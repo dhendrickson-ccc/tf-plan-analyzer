@@ -102,18 +102,18 @@
 
 ### Implementation for User Story 4
 
-- [ ] T040 [P] [US4] Update MultiEnvReport to handle variable number of environments (no hardcoded assumptions of 3) in multi_env_comparator.py
-- [ ] T041 [P] [US4] Update HTML table generation to dynamically create N columns based on environment count in generate_html_report.py
-- [ ] T042 [US4] Add responsive CSS for 2-5+ column layouts in generate_html_report.py
-- [ ] T043 [US4] Update summary statistics to work with any number of environments in MultiEnvReport
+- [X] T040 [P] [US4] Update MultiEnvReport to handle variable number of environments (no hardcoded assumptions of 3) in multi_env_comparator.py
+- [X] T041 [P] [US4] Update HTML table generation to dynamically create N columns based on environment count in generate_html_report.py
+- [X] T042 [US4] Add responsive CSS for 2-5+ column layouts in generate_html_report.py
+- [X] T043 [US4] Update summary statistics to work with any number of environments in MultiEnvReport
 
 ### Tests for User Story 4
 
-- [ ] T044 [P] [US4] Write end-to-end test: compare 2 plan files, verify 2 columns in HTML in test_e2e_multi_env.py
-- [ ] T045 [P] [US4] Write end-to-end test: compare 5 plan files, verify 5 columns in HTML in test_e2e_multi_env.py
-- [ ] T046 [US4] Write end-to-end test: compare with 1 file triggers error message suggesting 'report' subcommand in test_e2e_multi_env.py
-- [ ] T047 [US4] Run end-to-end tests with variable environment counts and validate output
-- [ ] T048 [US4] Fix any layout issues with 5+ column tables
+- [X] T044 [P] [US4] Write end-to-end test: compare 2 plan files, verify 2 columns in HTML in test_e2e_multi_env.py
+- [X] T045 [P] [US4] Write end-to-end test: compare 5 plan files, verify 5 columns in HTML in test_e2e_multi_env.py
+- [X] T046 [US4] Write end-to-end test: compare with 1 file triggers error message suggesting 'report' subcommand in test_e2e_multi_env.py
+- [X] T047 [US4] Run end-to-end tests with variable environment counts and validate output
+- [X] T048 [US4] Fix any layout issues with 5+ column tables
 
 **Checkpoint**: Tool now supports flexible environment counts (2-5+)
 

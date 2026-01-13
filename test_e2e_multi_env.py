@@ -136,4 +136,41 @@ class TestMultiEnvComparison:
         )
         assert result.returncode == 1
         assert 'File not found' in result.stdout
+    
+    def test_compare_five_environments(self):
+        """Test comparing five environments to verify variable environment count support."""
+        import os
+        
+        output_file = 'test_5_env_comparison.html'
+        if os.path.exists(output_file):
+            os.remove(output_file)
+        
+        result = subprocess.run(
+            ['python3', 'analyze_plan.py', 'compare',
+             'test_data/dev-plan.json', 'test_data/qa-plan.json',
+             'test_data/staging-plan.json', 'test_data/preprod-plan.json',
+             'test_data/prod-plan.json',
+             '--html', output_file],
+            capture_output=True,
+            text=True
+        )
+        assert result.returncode == 0
+        assert 'Comparing 5 environments' in result.stdout
+        assert output_file in result.stdout
+        
+        # Verify file was created
+        assert os.path.exists(output_file)
+        
+        # Verify HTML has 5 columns
+        with open(output_file, 'r') as f:
+            html_content = f.read()
+        
+        assert 'dev-plan' in html_content
+        assert 'qa-plan' in html_content
+        assert 'staging-plan' in html_content
+        assert 'preprod-plan' in html_content
+        assert 'prod-plan' in html_content
+        
+        # Clean up
+        os.remove(output_file)
 
