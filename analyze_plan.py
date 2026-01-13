@@ -1959,6 +1959,7 @@ def handle_report_subcommand(args):
 def handle_compare_subcommand(args):
     """Handle the 'compare' subcommand for multi-environment comparison."""
     from multi_env_comparator import EnvironmentPlan, MultiEnvReport
+    from pathlib import Path
     
     # Validate at least 2 plan files
     if len(args.plan_files) < 2:
@@ -1973,9 +1974,51 @@ def handle_compare_subcommand(args):
             print(f"Error: File not found: {plan_file}")
             sys.exit(1)
     
-    print(f"Comparing {len(args.plan_files)} environments...")
-    print("✅ Multi-environment comparison feature coming soon!")
-    print(f"Plan files: {', '.join(args.plan_files)}")
+    # Create environment names (from filenames by default)
+    env_names = []
+    for plan_file in args.plan_files:
+        # Derive name from filename: "dev-plan.json" -> "dev-plan"
+        name = Path(plan_file).stem
+        env_names.append(name)
+    
+    # Create EnvironmentPlan objects
+    environments = []
+    for name, plan_file in zip(env_names, args.plan_files):
+        env_plan = EnvironmentPlan(label=name, plan_file_path=Path(plan_file))
+        environments.append(env_plan)
+    
+    print(f"Comparing {len(args.plan_files)} environments: {', '.join(env_names)}")
+    
+    # Create MultiEnvReport and perform comparison
+    report = MultiEnvReport(environments=environments)
+    report.load_environments()
+    report.build_comparisons()
+    report.calculate_summary()
+    
+    # Generate output
+    if args.html:
+        # Determine output path
+        if args.html is True:
+            html_output = "comparison_report.html"
+        else:
+            html_output = args.html
+        
+        # Generate HTML report
+        report.generate_html(html_output)
+        print(f"✅ HTML comparison report generated: {html_output}")
+        print(f"📊 Summary: {report.summary_stats['total_unique_resources']} resources, " +
+              f"{report.summary_stats['resources_with_differences']} with differences")
+    else:
+        # Text output (simplified for now)
+        print(f"\n{'='*60}")
+        print("COMPARISON SUMMARY")
+        print(f"{'='*60}")
+        print(f"Environments compared: {report.summary_stats['total_environments']}")
+        print(f"Total unique resources: {report.summary_stats['total_unique_resources']}")
+        print(f"Resources with differences: {report.summary_stats['resources_with_differences']}")
+        print(f"Resources consistent: {report.summary_stats['resources_consistent']}")
+        print(f"Resources missing from some envs: {report.summary_stats['resources_missing_from_some']}")
+        print(f"{'='*60}\n")
 
 
 def main():

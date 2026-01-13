@@ -25,10 +25,10 @@
 
 **Purpose**: Project initialization and code structure preparation
 
-- [ ] T001 Review existing codebase structure (analyze_plan.py, generate_html_report.py, hcl_value_resolver.py)
-- [ ] T002 [P] Create multi_env_comparator.py stub with module docstring and imports
-- [ ] T003 [P] Create test_multi_env_unit.py stub for unit tests
-- [ ] T004 [P] Create test_e2e_multi_env.py stub for end-to-end tests
+- [X] T001 Review existing codebase structure (analyze_plan.py, generate_html_report.py, hcl_value_resolver.py)
+- [X] T002 [P] Create multi_env_comparator.py stub with module docstring and imports
+- [X] T003 [P] Create test_multi_env_unit.py stub for unit tests
+- [X] T004 [P] Create test_e2e_multi_env.py stub for end-to-end tests
 
 ---
 
@@ -38,14 +38,14 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Implement CLI subcommand routing in analyze_plan.py main() function
-- [ ] T006 [P] Create argparse subparsers for 'report' and 'compare' subcommands
-- [ ] T007 Add argument validation: report requires 1 file, compare requires 2+ files
-- [ ] T008 Implement error messages for incorrect argument counts per subcommand
-- [ ] T009 Route 'report' subcommand to existing TerraformPlanAnalyzer workflow (preserve backward compatibility)
-- [ ] T010 Create handler stub for 'compare' subcommand that routes to multi_env_comparator
-- [ ] T011 Add help text for both subcommands showing usage examples
-- [ ] T012 [P] Write end-to-end test for CLI routing (test both subcommands invoke correct handlers) in test_e2e_multi_env.py
+- [X] T005 Implement CLI subcommand routing in analyze_plan.py main() function
+- [X] T006 [P] Create argparse subparsers for 'report' and 'compare' subcommands
+- [X] T007 Add argument validation: report requires 1 file, compare requires 2+ files
+- [X] T008 Implement error messages for incorrect argument counts per subcommand
+- [X] T009 Route 'report' subcommand to existing TerraformPlanAnalyzer workflow (preserve backward compatibility)
+- [X] T010 Create handler stub for 'compare' subcommand that routes to multi_env_comparator
+- [X] T011 Add help text for both subcommands showing usage examples
+- [X] T012 [P] Write end-to-end test for CLI routing (test both subcommands invoke correct handlers) in test_e2e_multi_env.py
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -59,36 +59,36 @@
 
 ### Implementation for User Story 1
 
-- [ ] T013 [P] [US1] Implement EnvironmentPlan class in multi_env_comparator.py (load plan file, extract before_values)
-- [ ] T014 [P] [US1] Implement ResourceComparison class in multi_env_comparator.py (aggregate configs from multiple environments)
-- [ ] T015 [US1] Implement MultiEnvReport class in multi_env_comparator.py (orchestrate comparison logic)
-- [ ] T016 [US1] Add method to extract all unique resource addresses across all environments in MultiEnvReport
-- [ ] T017 [US1] Add method to build ResourceComparison objects for each unique resource address in MultiEnvReport
-- [ ] T018 [US1] Implement difference detection logic - compare configs across environments in ResourceComparison
-- [ ] T019 [US1] Handle missing resources (show "N/A" when resource exists in some but not all environments)
-- [ ] T020 [US1] Implement summary statistics calculation in MultiEnvReport (total_environments, total_unique_resources, resources_with_differences, etc.)
-- [ ] T021 [P] [US1] Create multi-column HTML table template in generate_html_report.py
-- [ ] T022 [P] [US1] Add function generate_multi_env_html_report() in generate_html_report.py
-- [ ] T023 [US1] Implement resource row generation with one column per environment in HTML report
-- [ ] T024 [US1] Reuse existing highlight_json_diff() function to highlight differences between environment configs
-- [ ] T025 [US1] Add CSS styling for multi-column table (responsive, readable columns)
-- [ ] T026 [US1] Implement summary card showing comparison metrics at top of HTML report
-- [ ] T027 [US1] Wire compare subcommand to call MultiEnvReport and generate HTML in analyze_plan.py
+- [X] T013 [P] [US1] Implement EnvironmentPlan class in multi_env_comparator.py (load plan file, extract before_values)
+- [X] T014 [P] [US1] Implement ResourceComparison class in multi_env_comparator.py (aggregate configs from multiple environments)
+- [X] T015 [US1] Implement MultiEnvReport class in multi_env_comparator.py (orchestrate comparison logic)
+- [X] T016 [US1] Add method to extract all unique resource addresses across all environments in MultiEnvReport
+- [X] T017 [US1] Add method to build ResourceComparison objects for each unique resource address in MultiEnvReport
+- [X] T018 [US1] Implement difference detection logic - compare configs across environments in ResourceComparison
+- [X] T019 [US1] Handle missing resources (show "N/A" when resource exists in some but not all environments)
+- [X] T020 [US1] Implement summary statistics calculation in MultiEnvReport (total_environments, total_unique_resources, resources_with_differences, etc.)
+- [X] T021 [P] [US1] Create multi-column HTML table template in generate_html_report.py
+- [X] T022 [P] [US1] Add function generate_multi_env_html_report() in generate_html_report.py
+- [X] T023 [US1] Implement resource row generation with one column per environment in HTML report
+- [X] T024 [US1] Reuse existing highlight_json_diff() function to highlight differences between environment configs
+- [X] T025 [US1] Add CSS styling for multi-column table (responsive, readable columns)
+- [X] T026 [US1] Implement summary card showing comparison metrics at top of HTML report
+- [X] T027 [US1] Wire compare subcommand to call MultiEnvReport and generate HTML in analyze_plan.py
 
 ### Tests for User Story 1
 
-- [ ] T028 [P] [US1] Write unit test: EnvironmentPlan loads plan file and extracts before_values correctly in test_multi_env_unit.py
-- [ ] T029 [P] [US1] Write unit test: ResourceComparison aggregates configs from 3 environments in test_multi_env_unit.py
-- [ ] T030 [P] [US1] Write unit test: ResourceComparison detects differences correctly in test_multi_env_unit.py
-- [ ] T031 [P] [US1] Write unit test: MultiEnvReport calculates summary statistics correctly in test_multi_env_unit.py
-- [ ] T032 [US1] Write end-to-end test: compare 3 plan files with --html flag, verify HTML file created in test_e2e_multi_env.py
-- [ ] T033 [US1] Write end-to-end test: verify HTML contains correct number of columns (3) in test_e2e_multi_env.py
-- [ ] T034 [US1] Write end-to-end test: verify differences are highlighted in HTML output in test_e2e_multi_env.py
-- [ ] T035 [US1] Write end-to-end test: verify missing resources show "N/A" in appropriate columns in test_e2e_multi_env.py
-- [ ] T036 [US1] Write end-to-end test: verify report subcommand still works (backward compatibility) in test_e2e_multi_env.py
-- [ ] T037 [US1] Run end-to-end tests with actual Terraform plan files and validate output
-- [ ] T038 [US1] Fix any bugs discovered during end-to-end testing
-- [ ] T039 [US1] Verify summary statistics are accurate in generated HTML report
+- [X] T028 [P] [US1] Write unit test: EnvironmentPlan loads plan file and extracts before_values correctly in test_multi_env_unit.py
+- [X] T029 [P] [US1] Write unit test: ResourceComparison aggregates configs from 3 environments in test_multi_env_unit.py
+- [X] T030 [P] [US1] Write unit test: ResourceComparison detects differences correctly in test_multi_env_unit.py
+- [X] T031 [P] [US1] Write unit test: MultiEnvReport calculates summary statistics correctly in test_multi_env_unit.py
+- [X] T032 [US1] Write end-to-end test: compare 3 plan files with --html flag, verify HTML file created in test_e2e_multi_env.py
+- [X] T033 [US1] Write end-to-end test: verify HTML contains correct number of columns (3) in test_e2e_multi_env.py
+- [X] T034 [US1] Write end-to-end test: verify differences are highlighted in HTML output in test_e2e_multi_env.py
+- [X] T035 [US1] Write end-to-end test: verify missing resources show "N/A" in appropriate columns in test_e2e_multi_env.py
+- [X] T036 [US1] Write end-to-end test: verify report subcommand still works (backward compatibility) in test_e2e_multi_env.py
+- [X] T037 [US1] Run end-to-end tests with actual Terraform plan files and validate output
+- [X] T038 [US1] Fix any bugs discovered during end-to-end testing
+- [X] T039 [US1] Verify summary statistics are accurate in generated HTML report
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently. Core comparison functionality works.
 

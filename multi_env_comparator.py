@@ -157,3 +157,107 @@ class MultiEnvReport:
             'resources_missing_from_some': sum(1 for rc in self.resource_comparisons 
                                                if len(rc.is_present_in) < len(self.environments))
         }
+    
+    def generate_html(self, output_path: str) -> None:
+        """Generate HTML comparison report.
+        
+        Args:
+            output_path: Path to write the HTML report
+        """
+        # Build environment labels list
+        env_labels = [env.label for env in self.environments]
+        
+        # Build HTML content
+        html_parts = []
+        html_parts.append('<!DOCTYPE html>')
+        html_parts.append('<html lang="en">')
+        html_parts.append('<head>')
+        html_parts.append('    <meta charset="UTF-8">')
+        html_parts.append('    <meta name="viewport" content="width=device-width, initial-scale=1.0">')
+        html_parts.append('    <title>Multi-Environment Terraform Comparison Report</title>')
+        html_parts.append('    <style>')
+        html_parts.append('        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }')
+        html_parts.append('        .container { max-width: 1600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }')
+        html_parts.append('        h1 { color: #333; margin-bottom: 10px; }')
+        html_parts.append('        .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin: 20px 0; }')
+        html_parts.append('        .summary-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; }')
+        html_parts.append('        .summary-card h3 { margin: 0 0 10px 0; font-size: 14px; opacity: 0.9; }')
+        html_parts.append('        .summary-card .value { font-size: 32px; font-weight: bold; }')
+        html_parts.append('        table { width: 100%; border-collapse: collapse; margin-top: 20px; }')
+        html_parts.append('        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; vertical-align: top; }')
+        html_parts.append('        th { background-color: #667eea; color: white; font-weight: 600; }')
+        html_parts.append('        tr.has-diff { background-color: #fff3cd; }')
+        html_parts.append('        tr.consistent { background-color: #d4edda; }')
+        html_parts.append('        .resource-address { font-weight: 600; color: #333; }')
+        html_parts.append('        .config-cell { max-width: 400px; overflow-x: auto; }')
+        html_parts.append('        .config-json { font-family: "Courier New", monospace; font-size: 12px; white-space: pre-wrap; }')
+        html_parts.append('        .not-present { color: #999; font-style: italic; }')
+        html_parts.append('    </style>')
+        html_parts.append('</head>')
+        html_parts.append('<body>')
+        html_parts.append('    <div class="container">')
+        html_parts.append('        <h1>🌍 Multi-Environment Terraform Comparison Report</h1>')
+        html_parts.append(f'        <p>Comparing {len(env_labels)} environments: {", ".join(env_labels)}</p>')
+        
+        # Summary cards
+        html_parts.append('        <div class="summary">')
+        html_parts.append('            <div class="summary-card">')
+        html_parts.append('                <h3>Total Environments</h3>')
+        html_parts.append(f'                <div class="value">{self.summary_stats["total_environments"]}</div>')
+        html_parts.append('            </div>')
+        html_parts.append('            <div class="summary-card">')
+        html_parts.append('                <h3>Total Resources</h3>')
+        html_parts.append(f'                <div class="value">{self.summary_stats["total_unique_resources"]}</div>')
+        html_parts.append('            </div>')
+        html_parts.append('            <div class="summary-card">')
+        html_parts.append('                <h3>Resources with Differences</h3>')
+        html_parts.append(f'                <div class="value">{self.summary_stats["resources_with_differences"]}</div>')
+        html_parts.append('            </div>')
+        html_parts.append('            <div class="summary-card">')
+        html_parts.append('                <h3>Consistent Resources</h3>')
+        html_parts.append(f'                <div class="value">{self.summary_stats["resources_consistent"]}</div>')
+        html_parts.append('            </div>')
+        html_parts.append('        </div>')
+        
+        # Comparison table
+        html_parts.append('        <table>')
+        html_parts.append('            <thead>')
+        html_parts.append('                <tr>')
+        html_parts.append('                    <th>Resource Address</th>')
+        for env_label in env_labels:
+            html_parts.append(f'                    <th>{env_label}</th>')
+        html_parts.append('                </tr>')
+        html_parts.append('            </thead>')
+        html_parts.append('            <tbody>')
+        
+        # Filter if diff_only is enabled
+        comparisons_to_show = self.resource_comparisons
+        if self.diff_only:
+            comparisons_to_show = [rc for rc in self.resource_comparisons if rc.has_differences]
+        
+        for rc in comparisons_to_show:
+            row_class = 'has-diff' if rc.has_differences else 'consistent'
+            html_parts.append(f'                <tr class="{row_class}">')
+            html_parts.append(f'                    <td class="resource-address">{rc.resource_address}</td>')
+            
+            for env_label in env_labels:
+                config = rc.env_configs.get(env_label)
+                if config is None:
+                    html_parts.append('                    <td class="not-present">N/A</td>')
+                else:
+                    config_json = json.dumps(config, indent=2, sort_keys=True)
+                    html_parts.append('                    <td class="config-cell">')
+                    html_parts.append(f'                        <pre class="config-json">{config_json}</pre>')
+                    html_parts.append('                    </td>')
+            
+            html_parts.append('                </tr>')
+        
+        html_parts.append('            </tbody>')
+        html_parts.append('        </table>')
+        html_parts.append('    </div>')
+        html_parts.append('</body>')
+        html_parts.append('</html>')
+        
+        # Write HTML file
+        with open(output_path, 'w') as f:
+            f.write('\n'.join(html_parts))
