@@ -34,7 +34,8 @@ class TerraformPlanAnalyzer:
                  global_ignore_reasons: Dict[str, str] = None,
                  resource_ignore_reasons: Dict[str, Dict[str, str]] = None,
                  hcl_resolver: Optional['HCLValueResolver'] = None,
-                 ignore_azure_casing: bool = False):
+                 ignore_azure_casing: bool = False,
+                 show_sensitive: bool = False):
         self.plan_file = Path(plan_file)
         self.plan_data = None
         self.resource_changes = []
@@ -59,6 +60,9 @@ class TerraformPlanAnalyzer:
         
         # Whether to ignore casing differences in Azure resource IDs
         self.ignore_azure_casing = ignore_azure_casing
+        
+        # Whether to show sensitive values (default: redact them)
+        self.show_sensitive = show_sensitive
 
         
     def load_plan(self) -> None:
@@ -121,11 +125,13 @@ class TerraformPlanAnalyzer:
             resource_address: Full resource address (e.g., azurerm_monitor_metric_alert.example)
             
         Returns:
-            Dict of changed attributes (excluding computed/ignored fields)
+            Dict of changed attributes with sensitivity info: {attr: (before, after, is_sensitive_before, is_sensitive_after)}
         """
         before = change.get('before', {})
         after = change.get('after', {})
         after_unknown = change.get('after_unknown', {})
+        before_sensitive = change.get('before_sensitive', {})
+        after_sensitive = change.get('after_sensitive', {})
         
         # Find all changed keys
         changes_dict = {}
@@ -133,20 +139,20 @@ class TerraformPlanAnalyzer:
             before_val = before.get(key)
             after_val = after.get(key)
             
-            # Check if the value is unknown (will be computed during apply)
-            if after_unknown.get(key) is True:
-                # Try to resolve from HCL if available
-                if self.hcl_resolver:
-                    hcl_value = self.hcl_resolver.get_resource_attribute(resource_address, key)
-                    if hcl_value is not None:
-                        after_val = hcl_value
-                    else:
-                        after_val = '(known after apply)'
-                else:
-                    after_val = '(known after apply)'
+            # Get sensitivity maps for this field
+            before_sens = before_sensitive.get(key) if isinstance(before_sensitive, dict) else None
+            after_sens = after_sensitive.get(key) if isinstance(after_sensitive, dict) else None
+            
+            # Get the after_unknown metadata for this field
+            key_unknown = after_unknown.get(key) if isinstance(after_unknown, dict) else None
+            
+            # Recursively resolve HCL values for nested structures
+            if key_unknown is not None:
+                after_val = self._resolve_nested_hcl(after_val, key_unknown, resource_address, [key])
             
             if not self._values_equal(before_val, after_val):
-                changes_dict[key] = (before_val, after_val)
+                # Store with sensitivity information (pass the sensitivity maps, not booleans)
+                changes_dict[key] = (before_val, after_val, before_sens, after_sens)
         
         # Extract resource type from address (e.g., "azurerm_monitor_metric_alert.example" -> "azurerm_monitor_metric_alert")
         resource_type = resource_address.split('.')[0] if '.' in resource_address else ''
@@ -232,6 +238,294 @@ class TerraformPlanAnalyzer:
         normalized_after = self._normalize_for_comparison(after_val)
         return normalized_before == normalized_after
     
+    def _resolve_nested_hcl(self, value: Any, after_unknown: Any, resource_address: str, path: List[str] = None) -> Any:
+        """Recursively resolve HCL values for nested structures that are 'known after apply'.
+        
+        Args:
+            value: The value to potentially resolve (may be null for computed values)
+            after_unknown: The after_unknown metadata for this value
+            resource_address: The resource address (e.g., azurerm_linux_function_app.python_analysis)
+            path: The current path within the structure (e.g., ['site_config', 'application_insights_connection_string'])
+        
+        Returns:
+            The value with nested HCL references resolved where possible
+        """
+        if path is None:
+            path = []
+        
+        # If this specific value is marked as unknown, try to resolve it
+        if after_unknown is True:
+            if self.hcl_resolver and path:
+                # Build the full attribute path, skipping numeric indices for blocks
+                # (e.g., "site_config.application_insights_connection_string" not "site_config.0.application_insights_connection_string")
+                attr_path = '.'.join(str(p) for p in path if not p.isdigit())
+                hcl_value = self.hcl_resolver.get_resource_attribute(resource_address, attr_path)
+                if hcl_value is not None:
+                    return hcl_value
+            return '(known after apply)'
+        
+        # If value is null but not marked as unknown, keep it as null
+        if value is None:
+            return None
+        
+        # If it's a dict, recursively resolve nested fields
+        if isinstance(value, dict):
+            resolved = {}
+            unknown_map = after_unknown if isinstance(after_unknown, dict) else {}
+            for key, val in value.items():
+                nested_unknown = unknown_map.get(key)
+                resolved[key] = self._resolve_nested_hcl(val, nested_unknown, resource_address, path + [key])
+            # Also check for fields that are in unknown_map but not in value (they'd be null)
+            if isinstance(after_unknown, dict):
+                for key in after_unknown:
+                    if key not in resolved:
+                        nested_unknown = after_unknown[key]
+                        resolved[key] = self._resolve_nested_hcl(None, nested_unknown, resource_address, path + [key])
+            return resolved
+        
+        # If it's a list, recursively resolve each element
+        if isinstance(value, list) and isinstance(after_unknown, list):
+            resolved = []
+            for i, val in enumerate(value):
+                elem_unknown = after_unknown[i] if i < len(after_unknown) else None
+                resolved.append(self._resolve_nested_hcl(val, elem_unknown, resource_address, path + [str(i)]))
+            return resolved
+        
+        # Otherwise return as-is
+        return value
+    
+    def _get_sensitivity_for_path(self, sensitive_map: Any, path: List[str]) -> Any:
+        """Navigate through a nested sensitivity map following a path.
+        
+        Returns the sensitivity value at the given path, which could be:
+        - True/False for leaf values
+        - A dict/list for nested structures
+        - None if path doesn't exist
+        """
+        if not sensitive_map:
+            return None
+        
+        current = sensitive_map
+        for key in path:
+            if isinstance(current, dict):
+                current = current.get(key)
+                if current is None:
+                    return None
+            elif isinstance(current, list):
+                # For lists in sensitivity maps, typically the entire list is marked
+                # or each element has its own sensitivity
+                try:
+                    idx = int(key)
+                    if idx < len(current):
+                        current = current[idx]
+                    else:
+                        return None
+                except (ValueError, IndexError):
+                    return None
+            else:
+                return None
+        
+        return current
+    
+    def _is_value_sensitive(self, sensitive_indicator: Any) -> bool:
+        """Check if a sensitivity indicator means the value is sensitive.
+        
+        Args:
+            sensitive_indicator: Could be True, False, {}, [], or a nested structure
+        
+        Returns:
+            True if this indicates a sensitive value, False otherwise
+        """
+        if sensitive_indicator is True:
+            return True
+        if sensitive_indicator is False or sensitive_indicator is None:
+            return False
+        # Empty dict/list in sensitivity map means structure exists but no fields are sensitive
+        if isinstance(sensitive_indicator, (dict, list)) and len(sensitive_indicator) == 0:
+            return False
+        # Non-empty dict/list means some nested fields might be sensitive
+        return False
+    
+    def _is_hcl_reference(self, value: Any) -> bool:
+        """Check if a value is an HCL reference (interpolation or direct reference).
+        
+        Args:
+            value: The value to check
+            
+        Returns:
+            True if the value appears to be an HCL reference
+        """
+        if not isinstance(value, str):
+            return False
+        
+        # ${...} interpolation
+        if '${' in value and '}' in value:
+            return True
+        
+        # Direct reference patterns: azurerm_resource.name.attribute or resource["key"].attribute
+        # Common Terraform provider prefixes
+        provider_prefixes = ['azurerm_', 'aws_', 'google_', 'azuread_', 'data.', 'var.', 'local.', 'module.']
+        if any(value.startswith(prefix) for prefix in provider_prefixes):
+            # Must have dots or brackets to be a reference
+            if '.' in value or '[' in value:
+                return True
+        
+        return False
+    
+    def _redact_sensitive_fields(self, value: Any, sensitivity_map: Any) -> Tuple[Any, Any]:
+        """Recursively redact sensitive fields in a value.
+        
+        Args:
+            value: The actual value to potentially redact
+            sensitivity_map: The sensitivity metadata for this value
+        
+        Returns:
+            Tuple of (redacted_value, sensitivity_info) where sensitivity_info
+            indicates which parts are sensitive
+        """
+        # If the entire value is sensitive, redact it
+        if self._is_value_sensitive(sensitivity_map):
+            if self.show_sensitive:
+                return value, True
+            else:
+                # Build the redacted display string
+                display_value = "<REDACTED>"
+                
+                # If the value is an HCL reference, show it
+                if isinstance(value, str) and self._is_hcl_reference(value):
+                    display_value += f" (resolves to: {value})"
+                elif value == '(known after apply)':
+                    display_value = "<REDACTED> (resolves to: (known after apply))"
+                
+                return display_value, True
+        
+        # If it's a dict, recursively check each field
+        if isinstance(value, dict) and isinstance(sensitivity_map, dict):
+            redacted = {}
+            sensitivity_info = {}
+            for key, val in value.items():
+                field_sensitivity = sensitivity_map.get(key)
+                redacted_val, is_sensitive = self._redact_sensitive_fields(val, field_sensitivity)
+                redacted[key] = redacted_val
+                if is_sensitive:
+                    sensitivity_info[key] = is_sensitive
+            
+            # Return the dict with sensitive fields redacted
+            return redacted, sensitivity_info if sensitivity_info else False
+        
+        # If it's a list, recursively check each element
+        if isinstance(value, list) and isinstance(sensitivity_map, list):
+            redacted = []
+            sensitivity_info = []
+            for i, val in enumerate(value):
+                elem_sensitivity = sensitivity_map[i] if i < len(sensitivity_map) else None
+                redacted_val, is_sensitive = self._redact_sensitive_fields(val, elem_sensitivity)
+                redacted.append(redacted_val)
+                sensitivity_info.append(is_sensitive if is_sensitive else False)
+            
+            return redacted, sensitivity_info if any(sensitivity_info) else False
+        
+        # Not sensitive
+        return value, False
+    
+    def _redact_with_change_detection(self, before_value: Any, after_value: Any, 
+                                      before_sensitivity: Any, after_sensitivity: Any) -> Tuple[Any, Any, bool]:
+        """Redact sensitive fields while detecting if values changed.
+        
+        Args:
+            before_value: The before value
+            after_value: The after value
+            before_sensitivity: Sensitivity map for before value
+            after_sensitivity: Sensitivity map for after value
+        
+        Returns:
+            Tuple of (redacted_before, redacted_after, values_changed)
+        """
+        # Check if before value is sensitive
+        before_is_sensitive = self._is_value_sensitive(before_sensitivity)
+        after_is_sensitive = self._is_value_sensitive(after_sensitivity)
+        
+        # Compare the actual values BEFORE redaction
+        values_changed = before_value != after_value
+        
+        # Now handle redaction
+        if before_is_sensitive or after_is_sensitive:
+            if self.show_sensitive:
+                return before_value, after_value, values_changed
+            else:
+                # Build display strings
+                before_display = "<REDACTED>"
+                after_display = "<REDACTED>"
+                
+                # Add "(changed)" indicator if values differ
+                if values_changed:
+                    before_display = "<REDACTED (changed)>"
+                    after_display = "<REDACTED (changed)>"
+                
+                # Show HCL references if available
+                if isinstance(before_value, str) and self._is_hcl_reference(before_value):
+                    before_display += f" (resolves to: {before_value})"
+                elif before_value == '(known after apply)':
+                    before_display = "<REDACTED> (resolves to: (known after apply))"
+                    
+                if isinstance(after_value, str) and self._is_hcl_reference(after_value):
+                    after_display += f" (resolves to: {after_value})"
+                elif after_value == '(known after apply)':
+                    after_display = "<REDACTED> (resolves to: (known after apply))"
+                
+                return before_display, after_display, values_changed
+        
+        # If it's a dict, recursively check each field
+        if isinstance(before_value, dict) and isinstance(after_value, dict):
+            redacted_before = {}
+            redacted_after = {}
+            any_changed = False
+            
+            all_keys = set(before_value.keys()) | set(after_value.keys())
+            for key in all_keys:
+                before_val = before_value.get(key)
+                after_val = after_value.get(key)
+                before_sens = before_sensitivity.get(key) if isinstance(before_sensitivity, dict) else None
+                after_sens = after_sensitivity.get(key) if isinstance(after_sensitivity, dict) else None
+                
+                r_before, r_after, changed = self._redact_with_change_detection(
+                    before_val, after_val, before_sens, after_sens
+                )
+                redacted_before[key] = r_before
+                redacted_after[key] = r_after
+                if changed:
+                    any_changed = True
+            
+            return redacted_before, redacted_after, any_changed
+        
+        # If it's a list, recursively check each element
+        if isinstance(before_value, list) and isinstance(after_value, list):
+            redacted_before = []
+            redacted_after = []
+            any_changed = False
+            
+            max_len = max(len(before_value), len(after_value))
+            for i in range(max_len):
+                before_val = before_value[i] if i < len(before_value) else None
+                after_val = after_value[i] if i < len(after_value) else None
+                before_sens = before_sensitivity[i] if isinstance(before_sensitivity, list) and i < len(before_sensitivity) else None
+                after_sens = after_sensitivity[i] if isinstance(after_sensitivity, list) and i < len(after_sensitivity) else None
+                
+                r_before, r_after, changed = self._redact_with_change_detection(
+                    before_val, after_val, before_sens, after_sens
+                )
+                if before_val is not None:
+                    redacted_before.append(r_before)
+                if after_val is not None:
+                    redacted_after.append(r_after)
+                if changed:
+                    any_changed = True
+            
+            return redacted_before, redacted_after, any_changed
+        
+        # Not sensitive - return as is
+        return before_value, after_value, values_changed
+    
     def print_summary(self, results: Dict[str, List]) -> None:
         """Print a formatted summary of the analysis."""
         created_count = len(results['created'])
@@ -278,12 +572,21 @@ class TerraformPlanAnalyzer:
                     # Show full before/after values
                     print(f"\n  {item['address']}")
                     for attr_name in sorted(changed_attrs.keys()):
-                        before_val, after_val = changed_attrs[attr_name]
-                        # Format values for display
-                        before_str = self._format_value(before_val)
-                        after_str = self._format_value(after_val)
+                        before_val, after_val, before_sens_map, after_sens_map = changed_attrs[attr_name]
                         
-                        print(f"    • {attr_name}:")
+                        # Redact sensitive values using granular checking
+                        display_before, before_sensitivity = self._redact_sensitive_fields(before_val, before_sens_map)
+                        display_after, after_sensitivity = self._redact_sensitive_fields(after_val, after_sens_map)
+                        
+                        # Format values for display
+                        before_str = self._format_value(display_before)
+                        after_str = self._format_value(display_after)
+                        
+                        # Check if any part is sensitive
+                        has_sensitive = before_sensitivity or after_sensitivity
+                        sensitivity_marker = " 🔒" if has_sensitive else ""
+                        
+                        print(f"    • {attr_name}{sensitivity_marker}:")
                         # Indent multi-line values
                         for line in before_str.split('\n'):
                             print(f"        - {line}")
@@ -381,11 +684,17 @@ class TerraformPlanAnalyzer:
         
         return ''.join(before_parts), ''.join(after_parts)
     
-    def _highlight_json_diff(self, before: Any, after: Any) -> Tuple[str, str, bool]:
+    def _highlight_json_diff(self, before: Any, after: Any, values_changed: bool = None) -> Tuple[str, str, bool]:
         """
         Highlight differences between two JSON structures.
         Returns HTML for before and after with differences highlighted, and a flag for known_after_apply.
         Only highlights lines that are actually different.
+        
+        Args:
+            before: The before value
+            after: The after value
+            values_changed: Optional metadata flag indicating if the actual values changed
+                           (used when both display as identical strings like <REDACTED (changed)>)
         """
         # Check if after is "(known after apply)" or contains HCL values
         is_known_after_apply = after == "(known after apply)"
@@ -410,8 +719,15 @@ class TerraformPlanAnalyzer:
         before_str = json.dumps(normalized_before, indent=2, sort_keys=True) if normalized_before is not None else "null"
         after_str = json.dumps(normalized_after, indent=2, sort_keys=True) if normalized_after is not None else "null"
         
-        # If strings are identical after normalization, return without highlighting
-        if before_str == after_str:
+        # Check if both values contain "(changed)" indicator - this means sensitive values changed
+        both_have_changed_indicator = "(changed)" in before_str and "(changed)" in after_str
+        
+        # If strings are identical after normalization AND no metadata indicates change, return without highlighting
+        # Use metadata (values_changed) as the source of truth for whether highlighting is needed
+        strings_identical = before_str == after_str
+        should_highlight = values_changed if values_changed is not None else (not strings_identical or both_have_changed_indicator)
+        
+        if strings_identical and not should_highlight:
             before_html = f'<pre class="json-content">{html.escape(before_str)}</pre>'
             after_html = f'<pre class="json-content">{html.escape(after_str)}</pre>'
             return before_html, after_html, is_known_after_apply
@@ -430,80 +746,107 @@ class TerraformPlanAnalyzer:
         added_class = 'known-after-apply' if is_known_after_apply else 'added'
         char_added_class = 'char-known-after-apply' if is_known_after_apply else 'char-added'
         
-        for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-            if tag == 'equal':
-                # Lines are the same
-                for line in before_lines[i1:i2]:
-                    before_html_lines.append(f'<span class="unchanged">{html.escape(line)}</span>')
-                for line in after_lines[j1:j2]:
-                    after_html_lines.append(f'<span class="unchanged">{html.escape(line)}</span>')
-            elif tag == 'delete':
-                # Lines only in before
-                for line in before_lines[i1:i2]:
-                    before_html_lines.append(f'<span class="removed">{html.escape(line)}</span>')
-                # Add empty lines to after to maintain alignment
-                empty_line = '<span class="unchanged opacity-50">' + ('&nbsp;' * 20) + '</span>'
-                for _ in range(i2 - i1):
-                    after_html_lines.append(empty_line)
-            elif tag == 'insert':
-                # Lines only in after
-                # Add empty lines to before to maintain alignment
-                empty_line = '<span class="unchanged opacity-50">' + ('&nbsp;' * 20) + '</span>'
-                for _ in range(j2 - j1):
-                    before_html_lines.append(empty_line)
-                for line in after_lines[j1:j2]:
-                    after_html_lines.append(f'<span class="{added_class}">{html.escape(line)}</span>')
-            elif tag == 'replace':
-                # Lines differ - do character-level comparison for similar lines
-                before_chunk = before_lines[i1:i2]
-                after_chunk = after_lines[j1:j2]
-                
-                # For each pair of lines, check if they're similar (e.g., only value differs)
-                max_len = max(len(before_chunk), len(after_chunk))
-                empty_line = '<span class="unchanged opacity-50">' + ('&nbsp;' * 20) + '</span>'
-                for idx in range(max_len):
-                    if idx < len(before_chunk) and idx < len(after_chunk):
-                        before_line = before_chunk[idx]
-                        after_line = after_chunk[idx]
-                        
-                        # Check if lines are similar enough for character-level diff
-                        similarity = SequenceMatcher(None, before_line, after_line).ratio()
-                        if similarity > 0.5:  # If more than 50% similar, show character diff
-                            before_highlighted, after_highlighted = TerraformPlanAnalyzer._highlight_char_diff(before_line, after_line, is_known_after_apply)
-                            before_html_lines.append(f'<span class="removed">{before_highlighted}</span>')
-                            after_html_lines.append(f'<span class="{added_class}">{after_highlighted}</span>')
-                        else:
-                            # Lines are too different, show as full line changes
+        # When strings are identical but metadata says values changed, force highlighting
+        if strings_identical and should_highlight:
+            # Both strings are the same but values actually changed (e.g., both show <REDACTED (changed)>)
+            # Only highlight lines that contain the "(changed)" indicator
+            for before_line, after_line in zip(before_lines, after_lines):
+                if "(changed)" in before_line or "(changed)" in after_line:
+                    # This line has a changed sensitive value - highlight it
+                    before_html_lines.append(f'<span class="removed">{html.escape(before_line)}</span>')
+                    after_html_lines.append(f'<span class="{added_class}">{html.escape(after_line)}</span>')
+                else:
+                    # This line didn't change - show as unchanged
+                    before_html_lines.append(f'<span class="unchanged">{html.escape(before_line)}</span>')
+                    after_html_lines.append(f'<span class="unchanged">{html.escape(after_line)}</span>')
+            
+            # Handle any remaining lines if lengths differ
+            if len(before_lines) > len(after_lines):
+                for line in before_lines[len(after_lines):]:
+                    if "(changed)" in line:
+                        before_html_lines.append(f'<span class="removed">{html.escape(line)}</span>')
+                    else:
+                        before_html_lines.append(f'<span class="unchanged">{html.escape(line)}</span>')
+            elif len(after_lines) > len(before_lines):
+                for line in after_lines[len(before_lines):]:
+                    if "(changed)" in line:
+                        after_html_lines.append(f'<span class="{added_class}">{html.escape(line)}</span>')
+                    else:
+                        after_html_lines.append(f'<span class="unchanged">{html.escape(line)}</span>')
+        else:
+            # Normal diff highlighting based on line comparison
+            for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+                if tag == 'equal':
+                    # Lines are the same
+                    for line in before_lines[i1:i2]:
+                        before_html_lines.append(f'<span class="unchanged">{html.escape(line)}</span>')
+                    for line in after_lines[j1:j2]:
+                        after_html_lines.append(f'<span class="unchanged">{html.escape(line)}</span>')
+                elif tag == 'delete':
+                    # Lines only in before
+                    for line in before_lines[i1:i2]:
+                        before_html_lines.append(f'<span class="removed">{html.escape(line)}</span>')
+                    # Add empty lines to after to maintain alignment
+                    empty_line = '<span class="unchanged opacity-50">' + ('&nbsp;' * 20) + '</span>'
+                    for _ in range(i2 - i1):
+                        after_html_lines.append(empty_line)
+                elif tag == 'insert':
+                    # Lines only in after
+                    # Add empty lines to before to maintain alignment
+                    empty_line = '<span class="unchanged opacity-50">' + ('&nbsp;' * 20) + '</span>'
+                    for _ in range(j2 - j1):
+                        before_html_lines.append(empty_line)
+                    for line in after_lines[j1:j2]:
+                        after_html_lines.append(f'<span class="{added_class}">{html.escape(line)}</span>')
+                elif tag == 'replace':
+                    # Lines differ - do character-level comparison for similar lines
+                    before_chunk = before_lines[i1:i2]
+                    after_chunk = after_lines[j1:j2]
+                    
+                    # For each pair of lines, check if they're similar (e.g., only value differs)
+                    max_len = max(len(before_chunk), len(after_chunk))
+                    empty_line = '<span class="unchanged opacity-50">' + ('&nbsp;' * 20) + '</span>'
+                    for idx in range(max_len):
+                        if idx < len(before_chunk) and idx < len(after_chunk):
+                            before_line = before_chunk[idx]
+                            after_line = after_chunk[idx]
+                            
+                            # Check if lines are similar enough for character-level diff
+                            similarity = SequenceMatcher(None, before_line, after_line).ratio()
+                            if similarity > 0.5:  # If more than 50% similar, show character diff
+                                before_highlighted, after_highlighted = TerraformPlanAnalyzer._highlight_char_diff(before_line, after_line, is_known_after_apply)
+                                before_html_lines.append(f'<span class="removed">{before_highlighted}</span>')
+                                after_html_lines.append(f'<span class="{added_class}">{after_highlighted}</span>')
+                            else:
+                                # Lines are too different, show as full line changes
+                                if before_line in after_chunk:
+                                    before_html_lines.append(f'<span class="unchanged">{html.escape(before_line)}</span>')
+                                else:
+                                    before_html_lines.append(f'<span class="removed">{html.escape(before_line)}</span>')
+                                
+                                if after_line in before_chunk:
+                                    after_html_lines.append(f'<span class="unchanged">{html.escape(after_line)}</span>')
+                                else:
+                                    after_html_lines.append(f'<span class="{added_class}">{html.escape(after_line)}</span>')
+                        elif idx < len(before_chunk):
+                            before_line = before_chunk[idx]
                             if before_line in after_chunk:
                                 before_html_lines.append(f'<span class="unchanged">{html.escape(before_line)}</span>')
                             else:
                                 before_html_lines.append(f'<span class="removed">{html.escape(before_line)}</span>')
-                            
+                            after_html_lines.append(empty_line)
+                        else:
+                            before_html_lines.append(empty_line)
+                            after_line = after_chunk[idx]
                             if after_line in before_chunk:
                                 after_html_lines.append(f'<span class="unchanged">{html.escape(after_line)}</span>')
                             else:
                                 after_html_lines.append(f'<span class="{added_class}">{html.escape(after_line)}</span>')
-                    elif idx < len(before_chunk):
-                        before_line = before_chunk[idx]
-                        if before_line in after_chunk:
-                            before_html_lines.append(f'<span class="unchanged">{html.escape(before_line)}</span>')
-                        else:
-                            before_html_lines.append(f'<span class="removed">{html.escape(before_line)}</span>')
-                        after_html_lines.append(empty_line)
-                    else:
-                        before_html_lines.append(empty_line)
-                        after_line = after_chunk[idx]
-                        if after_line in before_chunk:
-                            after_html_lines.append(f'<span class="unchanged">{html.escape(after_line)}</span>')
-                        else:
-                            after_html_lines.append(f'<span class="{added_class}">{html.escape(after_line)}</span>')
         
         before_html = f'<pre class="json-content">{"<br>".join(before_html_lines)}</pre>'
         after_html = f'<pre class="json-content">{"<br>".join(after_html_lines)}</pre>'
         
         return before_html, after_html, is_known_after_apply
-        
-        return before_html, after_html
     
     def _transform_results_for_html(self, results: Dict) -> Dict[str, Any]:
         """Transform results dict from analyze() format to HTML-friendly format."""
@@ -524,11 +867,29 @@ class TerraformPlanAnalyzer:
         # Transform config_changes from tuple format to list-of-dicts format
         for item in results['config_changes']:
             changes_list = []
-            for attr_name, (before_val, after_val) in item['changed_attributes'].items():
+            for attr_name, (before_val, after_val, before_sens_map, after_sens_map) in item['changed_attributes'].items():
+                # Use change detection to compare before redacting
+                display_before, display_after, values_changed = self._redact_with_change_detection(
+                    before_val, after_val, before_sens_map, after_sens_map
+                )
+                
+                # Check if any part is sensitive
+                before_sensitivity = self._is_value_sensitive(before_sens_map)
+                after_sensitivity = self._is_value_sensitive(after_sens_map)
+                has_sensitive = before_sensitivity or after_sensitivity
+                
+                # If not sensitive at the top level, check nested sensitivity
+                if not has_sensitive:
+                    _, before_sensitivity = self._redact_sensitive_fields(before_val, before_sens_map)
+                    _, after_sensitivity = self._redact_sensitive_fields(after_val, after_sens_map)
+                    has_sensitive = bool(before_sensitivity or after_sensitivity)
+                
                 changes_list.append({
                     'attribute': attr_name,
-                    'before': before_val,
-                    'after': after_val
+                    'before': display_before,
+                    'after': display_after,
+                    'is_sensitive': has_sensitive,
+                    'values_changed': values_changed
                 })
             
             transformed['updated'].append({
@@ -716,6 +1077,17 @@ class TerraformPlanAnalyzer:
             color: #495057;
             margin-bottom: 10px;
             font-size: 1.05em;
+        }}
+        
+        .sensitive-badge {{
+            background: #ff6b6b;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: bold;
+            margin-left: 8px;
+            vertical-align: middle;
         }}
         
         .change-diff {{
@@ -1038,6 +1410,14 @@ class TerraformPlanAnalyzer:
                         <span class="legend-description"><strong>Ignored Changes</strong> - Changes filtered out based on ignore configuration (at bottom)</span>
                     </div>
                 </div>
+                
+                <div class="legend-section">
+                    <h3>🔒 Security & Privacy</h3>
+                    <div class="legend-item">
+                        <span class="legend-symbol">🔒</span>
+                        <span class="legend-description"><strong>Sensitive Values</strong> - Fields marked as sensitive by Terraform are redacted and shown as <code>&lt;REDACTED&gt;</code>. Use <code>--show-sensitive</code> flag to override (not recommended for shared reports).</span>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -1098,9 +1478,12 @@ class TerraformPlanAnalyzer:
                 
                 for change in sorted(resource['changes'], key=lambda x: x['attribute']):
                     attr_name = html.escape(change['attribute'])
+                    is_sensitive = change.get('is_sensitive', False)
+                    sensitivity_badge = ' <span class="sensitive-badge">🔒 SENSITIVE</span>' if is_sensitive else ''
+                    
                     html_content += f"""
                     <div class="change-item">
-                        <div class="change-attribute">{attr_name}</div>
+                        <div class="change-attribute">{attr_name}{sensitivity_badge}</div>
 """
                     
                     before = change.get('before')
@@ -1109,7 +1492,9 @@ class TerraformPlanAnalyzer:
                     # Check if it's a simple value or complex structure
                     if isinstance(before, (dict, list)) or isinstance(after, (dict, list)):
                         # Complex structure - use diff highlighting
-                        before_html, after_html, is_known_after_apply = self._highlight_json_diff(before, after)
+                        # Pass values_changed metadata to enable highlighting even when strings are identical
+                        values_changed_metadata = change.get('values_changed', None)
+                        before_html, after_html, is_known_after_apply = self._highlight_json_diff(before, after, values_changed_metadata)
                         # Use ⚙️ for HCL-resolved values, ⚠️ for truly unknown
                         if is_known_after_apply and after != "(known after apply)":
                             after_header = "After ⚙️ (from Terraform config, not plan)"
@@ -1274,7 +1659,7 @@ class TerraformPlanAnalyzer:
 </html>
 """
         
-        with open(output_path, 'w') as f:
+        with open(output_path, 'w', encoding='utf-8', errors='surrogatepass') as f:
             f.write(html_content)
 
     def generate_json_report(self, results: Dict, output_path: str) -> None:
@@ -1297,25 +1682,59 @@ class TerraformPlanAnalyzer:
         updated_resources = []
         for item in results['config_changes']:
             changes = []
-            for attr_name, (before_val, after_val) in item['changed_attributes'].items():
+            for attr_name, (before_val, after_val, before_sens_map, after_sens_map) in item['changed_attributes'].items():
+                # Use change detection to compare before redacting
+                display_before, display_after, values_changed = self._redact_with_change_detection(
+                    before_val, after_val, before_sens_map, after_sens_map
+                )
+                
+                # Check if any part is sensitive
+                before_sensitivity = self._is_value_sensitive(before_sens_map)
+                after_sensitivity = self._is_value_sensitive(after_sens_map)
+                has_sensitive = before_sensitivity or after_sensitivity
+                
+                # If not sensitive at the top level, check nested sensitivity
+                if not has_sensitive:
+                    _, before_sensitivity = self._redact_sensitive_fields(before_val, before_sens_map)
+                    _, after_sensitivity = self._redact_sensitive_fields(after_val, after_sens_map)
+                    has_sensitive = bool(before_sensitivity or after_sensitivity)
+                
                 # Determine if this is "known after apply"
                 is_known_after_apply = after_val == "(known after apply)"
                 
-                # Check if value is from HCL (contains interpolations)
+                # Check if value is from HCL (contains interpolations or direct references)
                 is_from_hcl = False
                 if isinstance(after_val, (dict, list, str)):
-                    after_json = json.dumps(after_val, indent=2, sort_keys=True) if not isinstance(after_val, str) else after_val
-                    is_from_hcl = '${' in after_json
+                    after_json = json.dumps(after_val, indent=2, sort_keys=True) if not isinstance(after_val, str) else str(after_val)
+                    is_from_hcl = self._is_hcl_reference(after_json)
+                
+                # Also check before value for HCL references
+                before_hcl_ref = None
+                after_hcl_ref = None
+                if isinstance(before_val, str) and self._is_hcl_reference(before_val):
+                    before_hcl_ref = before_val
+                if isinstance(after_val, str) and self._is_hcl_reference(after_val):
+                    after_hcl_ref = after_val
                 
                 if is_from_hcl:
                     is_known_after_apply = True
                 
-                changes.append({
+                change_info = {
                     'attribute': attr_name,
-                    'before': before_val,
-                    'after': after_val,
-                    'is_known_after_apply': is_known_after_apply
-                })
+                    'before': display_before,
+                    'after': display_after,
+                    'is_known_after_apply': is_known_after_apply,
+                    'is_sensitive': has_sensitive,
+                    'value_changed': values_changed
+                }
+                
+                # Add HCL reference information if available
+                if before_hcl_ref:
+                    change_info['before_hcl_reference'] = before_hcl_ref
+                if after_hcl_ref:
+                    change_info['after_hcl_reference'] = after_hcl_ref
+                
+                changes.append(change_info)
             
             updated_resources.append({
                 'address': item['address'],
@@ -1356,7 +1775,8 @@ class TerraformPlanAnalyzer:
                 'generated_at': datetime.now().isoformat(),
                 'plan_file': str(self.plan_file),
                 'analyzer_version': '1.0',
-                'ignore_azure_casing': self.ignore_azure_casing
+                'ignore_azure_casing': self.ignore_azure_casing,
+                'sensitive_values_shown': self.show_sensitive
             },
             'summary': summary,
             'created_resources': sorted(results['created']),
@@ -1505,6 +1925,11 @@ Config file format (JSON):
         action='store_true',
         help='Ignore casing differences in Azure resource IDs (e.g., /providers/Microsoft.IotHub vs /providers/Microsoft.Iothub)'
     )
+    parser.add_argument(
+        '--show-sensitive',
+        action='store_true',
+        help='Show sensitive values in reports instead of redacting them (use with caution)'
+    )
     
     args = parser.parse_args()
     
@@ -1590,7 +2015,7 @@ Config file format (JSON):
     # Analyze the plan
     analyzer = TerraformPlanAnalyzer(args.plan_file, custom_ignore_fields, resource_specific_ignores,
                                     global_ignore_reasons, resource_ignore_reasons, hcl_resolver,
-                                    args.ignore_azure_casing)
+                                    args.ignore_azure_casing, args.show_sensitive)
     
     # Show ignored fields if requested
     if args.show_ignores:
