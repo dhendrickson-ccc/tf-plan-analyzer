@@ -1,0 +1,20 @@
+{
+  "global_ignores": {
+    "tags": "Tags are managed separately and don't affect resource functionality"
+  },
+  "resource_ignores": {
+    "azurerm_monitor_metric_alert": {
+      "action": "Dynamic block conversion causes inconsequential changes (empty map to null, casing differences)",
+      "description": "Description is conditionally set based on environment"
+    },
+    "azurerm_monitor_activity_log_alert": {
+      "action": "Dynamic block conversion causes inconsequential changes (empty map to null, casing differences)"
+    },
+    "azurerm_application_insights_workbook": {
+      "display_name": "Display name is conditionally set based on environment"
+    },
+    "azurerm_kusto_cluster": {
+      "identity": "Identity block converted to dynamic"
+    }
+  }
+}
