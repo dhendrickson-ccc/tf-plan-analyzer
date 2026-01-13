@@ -1804,135 +1804,8 @@ def load_config(config_file: str) -> Dict:
         sys.exit(1)
 
 
-def main():
-    """Main entry point."""
-    parser = argparse.ArgumentParser(
-        description='Analyze Terraform plan JSON files',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  # Basic analysis
-  python analyze_plan.py tfplan.json
-  
-  # Use a config file
-  python analyze_plan.py tfplan.json --config ignore_config.json
-  
-  # Ignore specific fields
-  python analyze_plan.py tfplan.json --ignore description
-  
-  # Ignore multiple fields globally
-  python analyze_plan.py tfplan.json --ignore description --ignore severity
-  python analyze_plan.py tfplan.json --ignore description,severity,scopes
-  
-  # Ignore fields for specific resource types
-  python analyze_plan.py tfplan.json --ignore-for azurerm_monitor_metric_alert:tags,action,description
-  python analyze_plan.py tfplan.json --ignore-for azurerm_storage_account:min_tls_version,cross_tenant_replication_enabled
-  
-  # Combine config file with CLI args (CLI args are additive)
-  python analyze_plan.py tfplan.json --config ignore_config.json --ignore extra_field
-  
-  # Generate HTML report
-  python analyze_plan.py tfplan.json --html
-  python analyze_plan.py tfplan.json --html custom_report.html
-  
-  # Generate JSON report for programmatic analysis
-  python analyze_plan.py tfplan.json --json
-  python analyze_plan.py tfplan.json --json custom_report.json
-  
-  # Ignore Azure resource ID casing differences
-  python analyze_plan.py tfplan.json --ignore-azure-casing
-  
-  # Show currently ignored fields
-  python analyze_plan.py tfplan.json --show-ignores
-  
-Config file format (JSON):
-  # Simple format (list):
-  {
-    "global_ignores": ["field1", "field2"],
-    "resource_ignores": {
-      "azurerm_monitor_metric_alert": ["tags", "action"]
-    }
-  }
-  
-  # With reasons (dict):
-  {
-    "global_ignores": {
-      "tags": "Tags are managed separately"
-    },
-    "resource_ignores": {
-      "azurerm_monitor_metric_alert": {
-        "action": "Action groups are non-impacting changes",
-        "description": "Description updates don't affect functionality"
-      }
-    }
-  }
-        """
-    )
-    
-    parser.add_argument('plan_file', help='Path to the terraform plan JSON file')
-    parser.add_argument(
-        '--config', '-c',
-        dest='config_file',
-        help='Path to JSON config file with ignore settings'
-    )
-    parser.add_argument(
-        '--ignore', '-i',
-        action='append',
-        dest='ignore_fields',
-        help='Additional field(s) to ignore globally when detecting changes (can be used multiple times or comma-separated)'
-    )
-    parser.add_argument(
-        '--ignore-for',
-        action='append',
-        dest='resource_ignores',
-        help='Ignore specific fields for a resource type. Format: resource_type:field1,field2 (e.g., azurerm_monitor_metric_alert:tags,action,description)'
-    )
-    parser.add_argument(
-        '--show-ignores',
-        action='store_true',
-        help='Display all fields being ignored'
-    )
-    parser.add_argument(
-        '--verbose', '-v',
-        action='store_true',
-        help='Show full before/after values for changed attributes'
-    )
-    parser.add_argument(
-        '--html',
-        nargs='?',
-        const=True,
-        default=None,
-        metavar='OUTPUT',
-        help='Generate HTML report instead of text output. Optionally specify output path (default: <plan_file>.html)'
-    )
-    parser.add_argument(
-        '--json',
-        nargs='?',
-        const=True,
-        default=None,
-        metavar='OUTPUT',
-        help='Generate JSON report for programmatic analysis. Optionally specify output path (default: <plan_file>.report.json)'
-    )
-    parser.add_argument(
-        '--tf-dir',
-        type=str,
-        default=None,
-        metavar='DIR',
-        help='Directory containing Terraform .tf files for resolving "known after apply" values (default: same directory as plan file)'
-    )
-    parser.add_argument(
-        '--ignore-azure-casing',
-        action='store_true',
-        help='Ignore casing differences in Azure resource IDs (e.g., /providers/Microsoft.IotHub vs /providers/Microsoft.Iothub)'
-    )
-    parser.add_argument(
-        '--show-sensitive',
-        action='store_true',
-        help='Show sensitive values in reports instead of redacting them (use with caution)'
-    )
-    
-    args = parser.parse_args()
-    
+def handle_report_subcommand(args):
+    """Handle the 'report' subcommand for single-plan analysis."""
     if not Path(args.plan_file).exists():
         print(f"Error: File not found: {args.plan_file}")
         sys.exit(1)
@@ -2083,6 +1956,230 @@ Config file format (JSON):
         analyzer.print_ignore_report()
 
 
+def handle_compare_subcommand(args):
+    """Handle the 'compare' subcommand for multi-environment comparison."""
+    from multi_env_comparator import EnvironmentPlan, MultiEnvReport
+    
+    # Validate at least 2 plan files
+    if len(args.plan_files) < 2:
+        print("Error: The 'compare' subcommand requires at least 2 plan files.")
+        print("Tip: For single plan analysis, use the 'report' subcommand instead:")
+        print(f"  python analyze_plan.py report {args.plan_files[0] if args.plan_files else 'plan.json'}")
+        sys.exit(1)
+    
+    # Check all files exist
+    for plan_file in args.plan_files:
+        if not Path(plan_file).exists():
+            print(f"Error: File not found: {plan_file}")
+            sys.exit(1)
+    
+    print(f"Comparing {len(args.plan_files)} environments...")
+    print("✅ Multi-environment comparison feature coming soon!")
+    print(f"Plan files: {', '.join(args.plan_files)}")
+
+
+def main():
+    """Main entry point with subcommand routing."""
+    parser = argparse.ArgumentParser(
+        description='Analyze Terraform plan JSON files',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Subcommands:
+  report    Analyze a single Terraform plan file (default mode)
+  compare   Compare multiple Terraform plan files across environments
+
+Examples:
+  # Single plan analysis (report subcommand)
+  python analyze_plan.py report tfplan.json
+  python analyze_plan.py report tfplan.json --config ignore_config.json
+  # Single plan analysis (report subcommand)
+  python analyze_plan.py report tfplan.json
+  python analyze_plan.py report tfplan.json --config ignore_config.json
+  python analyze_plan.py report tfplan.json --html
+  python analyze_plan.py report tfplan.json --ignore description
+  
+  # Multi-environment comparison (compare subcommand)
+  python analyze_plan.py compare dev.json staging.json prod.json --html
+  python analyze_plan.py compare dev.json prod.json --env-names "Development,Production"
+        """
+    )
+    
+    # Create subparsers for subcommands
+    subparsers = parser.add_subparsers(dest='subcommand', help='Available subcommands')
+    
+    # ========== REPORT SUBCOMMAND (single plan analysis) ==========
+    report_parser = subparsers.add_parser(
+        'report',
+        help='Analyze a single Terraform plan file',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Basic analysis
+  python analyze_plan.py report tfplan.json
+  
+  # Use a config file
+  python analyze_plan.py report tfplan.json --config ignore_config.json
+  
+  # Ignore specific fields
+  python analyze_plan.py report tfplan.json --ignore description
+  
+  # Ignore multiple fields globally
+  python analyze_plan.py report tfplan.json --ignore description --ignore severity
+  python analyze_plan.py report tfplan.json --ignore description,severity,scopes
+  
+  # Ignore fields for specific resource types
+  python analyze_plan.py report tfplan.json --ignore-for azurerm_monitor_metric_alert:tags,action,description
+  python analyze_plan.py report tfplan.json --ignore-for azurerm_storage_account:min_tls_version,cross_tenant_replication_enabled
+  
+  # Combine config file with CLI args (CLI args are additive)
+  python analyze_plan.py report tfplan.json --config ignore_config.json --ignore extra_field
+  
+  # Generate HTML report
+  python analyze_plan.py report tfplan.json --html
+  python analyze_plan.py report tfplan.json --html custom_report.html
+  
+  # Generate JSON report for programmatic analysis
+  python analyze_plan.py report tfplan.json --json
+  python analyze_plan.py report tfplan.json --json custom_report.json
+  
+  # Ignore Azure resource ID casing differences
+  python analyze_plan.py report tfplan.json --ignore-azure-casing
+  
+  # Show currently ignored fields
+  python analyze_plan.py report tfplan.json --show-ignores
+  
+Config file format (JSON):
+  # Simple format (list):
+  {
+    "global_ignores": ["field1", "field2"],
+    "resource_ignores": {
+      "azurerm_monitor_metric_alert": ["tags", "action"]
+    }
+  }
+  
+  # With reasons (dict):
+  {
+    "global_ignores": {
+      "tags": "Tags are managed separately"
+    },
+    "resource_ignores": {
+      "azurerm_monitor_metric_alert": {
+        "action": "Action groups are non-impacting changes",
+        "description": "Description updates don't affect functionality"
+      }
+    }
+  }
+        """
+    )
+    
+    report_parser.add_argument('plan_file', help='Path to the terraform plan JSON file')
+    report_parser.add_argument(
+        '--config', '-c',
+        dest='config_file',
+        help='Path to JSON config file with ignore settings'
+    )
+    report_parser.add_argument(
+        '--ignore', '-i',
+        action='append',
+        dest='ignore_fields',
+        help='Additional field(s) to ignore globally when detecting changes (can be used multiple times or comma-separated)'
+    )
+    report_parser.add_argument(
+        '--ignore-for',
+        action='append',
+        dest='resource_ignores',
+        help='Ignore specific fields for a resource type. Format: resource_type:field1,field2 (e.g., azurerm_monitor_metric_alert:tags,action,description)'
+    )
+    report_parser.add_argument(
+        '--show-ignores',
+        action='store_true',
+        help='Display all fields being ignored'
+    )
+    report_parser.add_argument(
+        '--verbose', '-v',
+        action='store_true',
+        help='Show full before/after values for changed attributes'
+    )
+    report_parser.add_argument(
+        '--html',
+        nargs='?',
+        const=True,
+        default=None,
+        metavar='OUTPUT',
+        help='Generate HTML report instead of text output. Optionally specify output path (default: <plan_file>.html)'
+    )
+    report_parser.add_argument(
+        '--json',
+        nargs='?',
+        const=True,
+        default=None,
+        metavar='OUTPUT',
+        help='Generate JSON report for programmatic analysis. Optionally specify output path (default: <plan_file>.report.json)'
+    )
+    report_parser.add_argument(
+        '--tf-dir',
+        type=str,
+        default=None,
+        metavar='DIR',
+        help='Directory containing Terraform .tf files for resolving "known after apply" values (default: same directory as plan file)'
+    )
+    report_parser.add_argument(
+        '--ignore-azure-casing',
+        action='store_true',
+        help='Ignore casing differences in Azure resource IDs (e.g., /providers/Microsoft.IotHub vs /providers/Microsoft.Iothub)'
+    )
+    report_parser.add_argument(
+        '--show-sensitive',
+        action='store_true',
+        help='Show sensitive values in reports instead of redacting them (use with caution)'
+    )
+    
+    # ========== COMPARE SUBCOMMAND (multi-environment comparison) ==========
+    compare_parser = subparsers.add_parser(
+        'compare',
+        help='Compare multiple Terraform plan files across environments',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Compare three environments
+  python analyze_plan.py compare dev.json staging.json prod.json --html
+  
+  # Compare with custom environment names
+  python analyze_plan.py compare dev.json prod.json --env-names "Development,Production"
+  
+  # Show only resources with differences
+  python analyze_plan.py compare dev.json staging.json prod.json --diff-only --html
+        """
+    )
+    
+    compare_parser.add_argument(
+        'plan_files',
+        nargs='+',
+        help='Paths to Terraform plan JSON files (minimum 2 required)'
+    )
+    compare_parser.add_argument(
+        '--html',
+        nargs='?',
+        const=True,
+        default=None,
+        metavar='OUTPUT',
+        help='Generate HTML report. Optionally specify output path (default: comparison_report.html)'
+    )
+    
+    args = parser.parse_args()
+    
+    # If no subcommand provided, show help
+    if not args.subcommand:
+        parser.print_help()
+        sys.exit(1)
+    
+    # Route to appropriate handler
+    if args.subcommand == 'report':
+        handle_report_subcommand(args)
+    elif args.subcommand == 'compare':
+        handle_compare_subcommand(args)
+
+
 if __name__ == '__main__':
     import signal
     # Ignore SIGPIPE to prevent BrokenPipeError when piping to head, less, etc.
@@ -2093,3 +2190,4 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         # Handle Ctrl+C gracefully
         sys.exit(0)
+
