@@ -154,18 +154,18 @@
 
 ### Implementation for User Story 3
 
-- [ ] T060 [P] [US3] Add --diff-only flag to compare subcommand argparse in analyze_plan.py
-- [ ] T061 [US3] Implement filtering logic in MultiEnvReport to exclude resources where has_differences=False
-- [ ] T062 [US3] Update HTML generation to show "No configuration differences found" message when no diffs and --diff-only used
-- [ ] T063 [US3] Ensure identical resources still shown in gray when --diff-only NOT used (default behavior)
+- [X] T060 [P] [US3] Add --diff-only flag to compare subcommand argparse in analyze_plan.py
+- [X] T061 [US3] Implement filtering logic in MultiEnvReport to exclude resources where has_differences=False
+- [X] T062 [US3] Update HTML generation to show "No configuration differences found" message when no diffs and --diff-only used
+- [X] T063 [US3] Ensure identical resources still shown in gray when --diff-only NOT used (default behavior)
 
 ### Tests for User Story 3
 
-- [ ] T064 [P] [US3] Write end-to-end test: use --diff-only with identical resources, verify message shown in test_e2e_multi_env.py
-- [ ] T065 [P] [US3] Write end-to-end test: use --diff-only with some differences, verify only diffs shown in test_e2e_multi_env.py
-- [ ] T066 [US3] Write end-to-end test: omit --diff-only, verify all resources shown in test_e2e_multi_env.py
-- [ ] T067 [US3] Run end-to-end tests and validate filtering works
-- [ ] T068 [US3] Fix any filtering edge cases
+- [X] T064 [P] [US3] Write end-to-end test: use --diff-only with identical resources, verify message shown in test_e2e_multi_env.py
+- [X] T065 [P] [US3] Write end-to-end test: use --diff-only with some differences, verify only diffs shown in test_e2e_multi_env.py
+- [X] T066 [US3] Write end-to-end test: omit --diff-only, verify all resources shown in test_e2e_multi_env.py
+- [X] T067 [US3] Run end-to-end tests and validate filtering works
+- [X] T068 [US3] Fix any filtering edge cases
 
 **Checkpoint**: Diff-only filtering complete
 

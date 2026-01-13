@@ -234,3 +234,67 @@ class TestEnvironmentLabeling:
         assert result.returncode == 0
         assert 'dev-plan, staging-plan' in result.stdout
 
+
+class TestDiffOnlyFilter:
+    """Tests for --diff-only flag to filter identical resources."""
+    
+    def test_diff_only_filters_identical_resources(self):
+        """Test that --diff-only hides resources with identical configs."""
+        import os
+        
+        output_file = 'test_diff_only_filtered.html'
+        if os.path.exists(output_file):
+            os.remove(output_file)
+        
+        result = subprocess.run(
+            ['python3', 'analyze_plan.py', 'compare',
+             'test_data/test1-plan.json', 'test_data/test2-plan.json',
+             '--diff-only', '--html', output_file],
+            capture_output=True,
+            text=True
+        )
+        assert result.returncode == 0
+        assert '1 with differences' in result.stdout
+        
+        # Verify HTML only shows differing resources
+        assert os.path.exists(output_file)
+        with open(output_file, 'r') as f:
+            html_content = f.read()
+        
+        # Should have the instance (different)
+        assert 'aws_instance.web' in html_content
+        # Should NOT have the S3 bucket or database (identical)
+        assert 'aws_s3_bucket.data' not in html_content
+        assert 'aws_db_instance.database' not in html_content
+        
+        os.remove(output_file)
+    
+    def test_without_diff_only_shows_all_resources(self):
+        """Test that without --diff-only, all resources are shown."""
+        import os
+        
+        output_file = 'test_all_resources_shown.html'
+        if os.path.exists(output_file):
+            os.remove(output_file)
+        
+        result = subprocess.run(
+            ['python3', 'analyze_plan.py', 'compare',
+             'test_data/test1-plan.json', 'test_data/test2-plan.json',
+             '--html', output_file],
+            capture_output=True,
+            text=True
+        )
+        assert result.returncode == 0
+        
+        # Verify HTML shows all resources
+        assert os.path.exists(output_file)
+        with open(output_file, 'r') as f:
+            html_content = f.read()
+        
+        # Should have all 3 resources
+        assert 'aws_instance.web' in html_content
+        assert 'aws_s3_bucket.data' in html_content
+        assert 'aws_db_instance.database' in html_content
+        
+        os.remove(output_file)
+

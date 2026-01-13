@@ -2002,7 +2002,8 @@ def handle_compare_subcommand(args):
     print(f"Comparing {len(args.plan_files)} environments: {', '.join(env_names)}")
     
     # Create MultiEnvReport and perform comparison
-    report = MultiEnvReport(environments=environments)
+    diff_only = getattr(args, 'diff_only', False)
+    report = MultiEnvReport(environments=environments, diff_only=diff_only)
     report.load_environments()
     report.build_comparisons()
     report.calculate_summary()
@@ -2226,6 +2227,11 @@ Examples:
         default=None,
         metavar='NAMES',
         help='Comma-separated list of environment names (e.g., "dev,staging,prod"). If not provided, names are derived from filenames.'
+    )
+    compare_parser.add_argument(
+        '--diff-only',
+        action='store_true',
+        help='Show only resources with differences (hide identical resources)'
     )
     
     args = parser.parse_args()
