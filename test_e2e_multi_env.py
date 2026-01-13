@@ -174,3 +174,63 @@ class TestMultiEnvComparison:
         # Clean up
         os.remove(output_file)
 
+
+class TestEnvironmentLabeling:
+    """Tests for environment labeling with --env-names flag."""
+    
+    def test_custom_environment_names(self):
+        """Test using --env-names flag with custom environment labels."""
+        import os
+        
+        output_file = 'test_custom_names.html'
+        if os.path.exists(output_file):
+            os.remove(output_file)
+        
+        result = subprocess.run(
+            ['python3', 'analyze_plan.py', 'compare',
+             'test_data/dev-plan.json', 'test_data/staging-plan.json',
+             '--env-names', 'Development,Staging',
+             '--html', output_file],
+            capture_output=True,
+            text=True
+        )
+        assert result.returncode == 0
+        assert 'Development, Staging' in result.stdout
+        
+        # Verify custom names in HTML
+        assert os.path.exists(output_file)
+        with open(output_file, 'r') as f:
+            html_content = f.read()
+        
+        assert 'Development' in html_content
+        assert 'Staging' in html_content
+        # Old names should NOT be in the HTML
+        assert 'dev-plan' not in html_content
+        assert 'staging-plan' not in html_content
+        
+        os.remove(output_file)
+    
+    def test_env_names_count_mismatch_error(self):
+        """Test that mismatched env-names count triggers error."""
+        result = subprocess.run(
+            ['python3', 'analyze_plan.py', 'compare',
+             'test_data/dev-plan.json', 'test_data/staging-plan.json', 'test_data/prod-plan.json',
+             '--env-names', 'Dev,Staging'],  # Only 2 names for 3 files
+            capture_output=True,
+            text=True
+        )
+        assert result.returncode == 1
+        assert 'Number of environment names' in result.stdout
+        assert 'must match' in result.stdout
+    
+    def test_default_names_from_filenames(self):
+        """Test that names are derived from filenames when --env-names not provided."""
+        result = subprocess.run(
+            ['python3', 'analyze_plan.py', 'compare',
+             'test_data/dev-plan.json', 'test_data/staging-plan.json'],
+            capture_output=True,
+            text=True
+        )
+        assert result.returncode == 0
+        assert 'dev-plan, staging-plan' in result.stdout
+

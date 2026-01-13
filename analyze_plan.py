@@ -1974,12 +1974,24 @@ def handle_compare_subcommand(args):
             print(f"Error: File not found: {plan_file}")
             sys.exit(1)
     
-    # Create environment names (from filenames by default)
-    env_names = []
-    for plan_file in args.plan_files:
-        # Derive name from filename: "dev-plan.json" -> "dev-plan"
-        name = Path(plan_file).stem
-        env_names.append(name)
+    # Create environment names
+    if args.env_names:
+        # Parse comma-separated names
+        env_names = [name.strip() for name in args.env_names.split(',')]
+        
+        # Validate count matches
+        if len(env_names) != len(args.plan_files):
+            print(f"Error: Number of environment names ({len(env_names)}) must match number of plan files ({len(args.plan_files)})")
+            print(f"Provided names: {', '.join(env_names)}")
+            print(f"Provided files: {len(args.plan_files)}")
+            sys.exit(1)
+    else:
+        # Derive names from filenames by default
+        env_names = []
+        for plan_file in args.plan_files:
+            # Derive name from filename: "dev-plan.json" -> "dev-plan"
+            name = Path(plan_file).stem
+            env_names.append(name)
     
     # Create EnvironmentPlan objects
     environments = []
@@ -2207,6 +2219,13 @@ Examples:
         default=None,
         metavar='OUTPUT',
         help='Generate HTML report. Optionally specify output path (default: comparison_report.html)'
+    )
+    compare_parser.add_argument(
+        '--env-names',
+        type=str,
+        default=None,
+        metavar='NAMES',
+        help='Comma-separated list of environment names (e.g., "dev,staging,prod"). If not provided, names are derived from filenames.'
     )
     
     args = parser.parse_args()

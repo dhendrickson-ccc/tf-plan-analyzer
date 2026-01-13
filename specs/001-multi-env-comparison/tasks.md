@@ -127,17 +127,17 @@
 
 ### Implementation for User Story 2
 
-- [ ] T049 [P] [US2] Add --env-names flag to compare subcommand argparse in analyze_plan.py
-- [ ] T050 [US2] Implement environment name parsing (comma-separated list) in compare handler
-- [ ] T051 [US2] Validate that number of env-names matches number of plan files, show error if mismatch
-- [ ] T052 [US2] Implement default name derivation from plan filenames when --env-names not provided in EnvironmentPlan
-- [ ] T053 [US2] Update HTML table headers to use environment labels in generate_html_report.py
-- [ ] T054 [US2] Preserve input file order for column ordering (plan files provided in desired column order)
+- [X] T049 [P] [US2] Add --env-names flag to compare subcommand argparse in analyze_plan.py
+- [X] T050 [US2] Implement environment name parsing (comma-separated list) in compare handler
+- [X] T051 [US2] Validate that number of env-names matches number of plan files, show error if mismatch
+- [X] T052 [US2] Implement default name derivation from plan filenames when --env-names not provided in EnvironmentPlan
+- [X] T053 [US2] Update HTML table headers to use environment labels in generate_html_report.py
+- [X] T054 [US2] Preserve input file order for column ordering (plan files provided in desired column order)
 
 ### Tests for User Story 2
 
-- [ ] T055 [P] [US2] Write end-to-end test: use --env-names flag, verify custom labels in HTML in test_e2e_multi_env.py
-- [ ] T056 [P] [US2] Write end-to-end test: omit --env-names, verify names derived from filenames in test_e2e_multi_env.py
+- [X] T055 [P] [US2] Write end-to-end test: use --env-names flag, verify custom labels in HTML in test_e2e_multi_env.py
+- [X] T056 [P] [US2] Write end-to-end test: omit --env-names, verify names derived from filenames in test_e2e_multi_env.py
 - [ ] T057 [US2] Write end-to-end test: provide mismatched env-names count, verify error message in test_e2e_multi_env.py
 - [ ] T058 [US2] Run end-to-end tests and validate custom labeling works correctly
 - [ ] T059 [US2] Fix any naming or ordering issues
