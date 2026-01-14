@@ -328,6 +328,12 @@ class ResourceComparison:
         # Get all non-None RAW configs for accurate comparison
         raw_configs = [cfg for cfg in self.env_configs_raw.values() if cfg is not None]
         
+        # If resource exists in some but not all environments, that's a difference
+        total_envs = len(self.env_configs_raw)
+        if len(raw_configs) < total_envs:
+            self.has_differences = True
+            return
+        
         if len(raw_configs) <= 1:
             self.has_differences = False
             return
@@ -615,8 +621,12 @@ class MultiEnvReport:
         html_parts.append('        .unchanged { color: #495057; }')
         html_parts.append('        .removed { background-color: #ffe0e0; color: #c92a2a; display: block; }')
         html_parts.append('        .added { background-color: #d3f9d8; color: #2b8a3e; display: block; }')
+        html_parts.append('        .baseline-removed { background-color: #bbdefb; color: #0d47a1; display: block; }')
+        html_parts.append('        .baseline-added { background-color: #e3f2fd; color: #1565c0; display: block; }')
         html_parts.append('        .char-removed { background-color: #ffc9c9; color: #c92a2a; }')
         html_parts.append('        .char-added { background-color: #b2f2bb; color: #2b8a3e; }')
+        html_parts.append('        .baseline-char-removed { background-color: #90caf9; color: #01579b; }')
+        html_parts.append('        .baseline-char-added { background-color: #e3f2fd; color: #1565c0; }')
         html_parts.append('        .opacity-50 { opacity: 0.5; }')
         html_parts.append('        .sensitive-indicator { background: #fff4e6; color: #d97706; padding: 4px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; margin-left: 8px; }')
         html_parts.append('        .hcl-resolved { background: #e7f5ff; color: #1971c2; padding: 4px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; margin-left: 8px; }')
@@ -718,10 +728,29 @@ class MultiEnvReport:
                     # Determine action type (for multi-env we don't have before/after, just config)
                     html_parts.append('                                <div class="env-action no-op">PRESENT</div>')
                     
-                    # First environment (baseline) shows plain JSON
+                    # First environment (baseline) shows blue-highlighted diff
                     if idx == 0:
-                        config_json = json.dumps(config, indent=2, sort_keys=True)
-                        html_parts.append(f'                                <pre class="config-json">{config_json}</pre>')
+                        # Find next available environment to compare against
+                        next_config = None
+                        for next_idx in range(1, len(env_labels)):
+                            next_config = rc.env_configs.get(env_labels[next_idx])
+                            if next_config is not None:
+                                break
+                        
+                        if next_config is not None:
+                            # Show baseline with blue highlighting
+                            before_html, _ = _highlight_json_diff(config, next_config)
+                            # Replace red/green classes with blue for baseline (both line and character level)
+                            baseline_html = (before_html
+                                .replace('class="removed"', 'class="baseline-removed"')
+                                .replace('class="added"', 'class="baseline-added"')
+                                .replace('char-added', 'baseline-char-added')
+                                .replace('char-removed', 'baseline-char-removed'))
+                            html_parts.append(f'                                {baseline_html}')
+                        else:
+                            # No other environment to compare to, show plain JSON
+                            config_json = json.dumps(config, indent=2, sort_keys=True)
+                            html_parts.append(f'                                <pre class="config-json">{config_json}</pre>')
                     else:
                         # Non-baseline environments: show character-level diff against baseline
                         if baseline_config is None:
