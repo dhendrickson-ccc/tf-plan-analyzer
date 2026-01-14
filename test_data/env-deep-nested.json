@@ -1,0 +1,47 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.0.0",
+  "resource_changes": [
+    {
+      "address": "aws_api_gateway.api",
+      "mode": "managed",
+      "type": "aws_api_gateway",
+      "name": "api",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "name": "main-api",
+          "endpoint_configuration": {
+            "types": ["REGIONAL"],
+            "vpc_endpoint_ids": {
+              "endpoints": [
+                {
+                  "subnet": {
+                    "availability_zone": "us-east-1a",
+                    "cidr_block": "10.0.1.0/24"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "after": {
+          "name": "main-api",
+          "endpoint_configuration": {
+            "types": ["REGIONAL"],
+            "vpc_endpoint_ids": {
+              "endpoints": [
+                {
+                  "subnet": {
+                    "availability_zone": "us-east-1a",
+                    "cidr_block": "10.0.1.0/24"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ]
+}

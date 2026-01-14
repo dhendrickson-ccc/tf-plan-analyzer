@@ -1,0 +1,31 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.0.0",
+  "resource_changes": [
+    {
+      "address": "aws_instance.app",
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "app",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "instance_type": "t2.small",
+          "ami": "ami-12345",
+          "tags": {
+            "Name": "app-server",
+            "Environment": "env2"
+          }
+        },
+        "after": {
+          "instance_type": "t2.small",
+          "ami": "ami-12345",
+          "tags": {
+            "Name": "app-server",
+            "Environment": "env2"
+          }
+        }
+      }
+    }
+  ]
+}

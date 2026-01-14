@@ -1,0 +1,27 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.0.0",
+  "resource_changes": [
+    {
+      "address": "aws_lambda_function.processor",
+      "mode": "managed",
+      "type": "aws_lambda_function",
+      "name": "processor",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "function_name": "data-processor",
+          "runtime": "python3.9",
+          "timeout": 300,
+          "memory_size": 512
+        },
+        "after": {
+          "function_name": "data-processor",
+          "runtime": "python3.9",
+          "timeout": 300,
+          "memory_size": 512
+        }
+      }
+    }
+  ]
+}

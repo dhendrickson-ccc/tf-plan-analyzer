@@ -6,9 +6,145 @@ Compares Terraform plan "before" states across multiple environments
 to identify configuration drift and ensure parity.
 """
 
+import html
 import json
+from difflib import SequenceMatcher
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Any
+from typing import Dict, List, Optional, Set, Any, Tuple
+
+
+def _highlight_char_diff(before_str: str, after_str: str) -> Tuple[str, str]:
+    """
+    Highlight character-level differences between two similar strings.
+    Returns HTML with character-level highlighting.
+    
+    Based on the implementation from analyze_plan.py TerraformPlanAnalyzer._highlight_char_diff()
+    """
+    matcher = SequenceMatcher(None, before_str, after_str)
+    before_parts = []
+    after_parts = []
+    
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag == 'equal':
+            # Characters are the same
+            text = html.escape(before_str[i1:i2])
+            before_parts.append(text)
+            after_parts.append(text)
+        elif tag == 'delete':
+            # Characters only in before
+            before_parts.append(f'<span class="char-removed">{html.escape(before_str[i1:i2])}</span>')
+        elif tag == 'insert':
+            # Characters only in after
+            after_parts.append(f'<span class="char-added">{html.escape(after_str[j1:j2])}</span>')
+        elif tag == 'replace':
+            # Characters differ
+            before_parts.append(f'<span class="char-removed">{html.escape(before_str[i1:i2])}</span>')
+            after_parts.append(f'<span class="char-added">{html.escape(after_str[j1:j2])}</span>')
+    
+    return ''.join(before_parts), ''.join(after_parts)
+
+
+def _highlight_json_diff(before: Any, after: Any) -> Tuple[str, str]:
+    """
+    Highlight differences between two JSON structures.
+    Returns HTML for before and after with differences highlighted.
+    Only highlights lines that are actually different.
+    
+    Based on the implementation from analyze_plan.py TerraformPlanAnalyzer._highlight_json_diff()
+    Simplified for multi-environment comparison (no known-after-apply, no sensitive redaction).
+    """
+    # Convert to formatted JSON strings
+    before_str = json.dumps(before, indent=2, sort_keys=True) if before is not None else "null"
+    after_str = json.dumps(after, indent=2, sort_keys=True) if after is not None else "null"
+    
+    # If strings are identical, return without highlighting
+    if before_str == after_str:
+        before_html = f'<pre class="json-content">{html.escape(before_str)}</pre>'
+        after_html = f'<pre class="json-content">{html.escape(after_str)}</pre>'
+        return before_html, after_html
+    
+    # Split into lines for comparison
+    before_lines = before_str.split('\n')
+    after_lines = after_str.split('\n')
+    
+    # Use SequenceMatcher to find differences
+    matcher = SequenceMatcher(None, before_lines, after_lines)
+    
+    before_html_lines = []
+    after_html_lines = []
+    
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag == 'equal':
+            # Lines are the same
+            for line in before_lines[i1:i2]:
+                before_html_lines.append(f'<span class="unchanged">{html.escape(line)}</span>')
+            for line in after_lines[j1:j2]:
+                after_html_lines.append(f'<span class="unchanged">{html.escape(line)}</span>')
+        elif tag == 'delete':
+            # Lines only in before
+            for line in before_lines[i1:i2]:
+                before_html_lines.append(f'<span class="removed">{html.escape(line)}</span>')
+            # Add empty lines to after to maintain alignment
+            empty_line = '<span class="unchanged opacity-50">' + ('&nbsp;' * 20) + '</span>'
+            for _ in range(i2 - i1):
+                after_html_lines.append(empty_line)
+        elif tag == 'insert':
+            # Lines only in after
+            # Add empty lines to before to maintain alignment
+            empty_line = '<span class="unchanged opacity-50">' + ('&nbsp;' * 20) + '</span>'
+            for _ in range(j2 - j1):
+                before_html_lines.append(empty_line)
+            for line in after_lines[j1:j2]:
+                after_html_lines.append(f'<span class="added">{html.escape(line)}</span>')
+        elif tag == 'replace':
+            # Lines differ - do character-level comparison for similar lines
+            before_chunk = before_lines[i1:i2]
+            after_chunk = after_lines[j1:j2]
+            
+            # For each pair of lines, check if they're similar (e.g., only value differs)
+            max_len = max(len(before_chunk), len(after_chunk))
+            empty_line = '<span class="unchanged opacity-50">' + ('&nbsp;' * 20) + '</span>'
+            for idx in range(max_len):
+                if idx < len(before_chunk) and idx < len(after_chunk):
+                    before_line = before_chunk[idx]
+                    after_line = after_chunk[idx]
+                    
+                    # Check if lines are similar enough for character-level diff
+                    similarity = SequenceMatcher(None, before_line, after_line).ratio()
+                    if similarity > 0.5:  # If more than 50% similar, show character diff
+                        before_highlighted, after_highlighted = _highlight_char_diff(before_line, after_line)
+                        before_html_lines.append(f'<span class="removed">{before_highlighted}</span>')
+                        after_html_lines.append(f'<span class="added">{after_highlighted}</span>')
+                    else:
+                        # Lines are too different, show as full line changes
+                        if before_line in after_chunk:
+                            before_html_lines.append(f'<span class="unchanged">{html.escape(before_line)}</span>')
+                        else:
+                            before_html_lines.append(f'<span class="removed">{html.escape(before_line)}</span>')
+                        
+                        if after_line in before_chunk:
+                            after_html_lines.append(f'<span class="unchanged">{html.escape(after_line)}</span>')
+                        else:
+                            after_html_lines.append(f'<span class="added">{html.escape(after_line)}</span>')
+                elif idx < len(before_chunk):
+                    before_line = before_chunk[idx]
+                    if before_line in after_chunk:
+                        before_html_lines.append(f'<span class="unchanged">{html.escape(before_line)}</span>')
+                    else:
+                        before_html_lines.append(f'<span class="removed">{html.escape(before_line)}</span>')
+                    after_html_lines.append(empty_line)
+                else:
+                    before_html_lines.append(empty_line)
+                    after_line = after_chunk[idx]
+                    if after_line in before_chunk:
+                        after_html_lines.append(f'<span class="unchanged">{html.escape(after_line)}</span>')
+                    else:
+                        after_html_lines.append(f'<span class="added">{html.escape(after_line)}</span>')
+    
+    before_html = f'<pre class="json-content">{"<br>".join(before_html_lines)}</pre>'
+    after_html = f'<pre class="json-content">{"<br>".join(after_html_lines)}</pre>'
+    
+    return before_html, after_html
 
 
 class EnvironmentPlan:
@@ -35,6 +171,7 @@ class EnvironmentPlan:
         self.show_sensitive = show_sensitive
         self.plan_data: Optional[Dict[str, Any]] = None
         self.before_values: Dict[str, Dict] = {}
+        self.before_values_raw: Dict[str, Dict] = {}  # Store unmasked versions for comparison
         self.hcl_resolver = None
     
     def load(self) -> None:
@@ -66,7 +203,12 @@ class EnvironmentPlan:
                 if self.hcl_resolver:
                     before = self._resolve_hcl_values(address, before)
                 
-                # Handle sensitive values
+                # Store raw version (before masking) for comparison
+                import copy
+                before_raw = copy.deepcopy(before)
+                self.before_values_raw[address] = before_raw
+                
+                # Handle sensitive values (masks them)
                 before = self._process_sensitive_values(before, rc)
                 
                 self.before_values[address] = before
@@ -163,38 +305,132 @@ class ResourceComparison:
         self.resource_address = resource_address
         self.resource_type = resource_type
         self.env_configs: Dict[str, Optional[Dict]] = {}
+        self.env_configs_raw: Dict[str, Optional[Dict]] = {}  # Store unmasked configs for comparison
         self.is_present_in: Set[str] = set()
         self.has_differences = False
     
-    def add_environment_config(self, env_label: str, config: Optional[Dict]) -> None:
+    def add_environment_config(self, env_label: str, config: Optional[Dict], config_raw: Optional[Dict] = None) -> None:
         """
         Add configuration for an environment.
         
         Args:
             env_label: Environment label
-            config: Configuration dict or None if resource doesn't exist in this environment
+            config: Configuration dict (possibly with masked sensitive values) or None if resource doesn't exist
+            config_raw: Unmasked configuration for comparison purposes
         """
         self.env_configs[env_label] = config
+        self.env_configs_raw[env_label] = config_raw if config_raw is not None else config
         if config is not None:
             self.is_present_in.add(env_label)
     
     def detect_differences(self) -> None:
-        """Detect if configurations differ across environments."""
-        # Get all non-None configs
-        configs = [cfg for cfg in self.env_configs.values() if cfg is not None]
+        """Detect if configurations differ across environments using RAW unmasked values."""
+        # Get all non-None RAW configs for accurate comparison
+        raw_configs = [cfg for cfg in self.env_configs_raw.values() if cfg is not None]
         
-        if len(configs) <= 1:
+        # If resource exists in some but not all environments, that's a difference
+        total_envs = len(self.env_configs_raw)
+        if len(raw_configs) < total_envs:
+            self.has_differences = True
+            return
+        
+        if len(raw_configs) <= 1:
             self.has_differences = False
             return
         
-        # Compare first config with all others
-        baseline = json.dumps(configs[0], sort_keys=True)
-        for cfg in configs[1:]:
+        # Compare first config with all others using RAW values
+        baseline = json.dumps(raw_configs[0], sort_keys=True)
+        for cfg in raw_configs[1:]:
             if json.dumps(cfg, sort_keys=True) != baseline:
                 self.has_differences = True
                 return
         
         self.has_differences = False
+    
+    def mark_changed_sensitive_values(self) -> None:
+        """
+        Mark sensitive values that changed between environments with (changed) indicator.
+        Compares RAW configs to detect changes, then updates masked configs.
+        """
+        if not self.has_differences:
+            return
+        
+        # Get baseline (first environment)
+        env_labels = list(self.env_configs.keys())
+        if len(env_labels) < 2:
+            return
+        
+        baseline_label = env_labels[0]
+        baseline_raw = self.env_configs_raw.get(baseline_label)
+        baseline_masked = self.env_configs.get(baseline_label)
+        
+        if not baseline_raw or not baseline_masked:
+            return
+        
+        # For each other environment, detect which sensitive fields changed
+        for env_label in env_labels[1:]:
+            other_raw = self.env_configs_raw.get(env_label)
+            other_masked = self.env_configs.get(env_label)
+            
+            if not other_raw or not other_masked:
+                continue
+            
+            # Recursively mark changed sensitive values
+            self.env_configs[env_label] = self._mark_changed_recursive(
+                baseline_raw, other_raw, baseline_masked, other_masked
+            )
+    
+    def _mark_changed_recursive(self, baseline_raw: Any, other_raw: Any, 
+                                baseline_masked: Any, other_masked: Any) -> Any:
+        """
+        Recursively compare raw and masked values, marking changed sensitive fields.
+        
+        Args:
+            baseline_raw: Unmasked baseline value
+            other_raw: Unmasked comparison value
+            baseline_masked: Masked baseline value
+            other_masked: Masked comparison value
+            
+        Returns:
+            Updated masked value with (changed) indicators
+        """
+        # If the masked value is [SENSITIVE] and raw values differ, mark as changed
+        if isinstance(other_masked, str) and other_masked == "[SENSITIVE]":
+            if baseline_raw != other_raw:
+                return "[SENSITIVE] (changed)"
+            return other_masked
+        
+        # Recursively process dictionaries
+        if isinstance(other_masked, dict) and isinstance(baseline_masked, dict):
+            result = {}
+            for key in other_masked.keys():
+                baseline_raw_val = baseline_raw.get(key) if isinstance(baseline_raw, dict) else None
+                other_raw_val = other_raw.get(key) if isinstance(other_raw, dict) else None
+                baseline_masked_val = baseline_masked.get(key)
+                other_masked_val = other_masked.get(key)
+                
+                result[key] = self._mark_changed_recursive(
+                    baseline_raw_val, other_raw_val, 
+                    baseline_masked_val, other_masked_val
+                )
+            return result
+        
+        # Recursively process lists
+        if isinstance(other_masked, list) and isinstance(baseline_masked, list):
+            result = []
+            for i in range(len(other_masked)):
+                baseline_raw_val = baseline_raw[i] if isinstance(baseline_raw, list) and i < len(baseline_raw) else None
+                other_raw_val = other_raw[i] if isinstance(other_raw, list) and i < len(other_raw) else None
+                baseline_masked_val = baseline_masked[i] if i < len(baseline_masked) else None
+                other_masked_val = other_masked[i]
+                
+                result.append(self._mark_changed_recursive(
+                    baseline_raw_val, other_raw_val,
+                    baseline_masked_val, other_masked_val
+                ))
+            return result
+        
+        return other_masked
     
     def has_sensitive_differences(self) -> bool:
         """
@@ -265,12 +501,20 @@ class MultiEnvReport:
             # Add config from each environment (with ignore config applied)
             for env in self.environments:
                 config = env.before_values.get(address)
+                config_raw = env.before_values_raw.get(address)
+                
                 if config is not None and self.ignore_config:
                     config = self._apply_ignore_config(config, resource_type)
-                comparison.add_environment_config(env.label, config)
+                if config_raw is not None and self.ignore_config:
+                    config_raw = self._apply_ignore_config(config_raw, resource_type)
+                    
+                comparison.add_environment_config(env.label, config, config_raw)
             
-            # Detect differences
+            # Detect differences (uses raw values)
             comparison.detect_differences()
+            
+            # Mark changed sensitive values with (changed) indicator
+            comparison.mark_changed_sensitive_values()
             
             self.resource_comparisons.append(comparison)
     
@@ -373,6 +617,17 @@ class MultiEnvReport:
         html_parts.append('        .env-action.no-op { background: #e9ecef; color: #495057; }')
         html_parts.append('        .env-action.missing { background: #f1f3f5; color: #868e96; }')
         html_parts.append('        .config-json { font-family: "Monaco", "Menlo", monospace; font-size: 0.85em; white-space: pre-wrap; background: #f8f9fa; padding: 12px; border-radius: 5px; line-height: 1.5; word-break: break-word; margin-top: 10px; border: 1px solid #e2e8f0; }')
+        html_parts.append('        .json-content { font-family: "Monaco", "Menlo", monospace; font-size: 0.85em; white-space: pre-wrap; background: #f8f9fa; padding: 12px; border-radius: 5px; line-height: 1.5; word-break: break-word; margin: 0; border: none; }')
+        html_parts.append('        .unchanged { color: #495057; }')
+        html_parts.append('        .removed { background-color: #ffe0e0; color: #c92a2a; display: block; }')
+        html_parts.append('        .added { background-color: #d3f9d8; color: #2b8a3e; display: block; }')
+        html_parts.append('        .baseline-removed { background-color: #bbdefb; color: #0d47a1; display: block; }')
+        html_parts.append('        .baseline-added { background-color: #e3f2fd; color: #1565c0; display: block; }')
+        html_parts.append('        .char-removed { background-color: #ffc9c9; color: #c92a2a; }')
+        html_parts.append('        .char-added { background-color: #b2f2bb; color: #2b8a3e; }')
+        html_parts.append('        .baseline-char-removed { background-color: #90caf9; color: #01579b; }')
+        html_parts.append('        .baseline-char-added { background-color: #e3f2fd; color: #1565c0; }')
+        html_parts.append('        .opacity-50 { opacity: 0.5; }')
         html_parts.append('        .sensitive-indicator { background: #fff4e6; color: #d97706; padding: 4px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; margin-left: 8px; }')
         html_parts.append('        .hcl-resolved { background: #e7f5ff; color: #1971c2; padding: 4px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; margin-left: 8px; }')
         html_parts.append('    </style>')
@@ -455,8 +710,12 @@ class MultiEnvReport:
             html_parts.append('                <div class="resource-change-content">')
             html_parts.append('                    <div class="change-diff">')
             
+            # Get baseline environment (first in the list)
+            baseline_label = env_labels[0]
+            baseline_config = rc.env_configs.get(baseline_label)
+            
             # Show each environment's configuration
-            for env_label in env_labels:
+            for idx, env_label in enumerate(env_labels):
                 config = rc.env_configs.get(env_label)
                 html_parts.append('                        <div class="diff-column">')
                 html_parts.append(f'                            <div class="diff-header">{env_label}</div>')
@@ -468,8 +727,46 @@ class MultiEnvReport:
                 else:
                     # Determine action type (for multi-env we don't have before/after, just config)
                     html_parts.append('                                <div class="env-action no-op">PRESENT</div>')
-                    config_json = json.dumps(config, indent=2, sort_keys=True)
-                    html_parts.append(f'                                <pre class="config-json">{config_json}</pre>')
+                    
+                    # First environment (baseline) shows blue-highlighted diff
+                    if idx == 0:
+                        # Find next available environment to compare against
+                        next_config = None
+                        for next_idx in range(1, len(env_labels)):
+                            next_config = rc.env_configs.get(env_labels[next_idx])
+                            if next_config is not None:
+                                break
+                        
+                        if next_config is not None:
+                            # Show baseline with blue highlighting
+                            before_html, _ = _highlight_json_diff(config, next_config)
+                            # Replace red/green classes with blue for baseline (both line and character level)
+                            baseline_html = (before_html
+                                .replace('class="removed"', 'class="baseline-removed"')
+                                .replace('class="added"', 'class="baseline-added"')
+                                .replace('char-added', 'baseline-char-added')
+                                .replace('char-removed', 'baseline-char-removed'))
+                            html_parts.append(f'                                {baseline_html}')
+                        else:
+                            # No other environment to compare to, show plain JSON
+                            config_json = json.dumps(config, indent=2, sort_keys=True)
+                            html_parts.append(f'                                <pre class="config-json">{config_json}</pre>')
+                    else:
+                        # Non-baseline environments: show character-level diff against baseline
+                        if baseline_config is None:
+                            # Baseline doesn't have this resource, show as added
+                            config_json = json.dumps(config, indent=2, sort_keys=True)
+                            html_parts.append('                                <div style="background: #fff4e6; color: #d97706; padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 0.85em;">')
+                            html_parts.append('                                    ⚠️ BASELINE MISSING - Resource not present in baseline environment')
+                            html_parts.append('                                </div>')
+                            # Show highlighted as all "added"
+                            lines = config_json.split('\n')
+                            highlighted_lines = [f'<span class="added">{html.escape(line)}</span>' for line in lines]
+                            html_parts.append(f'                                <pre class="json-content">{"<br>".join(highlighted_lines)}</pre>')
+                        else:
+                            # Generate character-level diff HTML
+                            _, after_html = _highlight_json_diff(baseline_config, config)
+                            html_parts.append(f'                                {after_html}')
                 
                 html_parts.append('                            </div>')
                 html_parts.append('                        </div>')

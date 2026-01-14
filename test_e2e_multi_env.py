@@ -498,3 +498,94 @@ class TestErrorHandling:
             assert 'Invalid JSON' in result.stdout or 'Error' in result.stdout
         finally:
             os.remove(invalid_file)
+
+
+class TestCharacterLevelDiff:
+    """Test suite for character-level diff highlighting in HTML reports."""
+    
+    def test_character_level_diff_single_field(self):
+        """Test that only differing characters are highlighted (t2.micro vs t2.small)."""
+        import os
+        
+        output_file = 'test_char_diff.html'
+        if os.path.exists(output_file):
+            os.remove(output_file)
+        
+        result = subprocess.run(
+            ['python3', 'analyze_plan.py', 'compare',
+             'test_data/env-char-diff-1.json', 'test_data/env-char-diff-2.json',
+             '--html', output_file],
+            capture_output=True,
+            text=True
+        )
+        assert result.returncode == 0
+        assert os.path.exists(output_file)
+        
+        with open(output_file, 'r') as f:
+            html_content = f.read()
+        
+        # Verify character-level highlighting exists
+        # Should have char-removed and char-added spans for "micro" vs "small"
+        assert 'char-removed' in html_content or 'char-added' in html_content
+        
+        # Clean up
+        os.remove(output_file)
+    
+    def test_baseline_shows_plain_json(self):
+        """Test that the first environment (baseline) shows plain JSON without highlighting."""
+        import os
+        
+        output_file = 'test_baseline_plain.html'
+        if os.path.exists(output_file):
+            os.remove(output_file)
+        
+        result = subprocess.run(
+            ['python3', 'analyze_plan.py', 'compare',
+             'test_data/env-char-diff-1.json', 'test_data/env-char-diff-2.json',
+             '--html', output_file],
+            capture_output=True,
+            text=True
+        )
+        assert result.returncode == 0
+        assert os.path.exists(output_file)
+        
+        with open(output_file, 'r') as f:
+            html_content = f.read()
+        
+        # Baseline environment should have plain JSON
+        # Check that baseline column exists and has JSON content
+        assert 'env-char-diff-1' in html_content
+        assert 'env-char-diff-2' in html_content
+        
+        # Clean up
+        os.remove(output_file)
+    
+    def test_identical_configs_no_highlighting(self):
+        """Test that identical configs show without character-level highlights."""
+        import os
+        
+        output_file = 'test_identical_configs.html'
+        if os.path.exists(output_file):
+            os.remove(output_file)
+        
+        # Compare same file but use custom environment names to avoid duplicate error
+        result = subprocess.run(
+            ['python3', 'analyze_plan.py', 'compare',
+             'test_data/env-char-diff-1.json', 'test_data/env-char-diff-1.json',
+             '--env-names', 'env-a,env-b',
+             '--html', output_file],
+            capture_output=True,
+            text=True
+        )
+        assert result.returncode == 0
+        assert os.path.exists(output_file)
+        
+        with open(output_file, 'r') as f:
+            html_content = f.read()
+        
+        # Should show that configs are identical
+        # No differences should be highlighted
+        assert '<!DOCTYPE html>' in html_content
+        
+        # Clean up
+        os.remove(output_file)

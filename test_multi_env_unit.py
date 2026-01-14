@@ -97,13 +97,13 @@ class TestResourceComparison:
         rc = ResourceComparison(resource_address="aws_instance.web", resource_type="aws_instance")
         
         config = {"instance_type": "t2.micro"}
-        rc.add_environment_config("dev", config)
-        rc.add_environment_config("prod", None)  # Not present in prod
+        rc.add_environment_config("dev", config, config)
+        rc.add_environment_config("prod", None, None)  # Not present in prod
         
         rc.detect_differences()
         
-        # Should not have differences if only one environment has it
-        assert rc.has_differences == False
+        # Should have differences if resource is missing in some environments
+        assert rc.has_differences == True
 
 
 class TestMultiEnvReport:
