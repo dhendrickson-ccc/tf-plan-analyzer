@@ -171,6 +171,7 @@ class EnvironmentPlan:
         self.show_sensitive = show_sensitive
         self.plan_data: Optional[Dict[str, Any]] = None
         self.before_values: Dict[str, Dict] = {}
+        self.before_values_raw: Dict[str, Dict] = {}  # Store unmasked versions for comparison
         self.hcl_resolver = None
     
     def load(self) -> None:
@@ -202,7 +203,12 @@ class EnvironmentPlan:
                 if self.hcl_resolver:
                     before = self._resolve_hcl_values(address, before)
                 
-                # Handle sensitive values
+                # Store raw version (before masking) for comparison
+                import copy
+                before_raw = copy.deepcopy(before)
+                self.before_values_raw[address] = before_raw
+                
+                # Handle sensitive values (masks them)
                 before = self._process_sensitive_values(before, rc)
                 
                 self.before_values[address] = before
@@ -299,38 +305,126 @@ class ResourceComparison:
         self.resource_address = resource_address
         self.resource_type = resource_type
         self.env_configs: Dict[str, Optional[Dict]] = {}
+        self.env_configs_raw: Dict[str, Optional[Dict]] = {}  # Store unmasked configs for comparison
         self.is_present_in: Set[str] = set()
         self.has_differences = False
     
-    def add_environment_config(self, env_label: str, config: Optional[Dict]) -> None:
+    def add_environment_config(self, env_label: str, config: Optional[Dict], config_raw: Optional[Dict] = None) -> None:
         """
         Add configuration for an environment.
         
         Args:
             env_label: Environment label
-            config: Configuration dict or None if resource doesn't exist in this environment
+            config: Configuration dict (possibly with masked sensitive values) or None if resource doesn't exist
+            config_raw: Unmasked configuration for comparison purposes
         """
         self.env_configs[env_label] = config
+        self.env_configs_raw[env_label] = config_raw if config_raw is not None else config
         if config is not None:
             self.is_present_in.add(env_label)
     
     def detect_differences(self) -> None:
-        """Detect if configurations differ across environments."""
-        # Get all non-None configs
-        configs = [cfg for cfg in self.env_configs.values() if cfg is not None]
+        """Detect if configurations differ across environments using RAW unmasked values."""
+        # Get all non-None RAW configs for accurate comparison
+        raw_configs = [cfg for cfg in self.env_configs_raw.values() if cfg is not None]
         
-        if len(configs) <= 1:
+        if len(raw_configs) <= 1:
             self.has_differences = False
             return
         
-        # Compare first config with all others
-        baseline = json.dumps(configs[0], sort_keys=True)
-        for cfg in configs[1:]:
+        # Compare first config with all others using RAW values
+        baseline = json.dumps(raw_configs[0], sort_keys=True)
+        for cfg in raw_configs[1:]:
             if json.dumps(cfg, sort_keys=True) != baseline:
                 self.has_differences = True
                 return
         
         self.has_differences = False
+    
+    def mark_changed_sensitive_values(self) -> None:
+        """
+        Mark sensitive values that changed between environments with (changed) indicator.
+        Compares RAW configs to detect changes, then updates masked configs.
+        """
+        if not self.has_differences:
+            return
+        
+        # Get baseline (first environment)
+        env_labels = list(self.env_configs.keys())
+        if len(env_labels) < 2:
+            return
+        
+        baseline_label = env_labels[0]
+        baseline_raw = self.env_configs_raw.get(baseline_label)
+        baseline_masked = self.env_configs.get(baseline_label)
+        
+        if not baseline_raw or not baseline_masked:
+            return
+        
+        # For each other environment, detect which sensitive fields changed
+        for env_label in env_labels[1:]:
+            other_raw = self.env_configs_raw.get(env_label)
+            other_masked = self.env_configs.get(env_label)
+            
+            if not other_raw or not other_masked:
+                continue
+            
+            # Recursively mark changed sensitive values
+            self.env_configs[env_label] = self._mark_changed_recursive(
+                baseline_raw, other_raw, baseline_masked, other_masked
+            )
+    
+    def _mark_changed_recursive(self, baseline_raw: Any, other_raw: Any, 
+                                baseline_masked: Any, other_masked: Any) -> Any:
+        """
+        Recursively compare raw and masked values, marking changed sensitive fields.
+        
+        Args:
+            baseline_raw: Unmasked baseline value
+            other_raw: Unmasked comparison value
+            baseline_masked: Masked baseline value
+            other_masked: Masked comparison value
+            
+        Returns:
+            Updated masked value with (changed) indicators
+        """
+        # If the masked value is [SENSITIVE] and raw values differ, mark as changed
+        if isinstance(other_masked, str) and other_masked == "[SENSITIVE]":
+            if baseline_raw != other_raw:
+                return "[SENSITIVE] (changed)"
+            return other_masked
+        
+        # Recursively process dictionaries
+        if isinstance(other_masked, dict) and isinstance(baseline_masked, dict):
+            result = {}
+            for key in other_masked.keys():
+                baseline_raw_val = baseline_raw.get(key) if isinstance(baseline_raw, dict) else None
+                other_raw_val = other_raw.get(key) if isinstance(other_raw, dict) else None
+                baseline_masked_val = baseline_masked.get(key)
+                other_masked_val = other_masked.get(key)
+                
+                result[key] = self._mark_changed_recursive(
+                    baseline_raw_val, other_raw_val, 
+                    baseline_masked_val, other_masked_val
+                )
+            return result
+        
+        # Recursively process lists
+        if isinstance(other_masked, list) and isinstance(baseline_masked, list):
+            result = []
+            for i in range(len(other_masked)):
+                baseline_raw_val = baseline_raw[i] if isinstance(baseline_raw, list) and i < len(baseline_raw) else None
+                other_raw_val = other_raw[i] if isinstance(other_raw, list) and i < len(other_raw) else None
+                baseline_masked_val = baseline_masked[i] if i < len(baseline_masked) else None
+                other_masked_val = other_masked[i]
+                
+                result.append(self._mark_changed_recursive(
+                    baseline_raw_val, other_raw_val,
+                    baseline_masked_val, other_masked_val
+                ))
+            return result
+        
+        return other_masked
     
     def has_sensitive_differences(self) -> bool:
         """
@@ -401,12 +495,20 @@ class MultiEnvReport:
             # Add config from each environment (with ignore config applied)
             for env in self.environments:
                 config = env.before_values.get(address)
+                config_raw = env.before_values_raw.get(address)
+                
                 if config is not None and self.ignore_config:
                     config = self._apply_ignore_config(config, resource_type)
-                comparison.add_environment_config(env.label, config)
+                if config_raw is not None and self.ignore_config:
+                    config_raw = self._apply_ignore_config(config_raw, resource_type)
+                    
+                comparison.add_environment_config(env.label, config, config_raw)
             
-            # Detect differences
+            # Detect differences (uses raw values)
             comparison.detect_differences()
+            
+            # Mark changed sensitive values with (changed) indicator
+            comparison.mark_changed_sensitive_values()
             
             self.resource_comparisons.append(comparison)
     
