@@ -1,0 +1,17 @@
+# Python virtual environment
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# pytest cache
+.pytest_cache/
+
+# HTML reports (generated artifacts)
+*.html
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store

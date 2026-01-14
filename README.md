@@ -1,29 +1,153 @@
 # Terraform Plan Analyzer
 
-A Python tool to analyze Terraform plan JSON files and categorize resource changes. Supports both text and beautiful HTML report output with intelligent HCL value resolution.
+A Python tool to analyze Terraform plan JSON files and identify resource changes. Supports both single-plan analysis and multi-environment comparison with HTML and text output formats.
+
+## Table of Contents
+- [Quick Start](#quick-start)
+- [Single Plan Analysis](#single-plan-analysis)
+- [Multi-Environment Comparison](#multi-environment-comparison)
+- [Key Features](#key-features)
+- [Output Formats](#output-formats)
+- [Ignore Configuration](#ignore-configuration)
 
 ## Quick Start
 
+### Single Plan Analysis
 ```bash
-# Generate HTML report with HCL resolution (recommended)
-python analyze_plan.py plan.json --config ignore_config.json --html
+# Generate HTML report
+python analyze_plan.py report plan.json --html
 
-# Specify custom Terraform directory for HCL resolution
-python analyze_plan.py plan.json --tf-dir ../terraform --html
-
-# Text output to console
-python analyze_plan.py plan.json
+# Text output with HCL resolution
+python analyze_plan.py report plan.json --tf-dir ./terraform
 
 # Verbose text output
-python analyze_plan.py plan.json -v
-
-# Custom HTML output path
-python analyze_plan.py plan.json --html my_report.html
+python analyze_plan.py report plan.json -v
 ```
+
+### Multi-Environment Comparison
+```bash
+# Compare multiple environments (text output)
+python analyze_plan.py compare dev.json staging.json prod.json
+
+# Generate HTML comparison report
+python analyze_plan.py compare dev.json staging.json --html comparison.html
+
+# Compare with custom environment names
+python analyze_plan.py compare dev.json staging.json --env-names "Development,Staging"
+
+# Show only resources with differences
+python analyze_plan.py compare dev.json staging.json --diff-only
+
+# Verbose text output
+python analyze_plan.py compare dev.json staging.json -v
+```
+
+## Single Plan Analysis
+
+The `report` subcommand analyzes a single Terraform plan file and categorizes resource changes.
+
+### Usage
+```bash
+python analyze_plan.py report <plan_file> [options]
+```
+
+### Options
+- `--html [OUTPUT]` - Generate HTML report (default: report.html)
+- `--config FILE` - Path to ignore configuration JSON file
+- `--tf-dir DIR` - Directory containing Terraform .tf files for HCL resolution
+- `-v, --verbose` - Show detailed before/after values in text output
+
+### Examples
+```bash
+# Generate HTML report with HCL resolution (recommended)
+python analyze_plan.py report plan.json --config ignore_config.json --html
+
+# Specify custom Terraform directory for HCL resolution
+python analyze_plan.py report plan.json --tf-dir ../terraform --html
+
+# Text analysis with ignore config
+python analyze_plan.py report plan.json --config ignore_config.json
+
+# Verbose text output
+python analyze_plan.py report plan.json -v
+```
+
+## Multi-Environment Comparison
+
+The `compare` subcommand compares resource configurations across multiple environments to identify drift and ensure parity.
+
+### Usage
+```bash
+python analyze_plan.py compare <plan_file1> <plan_file2> [plan_file3 ...] [options]
+```
+
+### Options
+- `--html [OUTPUT]` - Generate HTML comparison report (default: comparison_report.html)
+- `--env-names NAMES` - Comma-separated environment names (e.g., "dev,staging,prod"). If not provided, names are derived from filenames
+- `--diff-only` - Show only resources with differences (hide identical resources)
+- `--config FILE` - Path to ignore configuration JSON file
+- `--tf-dir DIR` - Directory containing Terraform .tf files for HCL resolution
+- `--tfvars-files FILES` - Comma-separated list of .tfvars files (one per environment, in same order as plan files)
+- `--show-sensitive` - Show actual sensitive values instead of masking them (not recommended for shared reports)
+- `-v, --verbose` - Show detailed configurations for each resource in text output
+
+### Examples
+
+**Basic Comparison:**
+```bash
+# Compare two environments with auto-detected names
+python analyze_plan.py compare dev-plan.json prod-plan.json
+
+# Compare three environments with custom names
+python analyze_plan.py compare dev.json staging.json prod.json \
+  --env-names "Development,Staging,Production"
+```
+
+**HTML Reports:**
+```bash
+# Generate HTML comparison report
+python analyze_plan.py compare dev.json staging.json prod.json --html
+
+# Custom output path
+python analyze_plan.py compare dev.json staging.json --html reports/comparison.html
+
+# Show only differences
+python analyze_plan.py compare dev.json staging.json prod.json --diff-only --html
+```
+
+**Advanced Features:**
+```bash
+# Compare with HCL resolution
+python analyze_plan.py compare dev.json staging.json \
+  --tf-dir ./terraform \
+  --tfvars-files dev.tfvars,staging.tfvars \
+  --html
+
+# Compare with ignore configuration
+python analyze_plan.py compare dev.json staging.json \
+  --config ignore_config.json \
+  --diff-only
+
+# Verbose text output with sensitive values visible
+python analyze_plan.py compare dev.json staging.json -v --show-sensitive
+```
+
+### Multi-Environment Comparison Features
+
+- **Configuration Drift Detection**: Identifies resources with different configurations across environments
+- **Presence Tracking**: Shows which environments contain each resource
+- **Sensitive Value Handling**: Automatically masks sensitive values with [SENSITIVE] markers
+- **Side-by-Side Comparison**: HTML reports show configurations from all environments in parallel
+- **Difference Highlighting**: Visual indicators for resources with differences vs identical configurations
+- **Ignore Configuration**: Filter out expected differences (tags, timeouts, etc.)
+- **Flexible Output**: Both HTML and text formats supported
+
 
 ## Key Features
 
 ### 🔍 HCL Value Resolution (NEW!)
+- **Resolves "known after apply" values** from Terraform source files
+### 🔍 HCL Value Resolution
 - **Resolves "known after apply" values** from Terraform source files
 - **Shows actual configured values** instead of just "(known after apply)"
 - **Diffs HCL values against current state** to show real changes
@@ -50,74 +174,56 @@ python analyze_plan.py plan.json --html my_report.html
 - Verbose mode (-v) shows before/after values
 - Suitable for piping and grep
 
-## How HCL Resolution Works
+### 🔒 Sensitive Value Handling
+- Automatically masks sensitive values in multi-environment comparisons
+- Use `--show-sensitive` to reveal actual values when needed
+- Visual indicators for sensitive value differences
 
-When a Terraform plan shows a field as "known after apply", the analyzer:
-
-1. **Parses your .tf files** in the specified directory (defaults to plan file location)
-2. **Extracts resource definitions** and their configured attribute values
-3. **Resolves variables** from:
-   - .tfvars files (highest priority)
-   - Environment variables (TF_VAR_*)
-   - variables.tf defaults
-4. **Substitutes resolved values** for "known after apply" fields
-5. **Diffs against current state** to show what will actually change
-6. **Displays with visual cues** to distinguish HCL-resolved vs truly unknown values
-
-### Example
-
-**Before (without HCL resolution):**
-```
-app_settings: (known after apply)  ⚠️
-```
-
-**After (with HCL resolution):**
-```
-app_settings: {
-  "APPINSIGHTS_INSTRUMENTATIONKEY": "${azurerm_application_insights.main.instrumentation_key}",
-  "WEBSITE_RUN_FROM_PACKAGE": "1",
-  "LOCATION": "eastus2"
-}  ⚙️
-```
-
-The ⚙️ emoji indicates these values come from HCL configuration and shows both literal values (like `"1"`) and unresolved variable references (like `${...}`).
+### 🎯 Smart Filtering
+- Ignore configuration support to filter out noise
+- `--diff-only` flag to show only resources with differences
+- Resource-specific and global ignore rules
 
 ## Output Formats
 
-## Example
-
-```bash
-# Generate HTML report with HCL resolution
-python analyze_plan.py ../gsp-infrastructure-tf/2_deployApp/tfplan-test-2.json --config ignore_config.example.json --html
-
-# Specify custom Terraform directory
-python analyze_plan.py plan.json --tf-dir ../my-terraform-code --html
-
-# Text analysis with ignore config
-python analyze_plan.py ../gsp-infrastructure-tf/2_deployApp/tfplan-test-2.json --config ignore_config.example.json
-
-# Verbose text output
-python analyze_plan.py tfplan.json -v
-```
-
-## Resource Categories
-
-The script categorizes resources into:
+### Single Plan Analysis
+The `report` subcommand categorizes resources into:
 - **Created**: New resources being added
 - **Imported**: Resources being imported into state
 - **Updated - Config Changes**: Resources with actual configuration changes
 - **Updated - Tag-Only**: Resources with only tag changes
 - **Deleted**: Resources being removed
 
-## Features
+### Multi-Environment Comparison
+The `compare` subcommand provides:
+- **Summary Statistics**: Total resources, differences, consistency metrics
+- **Resource-by-Resource Comparison**: Side-by-side view of configurations
+- **Presence Tracking**: Shows which environments contain each resource
+- **Difference Detection**: Highlights configuration drift across environments
 
-- **HCL Value Resolution**: Resolves "known after apply" values from Terraform source files
-- **Variable Substitution**: Resolves variables from .tfvars and variables.tf
-- **HTML Report Generation**: Beautiful, interactive HTML reports with diff highlighting
-- **Character-Level Diffs**: Highlights subtle differences like "IotHubs" vs "iotHubs"
-- **Smart Diff Highlighting**: Only highlights actual changes, shows identical values in context
-- **Flexible Ignore Configuration**: Filter out noise from your analysis
-- Filters out computed values (when not resolvable from HCL)
-- Distinguishes between tag-only and configuration changes
-- Provides detailed breakdown of which attributes changed
-- Clean, readable output format (both HTML and text)
+## Ignore Configuration
+
+Create an `ignore_config.json` file to filter out expected differences:
+
+```json
+{
+  "ignore_fields": {
+    "*": ["tags", "timeouts"],
+    "aws_instance": ["user_data"],
+    "azurerm_resource_group": ["location"]
+  }
+}
+```
+
+- `"*"` applies to all resource types (global ignore rules)
+- Specific resource types can have their own ignore rules
+- Fields are ignored consistently across all environments in comparisons
+
+Usage:
+```bash
+# Single plan analysis
+python analyze_plan.py report plan.json --config ignore_config.json --html
+
+# Multi-environment comparison
+python analyze_plan.py compare dev.json staging.json --config ignore_config.json --html
+```

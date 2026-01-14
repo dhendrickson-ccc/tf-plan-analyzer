@@ -1,0 +1,50 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.5.0",
+  "resource_changes": [
+    {
+      "address": "aws_instance.web",
+      "type": "aws_instance",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "ami": "ami-qa123",
+          "instance_type": "t2.medium",
+          "tags": {
+            "Environment": "QA",
+            "Name": "web-server-qa"
+          }
+        },
+        "after": {
+          "ami": "ami-qa123",
+          "instance_type": "t2.medium",
+          "tags": {
+            "Environment": "QA",
+            "Name": "web-server-qa"
+          }
+        }
+      }
+    },
+    {
+      "address": "aws_s3_bucket.data",
+      "type": "aws_s3_bucket",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "bucket": "qa-data-bucket",
+          "versioning": true,
+          "tags": {
+            "Environment": "QA"
+          }
+        },
+        "after": {
+          "bucket": "qa-data-bucket",
+          "versioning": true,
+          "tags": {
+            "Environment": "QA"
+          }
+        }
+      }
+    }
+  ]
+}

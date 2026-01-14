@@ -1,0 +1,48 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.0.0",
+  "resource_changes": [
+    {
+      "address": "aws_instance.web",
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "web",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "instance_type": "t2.large",
+          "ami": "ami-12345",
+          "tags": {
+            "Name": "prod-web-server",
+            "Environment": "production"
+          }
+        },
+        "after": {
+          "instance_type": "t2.large",
+          "ami": "ami-12345",
+          "tags": {
+            "Name": "prod-web-server",
+            "Environment": "production"
+          }
+        }
+      }
+    },
+    {
+      "address": "aws_rds_instance.database",
+      "mode": "managed",
+      "type": "aws_rds_instance",
+      "name": "database",
+      "change": {
+        "actions": ["no-op"],
+        "before": {
+          "instance_class": "db.t3.large",
+          "engine": "postgres"
+        },
+        "after": {
+          "instance_class": "db.t3.large",
+          "engine": "postgres"
+        }
+      }
+    }
+  ]
+}

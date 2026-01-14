@@ -1,0 +1,48 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.0.0",
+  "resource_changes": [
+    {
+      "address": "aws_instance.web",
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "web",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "instance_type": "t2.small",
+          "ami": "ami-12345",
+          "tags": {
+            "Name": "staging-web-server",
+            "Environment": "staging"
+          }
+        },
+        "after": {
+          "instance_type": "t2.medium",
+          "ami": "ami-12345",
+          "tags": {
+            "Name": "staging-web-server",
+            "Environment": "staging"
+          }
+        }
+      }
+    },
+    {
+      "address": "aws_s3_bucket.data",
+      "mode": "managed",
+      "type": "aws_s3_bucket",
+      "name": "data",
+      "change": {
+        "actions": ["no-op"],
+        "before": {
+          "bucket": "staging-data-bucket",
+          "versioning": false
+        },
+        "after": {
+          "bucket": "staging-data-bucket",
+          "versioning": false
+        }
+      }
+    }
+  ]
+}
