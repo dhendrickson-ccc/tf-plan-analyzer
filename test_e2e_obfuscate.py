@@ -550,6 +550,182 @@ def test_drift_detection(tmp_path):
     assert dev_after["api_key"].startswith("obf_")
 
 
+# ==================== USER STORY 3: SALT MANAGEMENT ====================
+
+def test_salt_reuse(tmp_path):
+    """T043: Test reusing salt file across multiple obfuscations."""
+    plan1 = {
+        "format_version": "1.0",
+        "terraform_version": "1.0.0",
+        "resource_changes": [{
+            "address": "aws_db_instance.db1",
+            "type": "aws_db_instance",
+            "change": {
+                "actions": ["create"],
+                "before": None,
+                "after": {"password": "secret123"},
+                "after_sensitive": {"password": True}
+            }
+        }]
+    }
+    
+    plan2 = {
+        "format_version": "1.0",
+        "terraform_version": "1.0.0",
+        "resource_changes": [{
+            "address": "aws_db_instance.db2",
+            "type": "aws_db_instance",
+            "change": {
+                "actions": ["create"],
+                "before": None,
+                "after": {"password": "secret123", "region": "us-east-1"},
+                "after_sensitive": {"password": True}
+            }
+        }]
+    }
+    
+    input1 = tmp_path / "file1.json"
+    input2 = tmp_path / "file2.json"
+    output1 = tmp_path / "obf1.json"
+    output2 = tmp_path / "obf2.json"
+    
+    input1.write_text(json.dumps(plan1))
+    input2.write_text(json.dumps(plan2))
+    
+    # Obfuscate file1 (generates salt)
+    run_obfuscate([str(input1), "--output", str(output1)])
+    salt_file = output1.parent / f"{output1.name}.salt"
+    assert salt_file.exists()
+    
+    # Obfuscate file2 with same salt
+    returncode, stdout, stderr = run_obfuscate([
+        str(input2),
+        "--output", str(output2),
+        "--salt-file", str(salt_file)
+    ])
+    
+    assert returncode == 0
+    # Should NOT create a new salt file when --salt-file is provided
+    salt_file2 = output2.parent / f"{output2.name}.salt"
+    assert not salt_file2.exists(), "Should not create new salt file when reusing existing one"
+    
+    # Verify matching passwords produce matching hashes
+    with open(output1) as f:
+        data1 = json.load(f)
+    with open(output2) as f:
+        data2 = json.load(f)
+    
+    password1 = data1["resource_changes"][0]["change"]["after"]["password"]
+    password2 = data2["resource_changes"][0]["change"]["after"]["password"]
+    
+    assert password1 == password2, "Same password with same salt should produce same hash"
+
+
+def test_different_salts(tmp_path):
+    """T044: Test that different salts produce different outputs."""
+    input_file = TEST_DATA_DIR / "basic.json"
+    output1 = tmp_path / "obf1.json"
+    output2 = tmp_path / "obf2.json"
+    
+    # First obfuscation
+    run_obfuscate([str(input_file), "--output", str(output1)])
+    
+    # Second obfuscation (different salt)
+    run_obfuscate([str(input_file), "--output", str(output2)])
+    
+    # Read outputs
+    with open(output1) as f:
+        data1 = json.load(f)
+    with open(output2) as f:
+        data2 = json.load(f)
+    
+    # Passwords should be different (different salts)
+    password1 = data1["resource_changes"][0]["change"]["after"]["password"]
+    password2 = data2["resource_changes"][0]["change"]["after"]["password"]
+    
+    assert password1 != password2, "Different salts should produce different hashes"
+    assert password1.startswith("obf_")
+    assert password2.startswith("obf_")
+
+
+def test_salt_file_not_found(tmp_path):
+    """T045: Test exit code 5 when salt file doesn't exist."""
+    input_file = TEST_DATA_DIR / "basic.json"
+    output_file = tmp_path / "obf.json"
+    missing_salt = tmp_path / "missing.salt"
+    
+    returncode, stdout, stderr = run_obfuscate([
+        str(input_file),
+        "--output", str(output_file),
+        "--salt-file", str(missing_salt)
+    ])
+    
+    # Should fail with exit code 5
+    assert returncode == 5
+    assert "Salt file not found" in stderr
+
+
+def test_corrupted_salt_file(tmp_path):
+    """T046: Test exit code 6 for corrupted salt file."""
+    input_file = TEST_DATA_DIR / "basic.json"
+    output_file = tmp_path / "obf.json"
+    corrupt_salt = tmp_path / "corrupt.salt"
+    
+    # Create corrupted salt file
+    corrupt_salt.write_bytes(b"not a valid salt file format")
+    
+    returncode, stdout, stderr = run_obfuscate([
+        str(input_file),
+        "--output", str(output_file),
+        "--salt-file", str(corrupt_salt)
+    ])
+    
+    # Should fail with exit code 6
+    assert returncode == 6
+    assert ("Failed to" in stderr and "salt" in stderr.lower()) or "decrypt" in stderr.lower()
+
+
+def test_environment_variable_encryption(tmp_path):
+    """T047: Test TF_ANALYZER_SALT_KEY enables salt decryption across different sessions."""
+    input_file = TEST_DATA_DIR / "basic.json"
+    output1 = tmp_path / "obf1.json"
+    output2 = tmp_path / "obf2.json"
+    
+    # First run: Generate salt with explicit key (valid Fernet key)
+    test_key = "FKNSRhmPlGYip9-IzC4TT5q82A5C-TKjRNlKmXkP5Rc="
+    env1 = {"TF_ANALYZER_SALT_KEY": test_key}
+    
+    returncode1, stdout1, stderr1 = run_obfuscate([
+        str(input_file),
+        "--output", str(output1)
+    ], env=env1)
+    
+    assert returncode1 == 0
+    assert "WARNING: TF_ANALYZER_SALT_KEY environment variable not set!" not in stderr1
+    
+    salt_file = output1.parent / f"{output1.name}.salt"
+    assert salt_file.exists()
+    
+    # Second run: Reuse salt with same key (simulating different CI node)
+    env2 = {"TF_ANALYZER_SALT_KEY": test_key}
+    
+    returncode2, stdout2, stderr2 = run_obfuscate([
+        str(input_file),
+        "--output", str(output2),
+        "--salt-file", str(salt_file)
+    ], env=env2)
+    
+    assert returncode2 == 0
+    
+    # Verify outputs are identical
+    with open(output1) as f:
+        data1 = json.load(f)
+    with open(output2) as f:
+        data2 = json.load(f)
+    
+    assert data1 == data2, "Same key should enable decryption and produce identical output"
+
+
 if __name__ == "__main__":
     # Run tests with pytest
     pytest.main([__file__, "-v"])

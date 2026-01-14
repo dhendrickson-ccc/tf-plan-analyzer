@@ -56,24 +56,24 @@ description: "Implementation tasks for Sensitive Data Obfuscation feature"
 
 ### Implementation for User Story 1
 
-- [ ] T014 [P] [US1] Implement obfuscate_value() core hashing logic in sensitive_obfuscator.py: convert value to bytes, insert salt at position, SHA-256 hash, format as "obf_" + hexdigest
-- [ ] T015 [P] [US1] Implement traverse_and_obfuscate() function in sensitive_obfuscator.py to recursively traverse JSON and find sensitive_values markers
-- [ ] T016 [US1] Implement value replacement logic in sensitive_obfuscator.py: for each field marked true in sensitive_values, replace corresponding value in resource data with obfuscated hash
-- [ ] T017 [US1] Add obfuscate subcommand to analyze_plan.py with argument parser for positional plan_file argument
-- [ ] T018 [US1] Implement --output/-o flag in analyze_plan.py obfuscate subcommand with default value <input_stem>-obfuscated.json
-- [ ] T019 [US1] Implement input file validation in analyze_plan.py: check file exists, parse JSON, validate Terraform plan structure (has resource_changes field)
-- [ ] T020 [US1] Implement output file check in analyze_plan.py: exit with error code 4 if output file already exists
-- [ ] T021 [US1] Implement main obfuscation workflow in analyze_plan.py: load plan → generate salt → traverse resources → obfuscate sensitive values → write output
-- [ ] T022 [US1] Implement salt file auto-creation in analyze_plan.py: save generated salt to <output>.salt using store_salt() from salt_manager.py
-- [ ] T023 [US1] Implement error handling in analyze_plan.py: catch and report errors with detailed messages to stderr, appropriate exit codes (1-8)
-- [ ] T024 [US1] Add type handling in sensitive_obfuscator.py obfuscate_value(): support string, number, boolean, null (convert all to JSON bytes for hashing)
-- [ ] T025 [US1] Create test_e2e_obfuscate.py with test_basic_obfuscation() using test_data/obfuscate/basic.json
-- [ ] T026 [P] [US1] Create tests in test_e2e_obfuscate.py: test_nested_obfuscation(), test_multiple_resources(), test_empty_sensitive_value(), test_null_sensitive_value()
-- [ ] T027 [P] [US1] Create tests in test_e2e_obfuscate.py: test_no_sensitive_marker(), test_invalid_json(), test_malformed_sensitive_values()
-- [ ] T027b [US1] Create test_e2e_obfuscate.py test_error_behavior(): verify FR-018 (detailed error messages to stderr with resource/field) and FR-019 (no output file created on any error)
-- [ ] T028 [US1] Verify all FR requirements for US1: FR-001 through FR-008, FR-010 through FR-014, FR-017 through FR-019, FR-022
-- [ ] T029 [US1] Test with real Terraform plan files from test_data/: dev-sensitive.json and prod-sensitive.json
-- [ ] T030 [US1] Validate quickstart.md Step 1-3 instructions work end-to-end
+- [X] T014 [P] [US1] Implement obfuscate_value() core hashing logic in sensitive_obfuscator.py: convert value to bytes, insert salt at position, SHA-256 hash, format as "obf_" + hexdigest
+- [X] T015 [P] [US1] Implement traverse_and_obfuscate() function in sensitive_obfuscator.py to recursively traverse JSON and find sensitive_values markers
+- [X] T016 [US1] Implement value replacement logic in sensitive_obfuscator.py: for each field marked true in sensitive_values, replace corresponding value in resource data with obfuscated hash
+- [X] T017 [US1] Add obfuscate subcommand to analyze_plan.py with argument parser for positional plan_file argument
+- [X] T018 [US1] Implement --output/-o flag in analyze_plan.py obfuscate subcommand with default value <input_stem>-obfuscated.json
+- [X] T019 [US1] Implement input file validation in analyze_plan.py: check file exists, parse JSON, validate Terraform plan structure (has resource_changes field)
+- [X] T020 [US1] Implement output file check in analyze_plan.py: exit with error code 4 if output file already exists
+- [X] T021 [US1] Implement main obfuscation workflow in analyze_plan.py: load plan → generate salt → traverse resources → obfuscate sensitive values → write output
+- [X] T022 [US1] Implement salt file auto-creation in analyze_plan.py: save generated salt to <output>.salt using store_salt() from salt_manager.py
+- [X] T023 [US1] Implement error handling in analyze_plan.py: catch and report errors with detailed messages to stderr, appropriate exit codes (1-8)
+- [X] T024 [US1] Add type handling in sensitive_obfuscator.py obfuscate_value(): support string, number, boolean, null (convert all to JSON bytes for hashing)
+- [X] T025 [US1] Create test_e2e_obfuscate.py with test_basic_obfuscation() using test_data/obfuscate/basic.json
+- [X] T026 [P] [US1] Create tests in test_e2e_obfuscate.py: test_nested_obfuscation(), test_multiple_resources(), test_empty_sensitive_value(), test_null_sensitive_value()
+- [X] T027 [P] [US1] Create tests in test_e2e_obfuscate.py: test_no_sensitive_marker(), test_invalid_json(), test_malformed_sensitive_values()
+- [X] T027b [US1] Create test_e2e_obfuscate.py test_error_behavior(): verify FR-018 (detailed error messages to stderr with resource/field) and FR-019 (no output file created on any error)
+- [X] T028 [US1] Verify all FR requirements for US1: FR-001 through FR-008, FR-010 through FR-014, FR-017 through FR-019, FR-022
+- [X] T029 [US1] Test with real Terraform plan files from test_data/: dev-sensitive.json and prod-sensitive.json
+- [X] T030 [US1] Validate quickstart.md Step 1-3 instructions work end-to-end
 
 **Checkpoint**: User Story 1 complete - single file obfuscation works, safe sharing enabled
 
@@ -87,14 +87,14 @@ description: "Implementation tasks for Sensitive Data Obfuscation feature"
 
 ### Implementation for User Story 2
 
-- [ ] T031 [US2] Verify determinism in obfuscate_value() function: same input + same salt + same position_seed → identical hash every time
-- [ ] T032 [US2] Create test_e2e_obfuscate.py test_deterministic_same_file(): obfuscate same file twice with same salt, assert outputs are byte-identical
-- [ ] T033 [US2] Create test_e2e_obfuscate.py test_deterministic_cross_file(): create two different plans with same sensitive value, obfuscate with same salt, assert matching values have matching hashes
-- [ ] T034 [US2] Create test_e2e_obfuscate.py test_drift_detection(): create two plans with some matching and some different sensitive values, obfuscate both, verify differences are visible as different hashes
-- [ ] T035 [US2] Validate with existing compare functionality: obfuscate dev-sensitive.json and prod-sensitive.json with same salt, run analyze_plan.py compare, verify comparison works correctly
-- [ ] T036 [US2] Validate SC-002 success criteria: same file + same salt = 100% identical output
-- [ ] T037 [US2] Validate SC-003 success criteria: different files + same sensitive value + same salt = matching hashes
-- [ ] T038 [US2] Validate SC-004 success criteria: users can compare obfuscated files and identify actual drift
+- [X] T031 [US2] Verify determinism in obfuscate_value() function: same input + same salt + same position_seed → identical hash every time
+- [X] T032 [US2] Create test_e2e_obfuscate.py test_deterministic_same_file(): obfuscate same file twice with same salt, assert outputs are byte-identical
+- [X] T033 [US2] Create test_e2e_obfuscate.py test_deterministic_cross_file(): create two different plans with same sensitive value, obfuscate with same salt, assert matching values have matching hashes
+- [X] T034 [US2] Create test_e2e_obfuscate.py test_drift_detection(): create two plans with some matching and some different sensitive values, obfuscate both, verify differences are visible as different hashes
+- [X] T035 [US2] Validate with existing compare functionality: obfuscate dev-sensitive.json and prod-sensitive.json with same salt, run analyze_plan.py compare, verify comparison works correctly
+- [X] T036 [US2] Validate SC-002 success criteria: same file + same salt = 100% identical output
+- [X] T037 [US2] Validate SC-003 success criteria: different files + same sensitive value + same salt = matching hashes
+- [X] T038 [US2] Validate SC-004 success criteria: users can compare obfuscated files and identify actual drift
 
 **Checkpoint**: User Story 2 complete - drift detection validated across environments
 
@@ -108,16 +108,16 @@ description: "Implementation tasks for Sensitive Data Obfuscation feature"
 
 ### Implementation for User Story 3
 
-- [ ] T039 [P] [US3] Implement --salt-file/-s flag in analyze_plan.py obfuscate subcommand to accept path to existing salt file
-- [ ] T040 [US3] Implement salt file loading logic in analyze_plan.py: when --salt-file provided, load salt using load_salt() instead of generating new one
-- [ ] T041 [US3] Implement salt file validation in analyze_plan.py: exit with error code 5 if salt file not found, code 6 if corrupted/invalid
-- [ ] T042 [US3] Update obfuscation workflow in analyze_plan.py: skip salt file creation when --salt-file was provided (salt already exists)
-- [ ] T043 [US3] Create test_e2e_obfuscate.py test_salt_reuse(): generate salt, obfuscate file1, reuse salt for file2, verify matching sensitive values have matching hashes
-- [ ] T044 [US3] Create test_e2e_obfuscate.py test_different_salts(): obfuscate same file with two different salts, verify outputs differ
-- [ ] T045 [US3] Create test_e2e_obfuscate.py test_salt_file_not_found(): verify exit code 5 when --salt-file points to non-existent file
-- [ ] T046 [US3] Create test_e2e_obfuscate.py test_corrupted_salt_file(): create invalid salt file, verify exit code 6 and helpful error message
-- [ ] T047 [US3] Test environment variable encryption: verify TF_ANALYZER_SALT_KEY enables salt decryption across different machines/CI nodes
-- [ ] T048 [US3] Validate FR-009, FR-015, FR-016, FR-020, FR-021: salt generation, reuse, encryption, naming, file specification
+- [X] T039 [P] [US3] Implement --salt-file/-s flag in analyze_plan.py obfuscate subcommand to accept path to existing salt file
+- [X] T040 [US3] Implement salt file loading logic in analyze_plan.py: when --salt-file provided, load salt using load_salt() instead of generating new one
+- [X] T041 [US3] Implement salt file validation in analyze_plan.py: exit with error code 5 if salt file not found, code 6 if corrupted/invalid
+- [X] T042 [US3] Update obfuscation workflow in analyze_plan.py: skip salt file creation when --salt-file was provided (salt already exists)
+- [X] T043 [US3] Create test_e2e_obfuscate.py test_salt_reuse(): generate salt, obfuscate file1, reuse salt for file2, verify matching sensitive values have matching hashes
+- [X] T044 [US3] Create test_e2e_obfuscate.py test_different_salts(): obfuscate same file with two different salts, verify outputs differ
+- [X] T045 [US3] Create test_e2e_obfuscate.py test_salt_file_not_found(): verify exit code 5 when --salt-file points to non-existent file
+- [X] T046 [US3] Create test_e2e_obfuscate.py test_corrupted_salt_file(): create invalid salt file, verify exit code 6 and helpful error message
+- [X] T047 [US3] Test environment variable encryption: verify TF_ANALYZER_SALT_KEY enables salt decryption across different machines/CI nodes
+- [X] T048 [US3] Validate FR-009, FR-015, FR-016, FR-020, FR-021: salt generation, reuse, encryption, naming, file specification
 - [ ] T049 [US3] Validate quickstart.md "Drift Detection Across Environments" workflow end-to-end
 
 **Checkpoint**: User Story 3 complete - salt management fully functional, security enhanced
