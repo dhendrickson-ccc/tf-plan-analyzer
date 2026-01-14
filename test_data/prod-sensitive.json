@@ -1,0 +1,31 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.0.0",
+  "resource_changes": [
+    {
+      "address": "aws_db_instance.database",
+      "type": "aws_db_instance",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "id": "db-instance-prod",
+          "engine": "postgres",
+          "username": "admin",
+          "password": "prod-secret-password"
+        },
+        "after": {
+          "id": "db-instance-prod",
+          "engine": "postgres",
+          "username": "admin",
+          "password": "prod-secret-password-new"
+        },
+        "before_sensitive": {
+          "password": true
+        },
+        "after_sensitive": {
+          "password": true
+        }
+      }
+    }
+  ]
+}

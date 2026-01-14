@@ -138,9 +138,9 @@
 
 - [X] T055 [P] [US2] Write end-to-end test: use --env-names flag, verify custom labels in HTML in test_e2e_multi_env.py
 - [X] T056 [P] [US2] Write end-to-end test: omit --env-names, verify names derived from filenames in test_e2e_multi_env.py
-- [ ] T057 [US2] Write end-to-end test: provide mismatched env-names count, verify error message in test_e2e_multi_env.py
-- [ ] T058 [US2] Run end-to-end tests and validate custom labeling works correctly
-- [ ] T059 [US2] Fix any naming or ordering issues
+- [X] T057 [US2] Write end-to-end test: provide mismatched env-names count, verify error message in test_e2e_multi_env.py
+- [X] T058 [US2] Run end-to-end tests and validate custom labeling works correctly
+- [X] T059 [US2] Fix any naming or ordering issues
 
 **Checkpoint**: Environment labeling and ordering functionality complete
 
@@ -179,26 +179,26 @@
 
 ### Implementation
 
-- [ ] T069 [P] Add --tf-dir flag to compare subcommand (reuse existing flag pattern) in analyze_plan.py
-- [ ] T070 [P] Add --tfvars-files flag to compare subcommand argparse in analyze_plan.py
-- [ ] T071 Implement tfvars file list parsing (comma-separated) in compare handler
-- [ ] T072 Validate that number of tfvars files matches number of plan files, show error if mismatch
-- [ ] T073 Create HCLValueResolver instance for each environment with corresponding tfvars file in EnvironmentPlan
-- [ ] T074 Apply HCL resolution to "known after apply" values in each environment's before_values
-- [ ] T075 [P] Implement sensitive value detection across environments in ResourceComparison
-- [ ] T076 [P] Add --show-sensitive flag support to compare subcommand in analyze_plan.py
-- [ ] T077 Implement masked sensitive value display ("[SENSITIVE]") with difference highlighting in HTML
-- [ ] T078 Add visual indicator (⚠️) when masked sensitive values differ across environments
+- [X] T069 [P] Add --tf-dir flag to compare subcommand (reuse existing flag pattern) in analyze_plan.py
+- [X] T070 [P] Add --tfvars-files flag to compare subcommand argparse in analyze_plan.py
+- [X] T071 Implement tfvars file list parsing (comma-separated) in compare handler
+- [X] T072 Validate that number of tfvars files matches number of plan files, show error if mismatch
+- [X] T073 Create HCLValueResolver instance for each environment with corresponding tfvars file in EnvironmentPlan
+- [X] T074 Apply HCL resolution to "known after apply" values in each environment's before_values
+- [X] T075 [P] Implement sensitive value detection across environments in ResourceComparison
+- [X] T076 [P] Add --show-sensitive flag support to compare subcommand in analyze_plan.py
+- [X] T077 Implement masked sensitive value display ("[SENSITIVE]") with difference highlighting in HTML
+- [X] T078 Add visual indicator (⚠️) when masked sensitive values differ across environments
 
 ### Tests
 
-- [ ] T079 [P] Write end-to-end test: use --tf-dir and --tfvars-files, verify HCL-resolved values in HTML in test_e2e_multi_env.py
-- [ ] T080 [P] Write end-to-end test: verify mismatched tfvars count triggers error in test_e2e_multi_env.py
-- [ ] T081 [P] Write end-to-end test: verify sensitive values masked by default in test_e2e_multi_env.py
-- [ ] T082 [P] Write end-to-end test: verify --show-sensitive reveals actual values in test_e2e_multi_env.py
-- [ ] T083 [P] Write end-to-end test: verify differing masked sensitive values are highlighted in test_e2e_multi_env.py
-- [ ] T084 Run HCL resolution tests with real tfvars files
-- [ ] T085 Fix any HCL resolution issues
+- [X] T079 [P] Write end-to-end test: use --tf-dir and --tfvars-files, verify HCL-resolved values in HTML in test_e2e_multi_env.py
+- [X] T080 [P] Write end-to-end test: verify mismatched tfvars count triggers error in test_e2e_multi_env.py
+- [X] T081 [P] Write end-to-end test: verify sensitive values masked by default in test_e2e_multi_env.py
+- [X] T082 [P] Write end-to-end test: verify --show-sensitive reveals actual values in test_e2e_multi_env.py
+- [X] T083 [P] Write end-to-end test: verify differing masked sensitive values are highlighted in test_e2e_multi_env.py
+- [X] T084 Run HCL resolution tests with real tfvars files
+- [X] T085 Fix any HCL resolution issues
 
 **Checkpoint**: HCL resolution and sensitive value handling complete
 
@@ -212,19 +212,19 @@
 
 ### Implementation
 
-- [ ] T086 [P] Add expand/collapse JavaScript controls for nested JSON structures in HTML template in generate_html_report.py
-- [ ] T087 [P] Add CSS styling for collapsible sections (default: collapsed for depth > 2)
-- [ ] T088 Add --config flag to compare subcommand (reuse existing ignore config format) in analyze_plan.py
-- [ ] T089 Load ignore configuration in compare handler
-- [ ] T090 Apply ignore fields consistently across all environments in ResourceComparison
-- [ ] T091 Update diff detection to respect ignore configuration
+- [X] T086 [P] Add expand/collapse JavaScript controls for nested JSON structures in HTML template in generate_html_report.py
+- [X] T087 [P] Add CSS styling for collapsible sections (default: collapsed for depth > 2)
+- [X] T088 Add --config flag to compare subcommand (reuse existing ignore config format) in analyze_plan.py
+- [X] T089 Load ignore configuration in compare handler
+- [X] T090 Apply ignore fields consistently across all environments in ResourceComparison
+- [X] T091 Update diff detection to respect ignore configuration
 
 ### Tests
 
-- [ ] T092 [P] Write end-to-end test: verify deeply nested structures are collapsed by default in test_e2e_multi_env.py
-- [ ] T093 [P] Write end-to-end test: use --config flag, verify ignored fields not shown in diffs in test_e2e_multi_env.py
-- [ ] T094 Run tests with complex nested structures and ignore configs
-- [ ] T095 Fix any collapsing or ignore configuration issues
+- [X] T092 [P] Write end-to-end test: verify deeply nested structures are collapsed by default in test_e2e_multi_env.py
+- [X] T093 [P] Write end-to-end test: use --config flag, verify ignored fields not shown in diffs in test_e2e_multi_env.py
+- [X] T094 Run tests with complex nested structures and ignore configs
+- [X] T095 Fix any collapsing or ignore configuration issues
 
 **Checkpoint**: Nested structure handling and ignore config support complete
 
@@ -238,18 +238,18 @@
 
 ### Implementation for User Story 5
 
-- [ ] T096 [P] [US5] Implement text output formatter for multi-environment comparison in multi_env_comparator.py
-- [ ] T097 [US5] Add resource grouping logic for text display (group by resource address)
-- [ ] T098 [US5] Implement column-style text output with environment names
-- [ ] T099 [US5] Add -v (verbose) flag support for detailed text output in compare subcommand
-- [ ] T100 [US5] Handle terminal width gracefully (wrap or truncate with indicators)
+- [X] T096 [P] [US5] Implement text output formatter for multi-environment comparison in multi_env_comparator.py
+- [X] T097 [US5] Add resource grouping logic for text display (group by resource address)
+- [X] T098 [US5] Implement column-style text output with environment names
+- [X] T099 [US5] Add -v (verbose) flag support for detailed text output in compare subcommand
+- [X] T100 [US5] Handle terminal width gracefully (wrap or truncate with indicators)
 
 ### Tests for User Story 5
 
-- [ ] T101 [P] [US5] Write end-to-end test: omit --html flag, verify text output generated in test_e2e_multi_env.py
-- [ ] T102 [P] [US5] Write end-to-end test: use -v flag, verify verbose text output in test_e2e_multi_env.py
-- [ ] T103 [US5] Run text output tests and validate readability
-- [ ] T104 [US5] Fix any text formatting issues
+- [X] T101 [P] [US5] Write end-to-end test: omit --html flag, verify text output generated in test_e2e_multi_env.py
+- [X] T102 [P] [US5] Write end-to-end test: use -v flag, verify verbose text output in test_e2e_multi_env.py
+- [X] T103 [US5] Run text output tests and validate readability
+- [X] T104 [US5] Fix any text formatting issues
 
 **Checkpoint**: Text output functionality complete
 
@@ -261,32 +261,32 @@
 
 ### Error Handling & Edge Cases
 
-- [ ] T105 Add error handling for corrupted/invalid JSON plan files
-- [ ] T106 Add error handling for plan files from different Terraform versions
-- [ ] T107 Add validation for duplicate environment names (error if names conflict)
-- [ ] T108 Implement graceful handling of plan files with different resource types
-- [ ] T109 Add error handling for missing plan files (clear file not found messages)
-- [ ] T110 Test edge case: same resource address but different resource types across environments
+- [X] T105 Add error handling for corrupted/invalid JSON plan files
+- [X] T106 Add error handling for plan files from different Terraform versions
+- [X] T107 Add validation for duplicate environment names (error if names conflict)
+- [X] T108 Implement graceful handling of plan files with different resource types
+- [X] T109 Add error handling for missing plan files (clear file not found messages)
+- [X] T110 Test edge case: same resource address but different resource types across environments
 
 ### Documentation & Help
 
-- [ ] T111 Update README.md with compare subcommand documentation and examples
-- [ ] T112 Add usage examples to --help text for both subcommands
-- [ ] T113 Create example plan files for testing/demonstration purposes (must include: 2+ resource types (e.g., aws_instance, aws_s3_bucket), nested configuration depth 3+, at least one sensitive value, one resource missing in one environment)
-- [ ] T114 Update existing documentation to reference new subcommand architecture
+- [X] T111 Update README.md with compare subcommand documentation and examples
+- [X] T112 Add usage examples to --help text for both subcommands
+- [X] T113 Create example plan files for testing/demonstration purposes (must include: 2+ resource types (e.g., aws_instance, aws_s3_bucket), nested configuration depth 3+, at least one sensitive value, one resource missing in one environment)
+- [X] T114 Update existing documentation to reference new subcommand architecture
 
 ### Final Validation
 
-- [ ] T115 Run all unit tests and verify 100% pass rate
-- [ ] T116 Run all end-to-end tests and verify 100% pass rate
-- [ ] T117 Performance test: verify 3 plans with 100 resources each complete in <10 seconds
-- [ ] T118 Performance test: verify 5 environments process without degradation
-- [ ] T119 Backward compatibility test: verify all existing analyze_plan.py use cases still work with 'report' subcommand
-- [ ] T120 Manual test: generate comparison reports with real Terraform plans and validate output quality
-- [ ] T121 Manual test: verify HTML reports are readable and visually clear
-- [ ] T122 Code review: verify no code duplication (Constitution Principle I)
-- [ ] T123 Constitution check: verify all data entities in canonical data model (Principle II)
-- [ ] T124 Constitution check: verify end-to-end tests cover all CLI flags (Principle V)
+- [X] T115 Run all unit tests and verify 100% pass rate
+- [X] T116 Run all end-to-end tests and verify 100% pass rate
+- [X] T117 Performance test: verify 3 plans with 100 resources each complete in <10 seconds
+- [X] T118 Performance test: verify 5 environments process without degradation
+- [X] T119 Backward compatibility test: verify all existing analyze_plan.py use cases still work with 'report' subcommand
+- [X] T120 Manual test: generate comparison reports with real Terraform plans and validate output quality
+- [X] T121 Manual test: verify HTML reports are readable and visually clear
+- [X] T122 Code review: verify no code duplication (Constitution Principle I)
+- [X] T123 Constitution check: verify all data entities in canonical data model (Principle II)
+- [X] T124 Constitution check: verify end-to-end tests cover all CLI flags (Principle V)
 
 ---
 

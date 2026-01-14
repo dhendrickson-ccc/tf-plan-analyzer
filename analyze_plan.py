@@ -1974,6 +1974,24 @@ def handle_compare_subcommand(args):
             print(f"Error: File not found: {plan_file}")
             sys.exit(1)
     
+    # Parse and validate tfvars files if provided
+    tfvars_files = None
+    if args.tfvars_files:
+        tfvars_files = [f.strip() for f in args.tfvars_files.split(',')]
+        
+        # Validate count matches plan files
+        if len(tfvars_files) != len(args.plan_files):
+            print(f"Error: Number of tfvars files ({len(tfvars_files)}) must match number of plan files ({len(args.plan_files)})")
+            print(f"Provided tfvars: {', '.join(tfvars_files)}")
+            print(f"Provided plan files: {len(args.plan_files)}")
+            sys.exit(1)
+        
+        # Check tfvars files exist
+        for tfvars_file in tfvars_files:
+            if not Path(tfvars_file).exists():
+                print(f"Error: Tfvars file not found: {tfvars_file}")
+                sys.exit(1)
+    
     # Create environment names
     if args.env_names:
         # Parse comma-separated names
@@ -1993,20 +2011,70 @@ def handle_compare_subcommand(args):
             name = Path(plan_file).stem
             env_names.append(name)
     
+    # Validate for duplicate environment names
+    if len(env_names) != len(set(env_names)):
+        duplicates = [name for name in env_names if env_names.count(name) > 1]
+        print(f"Error: Duplicate environment names detected: {', '.join(set(duplicates))}")
+        print("Each environment must have a unique name. Use --env-names to specify custom names.")
+        sys.exit(1)
+    
     # Create EnvironmentPlan objects
     environments = []
-    for name, plan_file in zip(env_names, args.plan_files):
-        env_plan = EnvironmentPlan(label=name, plan_file_path=Path(plan_file))
+    for idx, (name, plan_file) in enumerate(zip(env_names, args.plan_files)):
+        # Get corresponding tfvars file if provided
+        tfvars_file = tfvars_files[idx] if tfvars_files else None
+        
+        env_plan = EnvironmentPlan(
+            label=name, 
+            plan_file_path=Path(plan_file),
+            tf_dir=args.tf_dir,
+            tfvars_file=tfvars_file,
+            show_sensitive=args.show_sensitive
+        )
         environments.append(env_plan)
     
     print(f"Comparing {len(args.plan_files)} environments: {', '.join(env_names)}")
     
+    # Load ignore configuration if provided
+    ignore_config = None
+    if args.config:
+        if not Path(args.config).exists():
+            print(f"Error: Ignore config file not found: {args.config}")
+            sys.exit(1)
+        
+        try:
+            with open(args.config, 'r') as f:
+                ignore_config = json.load(f)
+        except json.JSONDecodeError as e:
+            print(f"Error: Invalid JSON in config file: {e}")
+            sys.exit(1)
+    
     # Create MultiEnvReport and perform comparison
     diff_only = getattr(args, 'diff_only', False)
-    report = MultiEnvReport(environments=environments, diff_only=diff_only)
-    report.load_environments()
-    report.build_comparisons()
-    report.calculate_summary()
+    report = MultiEnvReport(
+        environments=environments, 
+        diff_only=diff_only,
+        ignore_config=ignore_config
+    )
+    
+    # Load environments with error handling
+    try:
+        report.load_environments()
+    except json.JSONDecodeError as e:
+        print(f"Error: Invalid JSON in plan file: {e}")
+        print("Ensure all plan files are valid Terraform JSON plan outputs.")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error loading plan files: {e}")
+        sys.exit(1)
+    
+    # Build comparisons and calculate summary
+    try:
+        report.build_comparisons()
+        report.calculate_summary()
+    except Exception as e:
+        print(f"Error during comparison: {e}")
+        sys.exit(1)
     
     # Generate output
     if args.html:
@@ -2022,16 +2090,10 @@ def handle_compare_subcommand(args):
         print(f"📊 Summary: {report.summary_stats['total_unique_resources']} resources, " +
               f"{report.summary_stats['resources_with_differences']} with differences")
     else:
-        # Text output (simplified for now)
-        print(f"\n{'='*60}")
-        print("COMPARISON SUMMARY")
-        print(f"{'='*60}")
-        print(f"Environments compared: {report.summary_stats['total_environments']}")
-        print(f"Total unique resources: {report.summary_stats['total_unique_resources']}")
-        print(f"Resources with differences: {report.summary_stats['resources_with_differences']}")
-        print(f"Resources consistent: {report.summary_stats['resources_consistent']}")
-        print(f"Resources missing from some envs: {report.summary_stats['resources_missing_from_some']}")
-        print(f"{'='*60}\n")
+        # Text output with verbose support
+        verbose = getattr(args, 'verbose', False)
+        text_output = report.generate_text(verbose=verbose)
+        print(text_output)
 
 
 def main():
@@ -2232,6 +2294,37 @@ Examples:
         '--diff-only',
         action='store_true',
         help='Show only resources with differences (hide identical resources)'
+    )
+    compare_parser.add_argument(
+        '--tf-dir',
+        type=str,
+        default=None,
+        metavar='DIR',
+        help='Directory containing Terraform .tf files for HCL value resolution'
+    )
+    compare_parser.add_argument(
+        '--tfvars-files',
+        type=str,
+        default=None,
+        metavar='FILES',
+        help='Comma-separated list of .tfvars files (one per environment, in same order as plan files)'
+    )
+    compare_parser.add_argument(
+        '--show-sensitive',
+        action='store_true',
+        help='Show actual sensitive values instead of masking them (not recommended for shared reports)'
+    )
+    compare_parser.add_argument(
+        '--config',
+        type=str,
+        default=None,
+        metavar='FILE',
+        help='Path to ignore configuration JSON file (same format as single-plan report)'
+    )
+    compare_parser.add_argument(
+        '-v', '--verbose',
+        action='store_true',
+        help='Show detailed configuration for each resource in text output'
     )
     
     args = parser.parse_args()

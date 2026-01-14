@@ -1,0 +1,6 @@
+{
+  "ignore_fields": {
+    "*": ["tags", "timeouts"],
+    "aws_instance": ["user_data"]
+  }
+}
