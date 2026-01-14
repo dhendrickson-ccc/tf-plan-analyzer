@@ -40,27 +40,13 @@ When configuration values are similar but not identical (e.g., "instance_type": 
 
 ---
 
-### User Story 3 - [Brief Title] (Priority: P3)
-
-[Describe this user journey in plain language]
-
-**Why this priority**: [Explain the value and why it has this priority level]
-
-**Independent Test**: [Describe how this can be tested independently]
-
-**Acceptance Scenarios**:
-
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
-
----
-
 ### Edge Cases
 
-- What happens when comparing configurations with deeply nested JSON structures (3+ levels deep)? Character-level diff should still apply to leaf values.
-- How does the system handle very long string values (>200 characters)? Should maintain readability without overwhelming the display.
-- What happens when one environment has a field that doesn't exist in another? Show as addition/deletion at the field level, not character level.
-- How does character-level diff interact with sensitive value masking? Masked values should not show character diffs.
-- What happens when comparing more than 3 environments? Each environment should show diffs relative to a baseline for consistency.
+- What happens when comparing configurations with deeply nested JSON structures (3+ levels deep)? **CLARIFIED:** Character-level diff applies to all leaf values at any nesting depth.
+- How does the system handle very long string values (>200 characters)? **CLARIFIED:** Apply character-level diff normally and allow HTML to wrap long lines naturally (no truncation or special handling).
+- What happens when one environment has a field that doesn't exist in another? **CLARIFIED:** Show field-level addition/deletion (entire line highlighted as added/removed), not character-level diff, since there's no corresponding text to compare.
+- How does character-level diff interact with sensitive value masking? Masked values ([SENSITIVE]) should not show character diffs.
+- What happens when comparing more than 3 environments? **CLARIFIED:** First environment (leftmost column) serves as the baseline. All other environments show character-level diffs relative to the first environment.
 
 ## Requirements *(mandatory)*
 
@@ -70,12 +56,18 @@ When configuration values are similar but not identical (e.g., "instance_type": 
 - **FR-002**: System MUST use the same character-level diff algorithm currently used in the `report` subcommand's `highlight_json_diff()` function in `generate_html_report.py`
 - **FR-003**: System MUST highlight only the characters that differ between environment configurations, not entire JSON blocks
 - **FR-004**: System MUST maintain visual alignment between environment columns when showing character-level diffs
+- **FR-004a**: System MUST use the first environment (leftmost column) as the baseline for all comparisons
+- **FR-004b**: System MUST display the baseline environment (first column) as plain JSON without highlighting
+- **FR-004c**: System MUST display all non-baseline environments (columns 2, 3, 4, etc.) with character-level diff highlighting relative to the baseline
 - **FR-005**: System MUST apply character-level diff only to lines that are >50% similar (using `difflib.SequenceMatcher` ratio), falling back to line-level highlighting for completely different lines
+- **FR-005a**: System MUST apply character-level diff to leaf values at any nesting depth (no depth restrictions)
 - **FR-006**: System MUST display identical configurations without highlighting (preserve current "identical" display behavior)
 - **FR-007**: System MUST support character-level diff for all JSON value types (strings, numbers, booleans) when serialized
 - **FR-008**: System MUST preserve existing CSS classes for diff highlighting (`.added`, `.removed`, `.unchanged`)
 - **FR-009**: System MUST integrate with existing collapsible resource blocks without breaking expand/collapse functionality
 - **FR-010**: Character-level diff MUST NOT apply to sensitive values that are masked with `[SENSITIVE]` markers
+- **FR-011**: When a field exists in one environment but not another, system MUST highlight the entire field line as added/removed (not character-level diff)
+- **FR-012**: System MUST allow long string values (>200 characters) to wrap naturally in HTML without truncation or special handling
 
 ### Key Entities *(include if feature involves data)*
 
@@ -93,12 +85,21 @@ When configuration values are similar but not identical (e.g., "instance_type": 
 - **SC-004**: 100% of existing multi-environment comparison tests continue to pass (no regression)
 - **SC-005**: Character-level diffs correctly identify differences in at least 95% of test cases with subtle configuration changes (measured by test coverage)
 
+## Clarifications
+
+### Session 2026-01-13
+
+- Q: Which environment serves as the baseline for comparison? → A: First environment (leftmost column) is always the baseline
+- Q: How should highlighting be displayed across multiple columns? → A: First environment shows plain JSON (no highlighting), all other environments show character-level diffs relative to first environment
+- Q: How should missing fields be handled when one environment has a field that another doesn't? → A: Highlight the entire field line as added/removed (field-level highlighting), not character-level diff
+- Q: How should very long string values (>200 characters) be handled? → A: Apply character-level diff normally, allow HTML to wrap long lines naturally (no special handling)
+- Q: Should character-level diff apply at all nesting depths for deeply nested JSON? → A: Yes, apply character-level diff to all leaf values at any nesting depth
+
 ## Assumptions
 
 - The existing `highlight_json_diff()` function in `generate_html_report.py` provides the correct character-level diff logic and can be reused or adapted
 - Multi-environment comparisons will continue to use columnar display (not side-by-side "before/after" style)
 - Users want character-level diff applied to all differing resources, not as an opt-in feature
-- The baseline for comparison will be implicitly defined (likely first environment or pairwise comparison between adjacent environments)
 - Character-level diff highlighting is primarily valuable in HTML output; text output can remain as-is (config-level display)
 
 ## Constraints
