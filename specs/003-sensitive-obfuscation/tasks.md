@@ -128,19 +128,19 @@ description: "Implementation tasks for Sensitive Data Obfuscation feature"
 
 **Purpose**: Improvements affecting multiple user stories and final validation
 
-- [ ] T050 [P] Implement --force/-f flag in analyze_plan.py to allow output file overwriting (exit code 4 → success with warning)
-- [ ] T051 [P] Implement --show-stats flag in analyze_plan.py to display resources processed, values obfuscated, execution time
-- [ ] T052 Add performance optimization to traverse_and_obfuscate() if needed: ensure 10MB files process in under 5 seconds (SC-001)
-- [ ] T053 Test large file handling: validate SC-007 with 1000+ resource plan file (no memory issues, no degradation)
-- [ ] T054 [P] Add comprehensive error messages for all exit codes (1-8) per contracts/cli-interface.md
-- [ ] T055 [P] Add CLI help text and examples to analyze_plan.py obfuscate subcommand
-- [ ] T056 Create test_obfuscation_unit.py with unit tests for obfuscate_value(), get_salt_position(), traverse_and_obfuscate()
-- [ ] T057 [P] Create test_salt_manager.py with unit tests for generate, store, load, encrypt, decrypt functions
-- [ ] T058 Validate all success criteria SC-001 through SC-007
-- [ ] T059 Run full quickstart.md validation: all examples and workflows execute successfully
-- [ ] T060 [P] Update main README.md with obfuscate subcommand documentation and examples
-- [ ] T061 Security review: verify no sensitive values leak in error messages, logs, or temporary files
-- [ ] T062 Code review: verify Constitution Principle I (no duplication), Principle II (canonical data model references)
+- [X] T050 [P] Implement --force/-f flag in analyze_plan.py to allow output file overwriting (exit code 4 → success with warning)
+- [X] T051 [P] Implement --show-stats flag in analyze_plan.py to display resources processed, values obfuscated, execution time
+- [X] T052 Add performance optimization to traverse_and_obfuscate() if needed: ensure 10MB files process in under 5 seconds (SC-001)
+- [X] T053 Test large file handling: validate SC-007 with 1000+ resource plan file (no memory issues, no degradation)
+- [X] T054 [P] Add comprehensive error messages for all exit codes (1-8) per contracts/cli-interface.md
+- [X] T055 [P] Add CLI help text and examples to analyze_plan.py obfuscate subcommand
+- [X] T056 Create test_obfuscation_unit.py with unit tests for obfuscate_value(), get_salt_position(), traverse_and_obfuscate()
+- [X] T057 [P] Create test_salt_manager.py with unit tests for generate, store, load, encrypt, decrypt functions
+- [X] T058 Validate all success criteria SC-001 through SC-007
+- [X] T059 Run full quickstart.md validation: all examples and workflows execute successfully
+- [X] T060 [P] Update main README.md with obfuscate subcommand documentation and examples
+- [X] T061 Security review: verify no sensitive values leak in error messages, logs, or temporary files
+- [X] T062 Code review: verify Constitution Principle I (no duplication), Principle II (canonical data model references)
 
 ---
 

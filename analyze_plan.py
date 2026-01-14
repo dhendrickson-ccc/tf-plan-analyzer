@@ -2178,42 +2178,58 @@ def handle_obfuscate_subcommand(args):
             address = rc.get('address', f'resource_{resource_count}')
             change = rc.get('change', {})
             
-            # Get the actual data and sensitive marker
+            # Get before and after data with sensitive markers
+            before_data = change.get('before')
             after_data = change.get('after')
+            before_sensitive = change.get('before_sensitive')
             after_sensitive = change.get('after_sensitive')
             
-            # If no after_sensitive, skip obfuscation for this resource
-            if after_sensitive is None:
-                continue
-            
-            # If after_data is None, skip (resource doesn't exist after change)
-            if after_data is None:
-                continue
-            
             try:
-                # Obfuscate sensitive values
-                obfuscated_data = traverse_and_obfuscate(
-                    after_data,
-                    after_sensitive,
-                    salt,
-                    position_seed,
-                    path=[address]
-                )
+                # Obfuscate before values if present
+                if before_data is not None and before_sensitive is not None and before_sensitive is not False:
+                    obfuscated_before = traverse_and_obfuscate(
+                        before_data,
+                        before_sensitive,
+                        salt,
+                        position_seed,
+                        path=[address, 'before']
+                    )
+                    change['before'] = obfuscated_before
+                    
+                    # Count obfuscated values
+                    def count_sensitive(marker):
+                        if marker is True:
+                            return 1
+                        elif isinstance(marker, dict):
+                            return sum(count_sensitive(v) for v in marker.values())
+                        elif isinstance(marker, list):
+                            return sum(count_sensitive(v) for v in marker)
+                        return 0
+                    
+                    values_obfuscated += count_sensitive(before_sensitive)
                 
-                # Count obfuscated values (simple count of True values in sensitive marker)
-                def count_sensitive(marker):
-                    if marker is True:
-                        return 1
-                    elif isinstance(marker, dict):
-                        return sum(count_sensitive(v) for v in marker.values())
-                    elif isinstance(marker, list):
-                        return sum(count_sensitive(v) for v in marker)
-                    return 0
-                
-                values_obfuscated += count_sensitive(after_sensitive)
-                
-                # Update the plan data
-                change['after'] = obfuscated_data
+                # Obfuscate after values if present
+                if after_data is not None and after_sensitive is not None and after_sensitive is not False:
+                    obfuscated_after = traverse_and_obfuscate(
+                        after_data,
+                        after_sensitive,
+                        salt,
+                        position_seed,
+                        path=[address, 'after']
+                    )
+                    change['after'] = obfuscated_after
+                    
+                    # Count obfuscated values
+                    def count_sensitive(marker):
+                        if marker is True:
+                            return 1
+                        elif isinstance(marker, dict):
+                            return sum(count_sensitive(v) for v in marker.values())
+                        elif isinstance(marker, list):
+                            return sum(count_sensitive(v) for v in marker)
+                        return 0
+                    
+                    values_obfuscated += count_sensitive(after_sensitive)
                 
             except ValueError as e:
                 print(f"Error: Malformed sensitive_values structure", file=sys.stderr)
