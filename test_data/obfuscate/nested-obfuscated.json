@@ -1,0 +1,52 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.0.0",
+  "resource_changes": [
+    {
+      "address": "azurerm_key_vault.vault",
+      "type": "azurerm_key_vault",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "name": "test-vault",
+          "location": "eastus",
+          "config": {
+            "tenant_id": "abc123",
+            "secrets": {
+              "database": {
+                "connection_string": "obf_d1262ea2c0cabc4504ef89fa9450385ca511adf5b96230e196c7f7db0d9189e1",
+                "credentials": {
+                  "username": "admin",
+                  "password": "obf_44e7f3a96e2388f39d33187d48ba012cd9bba6bbbcc4d60d2bb2267e406f4e2c",
+                  "api_keys": {
+                    "primary": "obf_13c0c53caa2cf253ad8780d55a322d2e961c78acce9185eaa65231965952540b",
+                    "secondary": "obf_bfca7c60e8d798a72b8d4bd32f2c03d11920adbc613720fe8658fc88776ec8fc"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "after_sensitive": {
+          "config": {
+            "secrets": {
+              "database": {
+                "connection_string": true,
+                "credentials": {
+                  "password": true,
+                  "api_keys": {
+                    "primary": true,
+                    "secondary": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

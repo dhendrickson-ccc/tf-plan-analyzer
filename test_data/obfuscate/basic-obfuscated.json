@@ -1,0 +1,26 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.0.0",
+  "resource_changes": [
+    {
+      "address": "aws_db_instance.test_db",
+      "type": "aws_db_instance",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "id": "test-db-instance",
+          "engine": "postgres",
+          "username": "admin",
+          "password": "obf_1785612c53b676931bf784de98ae873ad362e4c3bf3f38161f60cdc484dfd6f6",
+          "publicly_accessible": false
+        },
+        "after_sensitive": {
+          "password": true
+        }
+      }
+    }
+  ]
+}

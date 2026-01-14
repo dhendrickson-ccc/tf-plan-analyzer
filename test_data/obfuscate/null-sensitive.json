@@ -1,0 +1,23 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.0.0",
+  "resource_changes": [
+    {
+      "address": "aws_db_instance.test",
+      "type": "aws_db_instance",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "id": "test-db",
+          "password": null,
+          "connection_string": null
+        },
+        "after_sensitive": {
+          "password": true,
+          "connection_string": true
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.0.0",
+  "resource_changes": [
+    {
+      "address": "aws_db_instance.database1",
+      "type": "aws_db_instance",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "id": "db1",
+          "password": "shared-password-123"
+        },
+        "after_sensitive": {
+          "password": true
+        }
+      }
+    },
+    {
+      "address": "aws_db_instance.database2",
+      "type": "aws_db_instance",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "id": "db2",
+          "password": "shared-password-123"
+        },
+        "after_sensitive": {
+          "password": true
+        }
+      }
+    },
+    {
+      "address": "aws_secretsmanager_secret.api_key",
+      "type": "aws_secretsmanager_secret",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "api-key",
+          "secret_value": "unique-api-key-xyz"
+        },
+        "after_sensitive": {
+          "secret_value": true
+        }
+      }
+    }
+  ]
+}

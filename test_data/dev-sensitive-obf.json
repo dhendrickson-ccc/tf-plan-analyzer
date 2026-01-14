@@ -1,0 +1,33 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.0.0",
+  "resource_changes": [
+    {
+      "address": "aws_db_instance.database",
+      "type": "aws_db_instance",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {
+          "id": "db-instance-dev",
+          "engine": "postgres",
+          "username": "admin",
+          "password": "dev-secret-password"
+        },
+        "after": {
+          "id": "db-instance-dev",
+          "engine": "postgres",
+          "username": "admin",
+          "password": "obf_cdb7bdfb767e765a9a809c68e50fd9ab917bd449fcac4f04261f9f6e5b2ed22a"
+        },
+        "before_sensitive": {
+          "password": true
+        },
+        "after_sensitive": {
+          "password": true
+        }
+      }
+    }
+  ]
+}

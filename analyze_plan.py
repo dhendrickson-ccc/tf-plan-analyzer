@@ -18,6 +18,17 @@ try:
 except ImportError:
     HCLValueResolver = None  # Optional dependency
 
+try:
+    from salt_manager import generate_salt, generate_position_seed, store_salt, load_salt
+    from sensitive_obfuscator import traverse_and_obfuscate
+except ImportError as e:
+    print(f"Warning: Obfuscate subcommand dependencies not available: {e}", file=sys.stderr)
+    generate_salt = None
+    generate_position_seed = None
+    store_salt = None
+    load_salt = None
+    traverse_and_obfuscate = None
+
 
 class TerraformPlanAnalyzer:
     """Analyzes terraform plan JSON files."""
@@ -2096,6 +2107,176 @@ def handle_compare_subcommand(args):
         print(text_output)
 
 
+def handle_obfuscate_subcommand(args):
+    """Handle the 'obfuscate' subcommand for sensitive data obfuscation."""
+    import time
+    
+    # Check dependencies
+    if not all([generate_salt, generate_position_seed, store_salt, load_salt, traverse_and_obfuscate]):
+        print("Error: Obfuscate subcommand requires salt_manager and sensitive_obfuscator modules", file=sys.stderr)
+        print("  Install cryptography: pip install 'cryptography>=41.0.0'", file=sys.stderr)
+        sys.exit(8)
+    
+    start_time = time.time()
+    
+    # Validate input file exists
+    input_path = Path(args.plan_file)
+    if not input_path.exists():
+        print(f"Error: Input file not found: {args.plan_file}", file=sys.stderr)
+        sys.exit(1)
+    
+    # Determine output path
+    if args.output:
+        output_path = Path(args.output)
+    else:
+        # Default: <input_stem>-obfuscated.json
+        output_path = input_path.parent / f"{input_path.stem}-obfuscated.json"
+    
+    # Check if output file exists (unless --force)
+    if output_path.exists() and not args.force:
+        print(f"Error: Output file already exists: {output_path}", file=sys.stderr)
+        print(f"  Use --force to overwrite, or specify different output with --output", file=sys.stderr)
+        sys.exit(4)
+    
+    # Load input plan
+    try:
+        with open(input_path, 'r') as f:
+            plan_data = json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"Error: Failed to parse JSON from {input_path}", file=sys.stderr)
+        print(f"  {str(e)}", file=sys.stderr)
+        sys.exit(2)
+    except Exception as e:
+        print(f"Error: Failed to read input file: {input_path}", file=sys.stderr)
+        print(f"  {str(e)}", file=sys.stderr)
+        sys.exit(8)
+    
+    # Validate Terraform plan structure
+    if 'resource_changes' not in plan_data:
+        print(f"Error: Input file is not a valid Terraform plan", file=sys.stderr)
+        print(f"  Missing required field: resource_changes", file=sys.stderr)
+        sys.exit(3)
+    
+    # Load or generate salt
+    if args.salt_file:
+        # Load existing salt
+        salt, position_seed = load_salt(args.salt_file)
+        salt_file_path = Path(args.salt_file)
+    else:
+        # Generate new salt
+        salt = generate_salt()
+        position_seed = generate_position_seed()
+        salt_file_path = Path(str(output_path) + '.salt')
+    
+    # Obfuscate resource changes
+    resource_count = 0
+    values_obfuscated = 0
+    
+    try:
+        for rc in plan_data.get('resource_changes', []):
+            resource_count += 1
+            address = rc.get('address', f'resource_{resource_count}')
+            change = rc.get('change', {})
+            
+            # Get before and after data with sensitive markers
+            before_data = change.get('before')
+            after_data = change.get('after')
+            before_sensitive = change.get('before_sensitive')
+            after_sensitive = change.get('after_sensitive')
+            
+            try:
+                # Obfuscate before values if present
+                if before_data is not None and before_sensitive is not None and before_sensitive is not False:
+                    obfuscated_before = traverse_and_obfuscate(
+                        before_data,
+                        before_sensitive,
+                        salt,
+                        position_seed,
+                        path=[address, 'before']
+                    )
+                    change['before'] = obfuscated_before
+                    
+                    # Count obfuscated values
+                    def count_sensitive(marker):
+                        if marker is True:
+                            return 1
+                        elif isinstance(marker, dict):
+                            return sum(count_sensitive(v) for v in marker.values())
+                        elif isinstance(marker, list):
+                            return sum(count_sensitive(v) for v in marker)
+                        return 0
+                    
+                    values_obfuscated += count_sensitive(before_sensitive)
+                
+                # Obfuscate after values if present
+                if after_data is not None and after_sensitive is not None and after_sensitive is not False:
+                    obfuscated_after = traverse_and_obfuscate(
+                        after_data,
+                        after_sensitive,
+                        salt,
+                        position_seed,
+                        path=[address, 'after']
+                    )
+                    change['after'] = obfuscated_after
+                    
+                    # Count obfuscated values
+                    def count_sensitive(marker):
+                        if marker is True:
+                            return 1
+                        elif isinstance(marker, dict):
+                            return sum(count_sensitive(v) for v in marker.values())
+                        elif isinstance(marker, list):
+                            return sum(count_sensitive(v) for v in marker)
+                        return 0
+                    
+                    values_obfuscated += count_sensitive(after_sensitive)
+                
+            except ValueError as e:
+                print(f"Error: Malformed sensitive_values structure", file=sys.stderr)
+                print(f"  Resource: {address}", file=sys.stderr)
+                print(f"  {str(e)}", file=sys.stderr)
+                sys.exit(7)
+            except Exception as e:
+                print(f"Error: Failed to obfuscate resource: {address}", file=sys.stderr)
+                print(f"  {str(e)}", file=sys.stderr)
+                sys.exit(8)
+        
+        # Write obfuscated plan to output file
+        try:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(output_path, 'w') as f:
+                json.dump(plan_data, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            print(f"Error: Failed to write output file: {output_path}", file=sys.stderr)
+            print(f"  {str(e)}", file=sys.stderr)
+            sys.exit(8)
+        
+        # Save salt file (if we generated it)
+        if not args.salt_file:
+            store_salt(salt, position_seed, str(salt_file_path))
+        
+        # Report success
+        execution_time = time.time() - start_time
+        print(f"✅ Obfuscated plan saved to: {output_path}")
+        if not args.salt_file:
+            print(f"🔐 Salt saved to: {salt_file_path}")
+        
+        if args.show_stats:
+            print()
+            print("Statistics:")
+            print(f"  Resources processed: {resource_count}")
+            print(f"  Values obfuscated: {values_obfuscated}")
+            print(f"  Execution time: {execution_time:.1f}s")
+    
+    except Exception as e:
+        # Catch-all for unexpected errors
+        print(f"Error: Unexpected error during obfuscation", file=sys.stderr)
+        print(f"  {str(e)}", file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        sys.exit(8)
+
+
 def main():
     """Main entry point with subcommand routing."""
     parser = argparse.ArgumentParser(
@@ -2327,6 +2508,60 @@ Examples:
         help='Show detailed configuration for each resource in text output'
     )
     
+    # ========== OBFUSCATE SUBCOMMAND (sensitive data obfuscation) ==========
+    obfuscate_parser = subparsers.add_parser(
+        'obfuscate',
+        help='Obfuscate sensitive values in Terraform plan',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Basic obfuscation (generates new salt)
+  python analyze_plan.py obfuscate plan.json
+  
+  # Custom output path
+  python analyze_plan.py obfuscate plan.json --output sanitized/plan.json
+  
+  # Reuse salt for drift detection across files
+  python analyze_plan.py obfuscate dev.json -o dev-obf.json
+  python analyze_plan.py obfuscate prod.json -o prod-obf.json -s dev-obf.json.salt
+  
+  # Force overwrite existing output
+  python analyze_plan.py obfuscate plan.json --force
+  
+  # Show statistics
+  python analyze_plan.py obfuscate plan.json --show-stats
+        """
+    )
+    
+    obfuscate_parser.add_argument(
+        'plan_file',
+        help='Path to Terraform plan JSON file'
+    )
+    obfuscate_parser.add_argument(
+        '--output', '-o',
+        type=str,
+        default=None,
+        metavar='OUTPUT',
+        help='Output file path (default: <input>-obfuscated.json)'
+    )
+    obfuscate_parser.add_argument(
+        '--salt-file', '-s',
+        type=str,
+        default=None,
+        metavar='SALT',
+        help='Existing salt file for deterministic hashing'
+    )
+    obfuscate_parser.add_argument(
+        '--force', '-f',
+        action='store_true',
+        help='Overwrite existing output file'
+    )
+    obfuscate_parser.add_argument(
+        '--show-stats',
+        action='store_true',
+        help='Display obfuscation statistics'
+    )
+    
     args = parser.parse_args()
     
     # If no subcommand provided, show help
@@ -2339,6 +2574,8 @@ Examples:
         handle_report_subcommand(args)
     elif args.subcommand == 'compare':
         handle_compare_subcommand(args)
+    elif args.subcommand == 'obfuscate':
+        handle_obfuscate_subcommand(args)
 
 
 if __name__ == '__main__':

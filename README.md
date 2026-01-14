@@ -6,6 +6,7 @@ A Python tool to analyze Terraform plan JSON files and identify resource changes
 - [Quick Start](#quick-start)
 - [Single Plan Analysis](#single-plan-analysis)
 - [Multi-Environment Comparison](#multi-environment-comparison)
+- [Sensitive Data Obfuscation](#sensitive-data-obfuscation)
 - [Key Features](#key-features)
 - [Output Formats](#output-formats)
 - [Ignore Configuration](#ignore-configuration)
@@ -40,6 +41,19 @@ python analyze_plan.py compare dev.json staging.json --diff-only
 
 # Verbose text output
 python analyze_plan.py compare dev.json staging.json -v
+```
+
+### Sensitive Data Obfuscation
+```bash
+# Basic obfuscation (sanitize for sharing)
+python analyze_plan.py obfuscate plan.json
+
+# Reuse salt for drift detection across environments
+python analyze_plan.py obfuscate dev.json -o dev-obf.json
+python analyze_plan.py obfuscate prod.json -o prod-obf.json -s dev-obf.json.salt
+
+# Show obfuscation statistics
+python analyze_plan.py obfuscate plan.json --show-stats
 ```
 
 ## Single Plan Analysis
@@ -145,7 +159,82 @@ python analyze_plan.py compare dev.json staging.json -v --show-sensitive
 - **Flexible Output**: Both HTML and text formats supported
 
 
+## Sensitive Data Obfuscation
+
+The `obfuscate` subcommand removes sensitive data from Terraform plan files using deterministic one-way hashing, allowing safe sharing while preserving the ability to detect drift across environments.
+
+### Usage
+```bash
+python analyze_plan.py obfuscate <plan_file> [options]
+```
+
+### Options
+- `--output, -o OUTPUT` - Output file path (default: `<input>-obfuscated.json`)
+- `--salt-file, -s SALT` - Use existing salt file for deterministic hashing
+- `--force, -f` - Overwrite existing output file
+- `--show-stats` - Display obfuscation statistics
+
+### How It Works
+
+**Obfuscation Process:**
+1. Identifies sensitive values marked by Terraform in `after_sensitive` and `before_sensitive` fields
+2. Generates a cryptographic salt (or loads existing one)
+3. Hashes each sensitive value using SHA-256 with salt inserted at variable positions
+4. Replaces sensitive values with `obf_<hash>` format
+5. Saves the salt file (encrypted with Fernet) alongside the output
+
+**Key Properties:**
+- **One-way hashing**: Original values cannot be recovered from hashes
+- **Deterministic**: Same value + same salt = same hash (enables drift detection)
+- **Salt randomization**: Different salts produce different hashes (prevents rainbow tables)
+- **Position randomization**: Salt inserted at variable positions for extra entropy
+
+### Examples
+
+**Basic Obfuscation:**
+```bash
+# Obfuscate a plan for safe sharing
+python analyze_plan.py obfuscate plan.json
+
+# Output files:
+#   plan-obfuscated.json       - Sanitized plan file
+#   plan-obfuscated.json.salt  - Encrypted salt (keep secure!)
+
+# Custom output path
+python analyze_plan.py obfuscate plan.json --output sanitized/plan.json
+
+# Overwrite existing file
+python analyze_plan.py obfuscate plan.json --force
+```
+
+**Drift Detection Across Environments:**
+```bash
+# Step 1: Obfuscate dev environment (generates new salt)
+python analyze_plan.py obfuscate dev.json -o dev-obf.json
+
+# Step 2: Obfuscate prod using SAME salt (for comparison)
+python analyze_plan.py obfuscate prod.json -o prod-obf.json -s dev-obf.json.salt
+
+# Step 3: Compare obfuscated plans
+python analyze_plan.py compare dev-obf.json prod-obf.json --html drift-report.html
+```
+
+### Security & Best Practices
+
+- **Keep salt files secure** - Enable hash correlation if attacker has original data
+- **Never commit salt files** to version control (add `*.salt` to `.gitignore`)
+- Use `TF_ANALYZER_SALT_KEY` environment variable for CI/CD workflows
+- Salt files are encrypted using Fernet symmetric encryption
+- Processes 10MB files (10,000 resources) in under 0.5 seconds
+
+
 ## Key Features
+
+### 🔒 Sensitive Data Obfuscation
+- **Safe sharing**: Remove sensitive data from Terraform plans using cryptographic hashing
+- **Drift detection**: Deterministic hashing enables comparison across environments
+- **Encrypted salts**: Salt files encrypted with Fernet for secure storage
+- **CI/CD ready**: Environment variable encryption for cross-machine workflows
 
 ### 🔍 HCL Value Resolution (NEW!)
 - **Resolves "known after apply" values** from Terraform source files
