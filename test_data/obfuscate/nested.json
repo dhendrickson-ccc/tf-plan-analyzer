@@ -1,0 +1,50 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.0.0",
+  "resource_changes": [
+    {
+      "address": "azurerm_key_vault.vault",
+      "type": "azurerm_key_vault",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "test-vault",
+          "location": "eastus",
+          "config": {
+            "tenant_id": "abc123",
+            "secrets": {
+              "database": {
+                "connection_string": "Server=myserver;Database=mydb;User=admin;Password=secret123",
+                "credentials": {
+                  "username": "admin",
+                  "password": "nested-deep-secret",
+                  "api_keys": {
+                    "primary": "key-12345",
+                    "secondary": "key-67890"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "after_sensitive": {
+          "config": {
+            "secrets": {
+              "database": {
+                "connection_string": true,
+                "credentials": {
+                  "password": true,
+                  "api_keys": {
+                    "primary": true,
+                    "secondary": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
