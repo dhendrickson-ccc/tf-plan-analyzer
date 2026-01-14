@@ -135,6 +135,8 @@ python analyze_plan.py compare dev.json staging.json -v --show-sensitive
 ### Multi-Environment Comparison Features
 
 - **Configuration Drift Detection**: Identifies resources with different configurations across environments
+- **Character-Level Diff Highlighting**: HTML reports show precise character-by-character differences (e.g., "t2.micro" vs "t2.small" highlights only "micro"/"small")
+- **Baseline Comparison**: First environment serves as baseline, others show diffs against it
 - **Presence Tracking**: Shows which environments contain each resource
 - **Sensitive Value Handling**: Automatically masks sensitive values with [SENSITIVE] markers
 - **Side-by-Side Comparison**: HTML reports show configurations from all environments in parallel

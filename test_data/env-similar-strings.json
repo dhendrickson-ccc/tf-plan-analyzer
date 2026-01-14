@@ -1,0 +1,29 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.0.0",
+  "resource_changes": [
+    {
+      "address": "aws_s3_bucket.app_data",
+      "mode": "managed",
+      "type": "aws_s3_bucket",
+      "name": "app_data",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "bucket": "my-application-data-bucket-production-v1",
+          "versioning": true,
+          "tags": {
+            "Environment": "production"
+          }
+        },
+        "after": {
+          "bucket": "my-application-data-bucket-production-v2",
+          "versioning": true,
+          "tags": {
+            "Environment": "production"
+          }
+        }
+      }
+    }
+  ]
+}
