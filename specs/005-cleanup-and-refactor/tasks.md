@@ -78,19 +78,19 @@
 
 ### Implementation for User Story 5
 
-- [ ] T019 [P] [US5] Create src/lib/diff_utils.py and extract `highlight_char_diff(old: str, new: str) -> tuple[str, str]` function (consolidate from analyze_plan.py lines 666-698 and multi_env_comparator.py lines 37-66)
-- [ ] T020 [P] [US5] Add `highlight_json_diff(before: dict, after: dict, sensitive_paths: list = None) -> str` to src/lib/diff_utils.py (consolidate from analyze_plan.py lines 700-870, multi_env_comparator.py lines 68-167)
-- [ ] T021 [P] [US5] Create src/lib/json_utils.py with function `load_json_file(file_path: str) -> dict` for common JSON loading pattern (found in 15+ locations per research.md Section 3.3)
-- [ ] T022 [P] [US5] Add function `format_json_for_display(data: dict, indent: int = 2, sort_keys: bool = True) -> str` to src/lib/json_utils.py
-- [ ] T023 [P] [US5] Create src/lib/file_utils.py with function `safe_read_file(file_path: str, encoding: str = 'utf-8') -> str` for common file reading pattern
-- [ ] T024 [P] [US5] Add function `safe_write_file(file_path: str, content: str, encoding: str = 'utf-8') -> None` to src/lib/file_utils.py
-- [ ] T025 [US5] Update analyze_plan.py to import from src.lib.diff_utils and replace inline implementations with shared functions
-- [ ] T026 [US5] Update multi_env_comparator.py to import from src.lib.diff_utils and replace inline implementations with shared functions
+- [X] T019 [P] [US5] Create src/lib/diff_utils.py and extract `highlight_char_diff(old: str, new: str) -> tuple[str, str]` function (consolidate from analyze_plan.py lines 666-698 and multi_env_comparator.py lines 37-66)
+- [X] T020 [P] [US5] Add `highlight_json_diff(before: dict, after: dict, sensitive_paths: list = None) -> str` to src/lib/diff_utils.py (consolidate from analyze_plan.py lines 700-870, multi_env_comparator.py lines 68-167)
+- [X] T021 [P] [US5] Create src/lib/json_utils.py with function `load_json_file(file_path: str) -> dict` for common JSON loading pattern (found in 15+ locations per research.md Section 3.3)
+- [X] T022 [P] [US5] Add function `format_json_for_display(data: dict, indent: int = 2, sort_keys: bool = True) -> str` to src/lib/json_utils.py
+- [X] T023 [P] [US5] Create src/lib/file_utils.py with function `safe_read_file(file_path: str, encoding: str = 'utf-8') -> str` for common file reading pattern
+- [X] T024 [P] [US5] Add function `safe_write_file(file_path: str, content: str, encoding: str = 'utf-8') -> None` to src/lib/file_utils.py
+- [X] T025 [US5] Update analyze_plan.py to import from src.lib.diff_utils and replace inline implementations with shared functions
+- [X] T026 [US5] Update multi_env_comparator.py to import from src.lib.diff_utils and replace inline implementations with shared functions
 - [ ] T027 [US5] Update all Python files to use src.lib.json_utils.load_json_file() instead of inline `with open() as f: json.load(f)` patterns (analyze_plan.py, multi_env_comparator.py, ignore_utils.py, test files)
-- [ ] T028 [US5] Add comprehensive docstrings to all functions in src/lib/ following Google or NumPy style (include parameters, return types, usage examples)
-- [ ] T029 [US5] Create src/lib/__init__.py with exports: `from .html_generation import generate_full_styles`, `from .diff_utils import highlight_char_diff, highlight_json_diff`, `from .json_utils import load_json_file, format_json_for_display`, `from .file_utils import safe_read_file, safe_write_file`
-- [ ] T030 [US5] Run all 158 existing tests with `pytest tests/ -v` to ensure code consolidation preserved all behavior
-- [ ] T031 [US5] Code review: Search codebase for remaining duplicate patterns using `grep -r "with open.*json.load" .` and verify all are either in tests (acceptable) or migrated to shared utilities
+- [X] T028 [US5] Add comprehensive docstrings to all functions in src/lib/ following Google or NumPy style (include parameters, return types, usage examples)
+- [X] T029 [US5] Create src/lib/__init__.py with exports: `from .html_generation import generate_full_styles`, `from .diff_utils import highlight_char_diff, highlight_json_diff`, `from .json_utils import load_json_file, format_json_for_display`, `from .file_utils import safe_read_file, safe_write_file`
+- [X] T030 [US5] Run all 158 existing tests with `pytest tests/ -v` to ensure code consolidation preserved all behavior
+- [X] T031 [US5] Code review: Search codebase for remaining duplicate patterns using `grep -r "with open.*json.load" .` and verify all are either in tests (acceptable) or migrated to shared utilities
 
 **Checkpoint**: All duplicate code eliminated, shared utilities in src/lib/ with comprehensive docstrings, all tests passing
 

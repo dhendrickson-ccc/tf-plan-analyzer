@@ -15,6 +15,7 @@ from ignore_utils import apply_ignore_config, get_ignored_attributes
 
 # Import shared HTML/CSS generation utilities
 import src.lib.html_generation
+from src.lib.diff_utils import highlight_char_diff, highlight_json_diff
 
 
 class AttributeDiff:
@@ -37,138 +38,16 @@ class AttributeDiff:
         self.attribute_type = attribute_type
 
 
+# The diff highlighting functions now use shared utilities from src.lib.diff_utils
+# Kept as module-level wrappers for backward compatibility
 def _highlight_char_diff(before_str: str, after_str: str) -> Tuple[str, str]:
-    """
-    Highlight character-level differences between two similar strings.
-    Returns HTML with character-level highlighting.
-    
-    Based on the implementation from analyze_plan.py TerraformPlanAnalyzer._highlight_char_diff()
-    """
-    matcher = SequenceMatcher(None, before_str, after_str)
-    before_parts = []
-    after_parts = []
-    
-    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-        if tag == 'equal':
-            # Characters are the same
-            text = html.escape(before_str[i1:i2])
-            before_parts.append(text)
-            after_parts.append(text)
-        elif tag == 'delete':
-            # Characters only in before
-            before_parts.append(f'<span class="char-removed">{html.escape(before_str[i1:i2])}</span>')
-        elif tag == 'insert':
-            # Characters only in after
-            after_parts.append(f'<span class="char-added">{html.escape(after_str[j1:j2])}</span>')
-        elif tag == 'replace':
-            # Characters differ
-            before_parts.append(f'<span class="char-removed">{html.escape(before_str[i1:i2])}</span>')
-            after_parts.append(f'<span class="char-added">{html.escape(after_str[j1:j2])}</span>')
-    
-    return ''.join(before_parts), ''.join(after_parts)
+    """Wrapper for shared highlight_char_diff utility."""
+    return highlight_char_diff(before_str, after_str, is_known_after_apply=False)
 
 
 def _highlight_json_diff(before: Any, after: Any) -> Tuple[str, str]:
-    """
-    Highlight differences between two JSON structures.
-    Returns HTML for before and after with differences highlighted.
-    Only highlights lines that are actually different.
-    
-    Based on the implementation from analyze_plan.py TerraformPlanAnalyzer._highlight_json_diff()
-    Simplified for multi-environment comparison (no known-after-apply, no sensitive redaction).
-    """
-    # Convert to formatted JSON strings
-    before_str = json.dumps(before, indent=2, sort_keys=True) if before is not None else "null"
-    after_str = json.dumps(after, indent=2, sort_keys=True) if after is not None else "null"
-    
-    # If strings are identical, return without highlighting
-    if before_str == after_str:
-        before_html = f'<pre class="json-content">{html.escape(before_str)}</pre>'
-        after_html = f'<pre class="json-content">{html.escape(after_str)}</pre>'
-        return before_html, after_html
-    
-    # Split into lines for comparison
-    before_lines = before_str.split('\n')
-    after_lines = after_str.split('\n')
-    
-    # Use SequenceMatcher to find differences
-    matcher = SequenceMatcher(None, before_lines, after_lines)
-    
-    before_html_lines = []
-    after_html_lines = []
-    
-    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-        if tag == 'equal':
-            # Lines are the same
-            for line in before_lines[i1:i2]:
-                before_html_lines.append(f'<span class="unchanged">{html.escape(line)}</span>')
-            for line in after_lines[j1:j2]:
-                after_html_lines.append(f'<span class="unchanged">{html.escape(line)}</span>')
-        elif tag == 'delete':
-            # Lines only in before
-            for line in before_lines[i1:i2]:
-                before_html_lines.append(f'<span class="removed">{html.escape(line)}</span>')
-            # Add empty lines to after to maintain alignment
-            empty_line = '<span class="unchanged opacity-50">' + ('&nbsp;' * 20) + '</span>'
-            for _ in range(i2 - i1):
-                after_html_lines.append(empty_line)
-        elif tag == 'insert':
-            # Lines only in after
-            # Add empty lines to before to maintain alignment
-            empty_line = '<span class="unchanged opacity-50">' + ('&nbsp;' * 20) + '</span>'
-            for _ in range(j2 - j1):
-                before_html_lines.append(empty_line)
-            for line in after_lines[j1:j2]:
-                after_html_lines.append(f'<span class="added">{html.escape(line)}</span>')
-        elif tag == 'replace':
-            # Lines differ - do character-level comparison for similar lines
-            before_chunk = before_lines[i1:i2]
-            after_chunk = after_lines[j1:j2]
-            
-            # For each pair of lines, check if they're similar (e.g., only value differs)
-            max_len = max(len(before_chunk), len(after_chunk))
-            empty_line = '<span class="unchanged opacity-50">' + ('&nbsp;' * 20) + '</span>'
-            for idx in range(max_len):
-                if idx < len(before_chunk) and idx < len(after_chunk):
-                    before_line = before_chunk[idx]
-                    after_line = after_chunk[idx]
-                    
-                    # Check if lines are similar enough for character-level diff
-                    similarity = SequenceMatcher(None, before_line, after_line).ratio()
-                    if similarity > 0.5:  # If more than 50% similar, show character diff
-                        before_highlighted, after_highlighted = _highlight_char_diff(before_line, after_line)
-                        before_html_lines.append(f'<span class="removed">{before_highlighted}</span>')
-                        after_html_lines.append(f'<span class="added">{after_highlighted}</span>')
-                    else:
-                        # Lines are too different, show as full line changes
-                        if before_line in after_chunk:
-                            before_html_lines.append(f'<span class="unchanged">{html.escape(before_line)}</span>')
-                        else:
-                            before_html_lines.append(f'<span class="removed">{html.escape(before_line)}</span>')
-                        
-                        if after_line in before_chunk:
-                            after_html_lines.append(f'<span class="unchanged">{html.escape(after_line)}</span>')
-                        else:
-                            after_html_lines.append(f'<span class="added">{html.escape(after_line)}</span>')
-                elif idx < len(before_chunk):
-                    before_line = before_chunk[idx]
-                    if before_line in after_chunk:
-                        before_html_lines.append(f'<span class="unchanged">{html.escape(before_line)}</span>')
-                    else:
-                        before_html_lines.append(f'<span class="removed">{html.escape(before_line)}</span>')
-                    after_html_lines.append(empty_line)
-                else:
-                    before_html_lines.append(empty_line)
-                    after_line = after_chunk[idx]
-                    if after_line in before_chunk:
-                        after_html_lines.append(f'<span class="unchanged">{html.escape(after_line)}</span>')
-                    else:
-                        after_html_lines.append(f'<span class="added">{html.escape(after_line)}</span>')
-    
-    before_html = f'<pre class="json-content">{"<br>".join(before_html_lines)}</pre>'
-    after_html = f'<pre class="json-content">{"<br>".join(after_html_lines)}</pre>'
-    
-    return before_html, after_html
+    """Wrapper for shared highlight_json_diff utility."""
+    return highlight_json_diff(before, after, is_known_after_apply=False)
 
 
 class EnvironmentPlan:
