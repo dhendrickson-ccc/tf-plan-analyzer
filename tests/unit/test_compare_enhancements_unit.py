@@ -8,7 +8,7 @@ and other compare enhancement features.
 
 import pytest
 import json
-from multi_env_comparator import ResourceComparison
+from src.core.multi_env_comparator import ResourceComparison
 
 
 class TestComputeAttributeDiffs:

@@ -22,10 +22,10 @@ class TestUS1IgnoreFileSupport:
     def test_ignore_global_rules(self):
         """Test that global ignore rules filter out tags across all resources."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/env-char-diff-1.json',
-             'test_data/env-char-diff-2.json',
-             '--config', 'test_data/ignore_test_config.json'],
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/env-char-diff-1.json',
+             'tests/fixtures/env-char-diff-2.json',
+             '--config', 'tests/fixtures/ignore_test_config.json'],
             capture_output=True,
             text=True
         )
@@ -40,10 +40,10 @@ class TestUS1IgnoreFileSupport:
     def test_ignore_resource_specific(self):
         """Test that resource-specific rules filter out description for specific types."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/env-char-diff-1.json',
-             'test_data/env-char-diff-2.json',
-             '--config', 'test_data/ignore_test_config.json'],
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/env-char-diff-1.json',
+             'tests/fixtures/env-char-diff-2.json',
+             '--config', 'tests/fixtures/ignore_test_config.json'],
             capture_output=True,
             text=True
         )
@@ -57,10 +57,10 @@ class TestUS1IgnoreFileSupport:
     def test_ignore_nested_attributes(self):
         """Test that nested attributes with dot notation are ignored."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/env-char-diff-1.json',
-             'test_data/env-char-diff-2.json',
-             '--config', 'test_data/ignore_test_config.json'],
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/env-char-diff-1.json',
+             'tests/fixtures/env-char-diff-2.json',
+             '--config', 'tests/fixtures/ignore_test_config.json'],
             capture_output=True,
             text=True
         )
@@ -74,10 +74,10 @@ class TestUS1IgnoreFileSupport:
     def test_ignore_config_file_not_found(self):
         """Test that missing config file returns exit code 1 with error message."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/env-char-diff-1.json',
-             'test_data/env-char-diff-2.json',
-             '--config', 'test_data/nonexistent_config.json'],
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/env-char-diff-1.json',
+             'tests/fixtures/env-char-diff-2.json',
+             '--config', 'tests/fixtures/nonexistent_config.json'],
             capture_output=True,
             text=True
         )
@@ -102,9 +102,9 @@ class TestUS1IgnoreFileSupport:
         
         try:
             result = subprocess.run(
-                ['python3', 'analyze_plan.py', 'compare',
-                 'test_data/env-char-diff-1.json',
-                 'test_data/env-char-diff-2.json',
+                ['python3', 'src/cli/analyze_plan.py', 'compare',
+                 'tests/fixtures/env-char-diff-1.json',
+                 'tests/fixtures/env-char-diff-2.json',
                  '--config', malformed_file],
                 capture_output=True,
                 text=True
@@ -131,10 +131,10 @@ class TestUS1IgnoreFileSupport:
         
         try:
             result = subprocess.run(
-                ['python3', 'analyze_plan.py', 'compare',
-                 'test_data/env-char-diff-1.json',
-                 'test_data/env-char-diff-2.json',
-                 '--config', 'test_data/ignore_test_config.json',
+                ['python3', 'src/cli/analyze_plan.py', 'compare',
+                 'tests/fixtures/env-char-diff-1.json',
+                 'tests/fixtures/env-char-diff-2.json',
+                 '--config', 'tests/fixtures/ignore_test_config.json',
                  '--html', output_file],
                 capture_output=True,
                 text=True
@@ -157,9 +157,9 @@ class TestUS1IgnoreFileSupport:
     def test_compare_without_config_still_works(self):
         """Test that compare subcommand still works without --config flag (backward compatibility)."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/env-char-diff-1.json',
-             'test_data/env-char-diff-2.json'],
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/env-char-diff-1.json',
+             'tests/fixtures/env-char-diff-2.json'],
             capture_output=True,
             text=True
         )
@@ -182,9 +182,9 @@ class TestUS2AttributeLevelDiff:
         
         try:
             result = subprocess.run(
-                ['python3', 'analyze_plan.py', 'compare',
-                 'test_data/env-char-diff-1.json',
-                 'test_data/env-char-diff-2.json',
+                ['python3', 'src/cli/analyze_plan.py', 'compare',
+                 'tests/fixtures/env-char-diff-1.json',
+                 'tests/fixtures/env-char-diff-2.json',
                  '--html', output_file],
                 capture_output=True,
                 text=True
@@ -215,9 +215,9 @@ class TestUS2AttributeLevelDiff:
         
         try:
             result = subprocess.run(
-                ['python3', 'analyze_plan.py', 'compare',
-                 'test_data/env-char-diff-1.json',
-                 'test_data/env-char-diff-2.json',
+                ['python3', 'src/cli/analyze_plan.py', 'compare',
+                 'tests/fixtures/env-char-diff-1.json',
+                 'tests/fixtures/env-char-diff-2.json',
                  '--html', output_file],
                 capture_output=True,
                 text=True
@@ -246,9 +246,9 @@ class TestUS2AttributeLevelDiff:
         
         try:
             result = subprocess.run(
-                ['python3', 'analyze_plan.py', 'compare',
-                 'test_data/env-deep-nested.json',
-                 'test_data/env-char-diff-1.json',
+                ['python3', 'src/cli/analyze_plan.py', 'compare',
+                 'tests/fixtures/env-deep-nested.json',
+                 'tests/fixtures/env-char-diff-1.json',
                  '--html', output_file],
                 capture_output=True,
                 text=True
@@ -272,9 +272,9 @@ class TestUS2AttributeLevelDiff:
         try:
             # Compare same file with different env names
             result = subprocess.run(
-                ['python3', 'analyze_plan.py', 'compare',
-                 'test_data/env-char-diff-1.json',
-                 'test_data/env-char-diff-1.json',
+                ['python3', 'src/cli/analyze_plan.py', 'compare',
+                 'tests/fixtures/env-char-diff-1.json',
+                 'tests/fixtures/env-char-diff-1.json',
                  '--env-names', 'env1,env2',
                  '--html', output_file],
                 capture_output=True,
@@ -304,9 +304,9 @@ class TestUS2AttributeLevelDiff:
         
         try:
             result = subprocess.run(
-                ['python3', 'analyze_plan.py', 'compare',
-                 'test_data/env-sensitive-char-1.json',
-                 'test_data/env-sensitive-char-2.json',
+                ['python3', 'src/cli/analyze_plan.py', 'compare',
+                 'tests/fixtures/env-sensitive-char-1.json',
+                 'tests/fixtures/env-sensitive-char-2.json',
                  '--html', output_file],
                 capture_output=True,
                 text=True
@@ -339,10 +339,10 @@ class TestUS3CombinedFunctionality:
         
         try:
             result = subprocess.run(
-                ['python3', 'analyze_plan.py', 'compare',
-                 'test_data/env-char-diff-1.json',
-                 'test_data/env-char-diff-2.json',
-                 '--config', 'test_data/ignore_test_config.json',
+                ['python3', 'src/cli/analyze_plan.py', 'compare',
+                 'tests/fixtures/env-char-diff-1.json',
+                 'tests/fixtures/env-char-diff-2.json',
+                 '--config', 'tests/fixtures/ignore_test_config.json',
                  '--html', output_file],
                 capture_output=True,
                 text=True
@@ -375,10 +375,10 @@ class TestUS3CombinedFunctionality:
         try:
             # This would need test data where all diffs are in ignored attributes
             result = subprocess.run(
-                ['python3', 'analyze_plan.py', 'compare',
-                 'test_data/env-char-diff-1.json',
-                 'test_data/env-char-diff-2.json',
-                 '--config', 'test_data/ignore_test_config.json',
+                ['python3', 'src/cli/analyze_plan.py', 'compare',
+                 'tests/fixtures/env-char-diff-1.json',
+                 'tests/fixtures/env-char-diff-2.json',
+                 '--config', 'tests/fixtures/ignore_test_config.json',
                  '--html', output_file],
                 capture_output=True,
                 text=True
@@ -393,10 +393,10 @@ class TestUS3CombinedFunctionality:
     def test_combined_with_diff_only_flag(self):
         """Test --config + --diff-only combination."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/dev-plan.json',
-             'test_data/staging-plan.json',
-             '--config', 'ignore_config.example.json',
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/dev-plan.json',
+             'tests/fixtures/staging-plan.json',
+             '--config', 'examples/ignore_config.example.json',
              '--diff-only'],
             capture_output=True,
             text=True
@@ -415,10 +415,10 @@ class TestUS3CombinedFunctionality:
         
         try:
             result = subprocess.run(
-                ['python3', 'analyze_plan.py', 'compare',
-                 'test_data/env-char-diff-1.json',
-                 'test_data/env-char-diff-2.json',
-                 '--config', 'test_data/ignore_test_config.json',
+                ['python3', 'src/cli/analyze_plan.py', 'compare',
+                 'tests/fixtures/env-char-diff-1.json',
+                 'tests/fixtures/env-char-diff-2.json',
+                 '--config', 'tests/fixtures/ignore_test_config.json',
                  '--html', output_file],
                 capture_output=True,
                 text=True
@@ -440,10 +440,10 @@ class TestUS3CombinedFunctionality:
         
         try:
             result = subprocess.run(
-                ['python3', 'analyze_plan.py', 'compare',
-                 'test_data/dev-plan.json',
-                 'test_data/staging-plan.json',
-                 '--config', 'ignore_config.example.json',
+                ['python3', 'src/cli/analyze_plan.py', 'compare',
+                 'tests/fixtures/dev-plan.json',
+                 'tests/fixtures/staging-plan.json',
+                 '--config', 'examples/ignore_config.example.json',
                  '--html', output_file],
                 capture_output=True,
                 text=True
@@ -466,10 +466,10 @@ class TestUS3CombinedFunctionality:
     def test_config_with_diff_only_text(self):
         """Test --config + --diff-only produces correct text output."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/dev-plan.json',
-             'test_data/staging-plan.json',
-             '--config', 'ignore_config.example.json',
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/dev-plan.json',
+             'tests/fixtures/staging-plan.json',
+             '--config', 'examples/ignore_config.example.json',
              '--diff-only'],
             capture_output=True,
             text=True

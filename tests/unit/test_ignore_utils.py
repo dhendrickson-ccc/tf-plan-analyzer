@@ -12,7 +12,7 @@ Tests all functions in ignore_utils.py with various scenarios including:
 import json
 import pytest
 from pathlib import Path
-from ignore_utils import (
+from src.lib.ignore_utils import (
     load_ignore_config,
     apply_ignore_config,
     get_ignored_attributes,

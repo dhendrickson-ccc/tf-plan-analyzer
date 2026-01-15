@@ -5,7 +5,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(__file__))
 
-from analyze_plan import TerraformPlanAnalyzer
+from src.cli.analyze_plan import TerraformPlanAnalyzer
 
 # Create a mock analyzer instance
 class MockAnalyzer(TerraformPlanAnalyzer):

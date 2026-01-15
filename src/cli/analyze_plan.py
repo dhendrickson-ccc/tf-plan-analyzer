@@ -18,13 +18,13 @@ import src.lib.html_generation
 from src.lib.diff_utils import highlight_char_diff, highlight_json_diff as highlight_json_diff_util
 
 try:
-    from hcl_value_resolver import HCLValueResolver
+    from src.core.hcl_value_resolver import HCLValueResolver
 except ImportError:
     HCLValueResolver = None  # Optional dependency
 
 try:
-    from salt_manager import generate_salt, generate_position_seed, store_salt, load_salt
-    from sensitive_obfuscator import traverse_and_obfuscate
+    from src.security.salt_manager import generate_salt, generate_position_seed, store_salt, load_salt
+    from src.security.sensitive_obfuscator import traverse_and_obfuscate
 except ImportError as e:
     print(f"Warning: Obfuscate subcommand dependencies not available: {e}", file=sys.stderr)
     generate_salt = None
@@ -1403,9 +1403,9 @@ def handle_report_subcommand(args):
 
 def handle_compare_subcommand(args):
     """Handle the 'compare' subcommand for multi-environment comparison."""
-    from multi_env_comparator import EnvironmentPlan, MultiEnvReport
+    from src.core.multi_env_comparator import EnvironmentPlan, MultiEnvReport
     from pathlib import Path
-    from ignore_utils import load_ignore_config
+    from src.lib.ignore_utils import load_ignore_config
     
     # Validate at least 2 plan files
     if len(args.plan_files) < 2:

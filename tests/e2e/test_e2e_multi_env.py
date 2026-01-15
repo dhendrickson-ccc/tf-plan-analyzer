@@ -17,7 +17,7 @@ class TestCLIRouting:
     def test_no_subcommand_shows_help(self):
         """Test that running without subcommand shows help and exits with error."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py'],
+            ['python3', 'src/cli/analyze_plan.py'],
             capture_output=True,
             text=True
         )
@@ -28,7 +28,7 @@ class TestCLIRouting:
     def test_report_subcommand_help(self):
         """Test that report subcommand help is accessible."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'report', '--help'],
+            ['python3', 'src/cli/analyze_plan.py', 'report', '--help'],
             capture_output=True,
             text=True
         )
@@ -40,7 +40,7 @@ class TestCLIRouting:
     def test_compare_subcommand_help(self):
         """Test that compare subcommand help is accessible."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare', '--help'],
+            ['python3', 'src/cli/analyze_plan.py', 'compare', '--help'],
             capture_output=True,
             text=True
         )
@@ -51,7 +51,7 @@ class TestCLIRouting:
     def test_compare_with_one_file_errors(self):
         """Test that compare subcommand requires at least 2 files."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare', 'dummy.json'],
+            ['python3', 'src/cli/analyze_plan.py', 'compare', 'dummy.json'],
             capture_output=True,
             text=True
         )
@@ -66,8 +66,8 @@ class TestMultiEnvComparison:
     def test_compare_two_environments(self):
         """Test comparing two environments with text output."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/dev-plan.json', 'test_data/staging-plan.json'],
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/dev-plan.json', 'tests/fixtures/staging-plan.json'],
             capture_output=True,
             text=True
         )
@@ -80,9 +80,9 @@ class TestMultiEnvComparison:
     def test_compare_three_environments(self):
         """Test comparing three environments."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/dev-plan.json', 'test_data/staging-plan.json', 
-             'test_data/prod-plan.json'],
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/dev-plan.json', 'tests/fixtures/staging-plan.json', 
+             'tests/fixtures/prod-plan.json'],
             capture_output=True,
             text=True
         )
@@ -101,8 +101,8 @@ class TestMultiEnvComparison:
             os.remove(output_file)
         
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/dev-plan.json', 'test_data/staging-plan.json',
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/dev-plan.json', 'tests/fixtures/staging-plan.json',
              '--html', output_file],
             capture_output=True,
             text=True
@@ -129,8 +129,8 @@ class TestMultiEnvComparison:
     def test_compare_nonexistent_file(self):
         """Test that comparing nonexistent file shows error."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/dev-plan.json', 'nonexistent.json'],
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/dev-plan.json', 'nonexistent.json'],
             capture_output=True,
             text=True
         )
@@ -146,10 +146,10 @@ class TestMultiEnvComparison:
             os.remove(output_file)
         
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/dev-plan.json', 'test_data/qa-plan.json',
-             'test_data/staging-plan.json', 'test_data/preprod-plan.json',
-             'test_data/prod-plan.json',
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/dev-plan.json', 'tests/fixtures/qa-plan.json',
+             'tests/fixtures/staging-plan.json', 'tests/fixtures/preprod-plan.json',
+             'tests/fixtures/prod-plan.json',
              '--html', output_file],
             capture_output=True,
             text=True
@@ -181,8 +181,8 @@ class TestSensitiveValues:
     def test_sensitive_values_masked_by_default(self):
         """Test that sensitive values are masked by default."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/dev-sensitive.json', 'test_data/prod-sensitive.json'],
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/dev-sensitive.json', 'tests/fixtures/prod-sensitive.json'],
             capture_output=True,
             text=True
         )
@@ -193,8 +193,8 @@ class TestSensitiveValues:
     def test_show_sensitive_reveals_values(self):
         """Test that --show-sensitive flag reveals actual sensitive values."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/dev-sensitive.json', 'test_data/prod-sensitive.json',
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/dev-sensitive.json', 'tests/fixtures/prod-sensitive.json',
              '--show-sensitive'],
             capture_output=True,
             text=True
@@ -212,8 +212,8 @@ class TestSensitiveValues:
             os.remove(output_file)
         
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/dev-sensitive.json', 'test_data/prod-sensitive.json',
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/dev-sensitive.json', 'tests/fixtures/prod-sensitive.json',
              '--html', output_file],
             capture_output=True,
             text=True
@@ -237,8 +237,8 @@ class TestHCLResolution:
     def test_tfvars_count_mismatch_error(self):
         """Test that mismatched tfvars count triggers error."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/dev-plan.json', 'test_data/staging-plan.json', 'test_data/prod-plan.json',
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/dev-plan.json', 'tests/fixtures/staging-plan.json', 'tests/fixtures/prod-plan.json',
              '--tfvars-files', 'dev.tfvars,staging.tfvars'],  # Only 2 tfvars for 3 files
             capture_output=True,
             text=True
@@ -260,8 +260,8 @@ class TestEnvironmentLabeling:
             os.remove(output_file)
         
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/dev-plan.json', 'test_data/staging-plan.json',
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/dev-plan.json', 'tests/fixtures/staging-plan.json',
              '--env-names', 'Development,Staging',
              '--html', output_file],
             capture_output=True,
@@ -286,8 +286,8 @@ class TestEnvironmentLabeling:
     def test_env_names_count_mismatch_error(self):
         """Test that mismatched env-names count triggers error."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/dev-plan.json', 'test_data/staging-plan.json', 'test_data/prod-plan.json',
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/dev-plan.json', 'tests/fixtures/staging-plan.json', 'tests/fixtures/prod-plan.json',
              '--env-names', 'Dev,Staging'],  # Only 2 names for 3 files
             capture_output=True,
             text=True
@@ -299,8 +299,8 @@ class TestEnvironmentLabeling:
     def test_default_names_from_filenames(self):
         """Test that names are derived from filenames when --env-names not provided."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/dev-plan.json', 'test_data/staging-plan.json'],
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/dev-plan.json', 'tests/fixtures/staging-plan.json'],
             capture_output=True,
             text=True
         )
@@ -320,8 +320,8 @@ class TestDiffOnlyFilter:
             os.remove(output_file)
         
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/test1-plan.json', 'test_data/test2-plan.json',
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/test1-plan.json', 'tests/fixtures/test2-plan.json',
              '--diff-only', '--html', output_file],
             capture_output=True,
             text=True
@@ -351,8 +351,8 @@ class TestDiffOnlyFilter:
             os.remove(output_file)
         
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/test1-plan.json', 'test_data/test2-plan.json',
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/test1-plan.json', 'tests/fixtures/test2-plan.json',
              '--html', output_file],
             capture_output=True,
             text=True
@@ -384,9 +384,9 @@ class TestIgnoreConfig:
             os.remove(output_file)
         
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/dev-plan.json', 'test_data/staging-plan.json',
-             '--config', 'test_data/ignore_config.json',
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/dev-plan.json', 'tests/fixtures/staging-plan.json',
+             '--config', 'tests/fixtures/ignore_config.json',
              '--html', output_file],
             capture_output=True,
             text=True
@@ -402,8 +402,8 @@ class TestIgnoreConfig:
     def test_missing_config_file_error(self):
         """Test that missing config file triggers error."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/dev-plan.json', 'test_data/staging-plan.json',
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/dev-plan.json', 'tests/fixtures/staging-plan.json',
              '--config', 'nonexistent_config.json'],
             capture_output=True,
             text=True
@@ -417,8 +417,8 @@ class TestTextOutput:
     def test_text_output_without_html_flag(self):
         """Test that text output is generated when --html flag is omitted."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/dev-plan.json', 'test_data/staging-plan.json'],
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/dev-plan.json', 'tests/fixtures/staging-plan.json'],
             capture_output=True,
             text=True
         )
@@ -435,8 +435,8 @@ class TestTextOutput:
     def test_verbose_flag_shows_configurations(self):
         """Test that -v flag shows detailed configurations in text output."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/dev-plan.json', 'test_data/staging-plan.json',
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/dev-plan.json', 'tests/fixtures/staging-plan.json',
              '-v'],
             capture_output=True,
             text=True
@@ -453,8 +453,8 @@ class TestTextOutput:
     def test_verbose_long_form_flag(self):
         """Test that --verbose long form works the same as -v."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/dev-plan.json', 'test_data/staging-plan.json',
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/dev-plan.json', 'tests/fixtures/staging-plan.json',
              '--verbose'],
             capture_output=True,
             text=True
@@ -468,8 +468,8 @@ class TestErrorHandling:
     def test_duplicate_environment_names_error(self):
         """Test that duplicate environment names trigger an error."""
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/dev-plan.json', 'test_data/staging-plan.json',
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/dev-plan.json', 'tests/fixtures/staging-plan.json',
              '--env-names', 'env1,env1'],
             capture_output=True,
             text=True
@@ -489,8 +489,8 @@ class TestErrorHandling:
         
         try:
             result = subprocess.run(
-                ['python3', 'analyze_plan.py', 'compare',
-                 'test_data/dev-plan.json', invalid_file],
+                ['python3', 'src/cli/analyze_plan.py', 'compare',
+                 'tests/fixtures/dev-plan.json', invalid_file],
                 capture_output=True,
                 text=True
             )
@@ -512,8 +512,8 @@ class TestCharacterLevelDiff:
             os.remove(output_file)
         
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/env-char-diff-1.json', 'test_data/env-char-diff-2.json',
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/env-char-diff-1.json', 'tests/fixtures/env-char-diff-2.json',
              '--html', output_file],
             capture_output=True,
             text=True
@@ -540,8 +540,8 @@ class TestCharacterLevelDiff:
             os.remove(output_file)
         
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/env-char-diff-1.json', 'test_data/env-char-diff-2.json',
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/env-char-diff-1.json', 'tests/fixtures/env-char-diff-2.json',
              '--html', output_file],
             capture_output=True,
             text=True
@@ -570,8 +570,8 @@ class TestCharacterLevelDiff:
         
         # Compare same file but use custom environment names to avoid duplicate error
         result = subprocess.run(
-            ['python3', 'analyze_plan.py', 'compare',
-             'test_data/env-char-diff-1.json', 'test_data/env-char-diff-1.json',
+            ['python3', 'src/cli/analyze_plan.py', 'compare',
+             'tests/fixtures/env-char-diff-1.json', 'tests/fixtures/env-char-diff-1.json',
              '--env-names', 'env-a,env-b',
              '--html', output_file],
             capture_output=True,

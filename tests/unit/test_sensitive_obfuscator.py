@@ -2,7 +2,7 @@
 
 import pytest
 import hashlib
-from sensitive_obfuscator import obfuscate_value, get_salt_position, traverse_and_obfuscate
+from src.security.sensitive_obfuscator import obfuscate_value, get_salt_position, traverse_and_obfuscate
 
 
 class TestObfuscateValue:

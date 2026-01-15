@@ -6,7 +6,7 @@ Unit tests for multi-environment comparison functionality.
 import json
 import pytest
 from pathlib import Path
-from multi_env_comparator import EnvironmentPlan, ResourceComparison, MultiEnvReport
+from src.core.multi_env_comparator import EnvironmentPlan, ResourceComparison, MultiEnvReport
 
 
 class TestEnvironmentPlan:
@@ -21,7 +21,7 @@ class TestEnvironmentPlan:
     
     def test_load_plan_with_resources(self):
         """Test loading a plan file with resources."""
-        plan = EnvironmentPlan(label="dev", plan_file_path=Path("test_data/dev-plan.json"))
+        plan = EnvironmentPlan(label="dev", plan_file_path=Path("tests/fixtures/dev-plan.json"))
         plan.load()
         
         # Check that resources were loaded
@@ -31,7 +31,7 @@ class TestEnvironmentPlan:
     
     def test_load_extracts_correct_config(self):
         """Test that load() correctly extracts before values."""
-        plan = EnvironmentPlan(label="dev", plan_file_path=Path("test_data/dev-plan.json"))
+        plan = EnvironmentPlan(label="dev", plan_file_path=Path("tests/fixtures/dev-plan.json"))
         plan.load()
         
         # Verify instance type is extracted correctly
@@ -111,8 +111,8 @@ class TestMultiEnvReport:
     
     def test_init(self):
         """Test MultiEnvReport initialization."""
-        env1 = EnvironmentPlan(label="dev", plan_file_path=Path("test_data/dev-plan.json"))
-        env2 = EnvironmentPlan(label="staging", plan_file_path=Path("test_data/staging-plan.json"))
+        env1 = EnvironmentPlan(label="dev", plan_file_path=Path("tests/fixtures/dev-plan.json"))
+        env2 = EnvironmentPlan(label="staging", plan_file_path=Path("tests/fixtures/staging-plan.json"))
         
         report = MultiEnvReport(environments=[env1, env2])
         
@@ -122,8 +122,8 @@ class TestMultiEnvReport:
     
     def test_load_environments(self):
         """Test loading all environment plans."""
-        env1 = EnvironmentPlan(label="dev", plan_file_path=Path("test_data/dev-plan.json"))
-        env2 = EnvironmentPlan(label="staging", plan_file_path=Path("test_data/staging-plan.json"))
+        env1 = EnvironmentPlan(label="dev", plan_file_path=Path("tests/fixtures/dev-plan.json"))
+        env2 = EnvironmentPlan(label="staging", plan_file_path=Path("tests/fixtures/staging-plan.json"))
         
         report = MultiEnvReport(environments=[env1, env2])
         report.load_environments()
@@ -134,8 +134,8 @@ class TestMultiEnvReport:
     
     def test_build_comparisons(self):
         """Test building resource comparisons."""
-        env1 = EnvironmentPlan(label="dev", plan_file_path=Path("test_data/dev-plan.json"))
-        env2 = EnvironmentPlan(label="staging", plan_file_path=Path("test_data/staging-plan.json"))
+        env1 = EnvironmentPlan(label="dev", plan_file_path=Path("tests/fixtures/dev-plan.json"))
+        env2 = EnvironmentPlan(label="staging", plan_file_path=Path("tests/fixtures/staging-plan.json"))
         
         report = MultiEnvReport(environments=[env1, env2])
         report.load_environments()
@@ -151,8 +151,8 @@ class TestMultiEnvReport:
     
     def test_calculate_summary(self):
         """Test summary statistics calculation."""
-        env1 = EnvironmentPlan(label="dev", plan_file_path=Path("test_data/dev-plan.json"))
-        env2 = EnvironmentPlan(label="staging", plan_file_path=Path("test_data/staging-plan.json"))
+        env1 = EnvironmentPlan(label="dev", plan_file_path=Path("tests/fixtures/dev-plan.json"))
+        env2 = EnvironmentPlan(label="staging", plan_file_path=Path("tests/fixtures/staging-plan.json"))
         
         report = MultiEnvReport(environments=[env1, env2])
         report.load_environments()
@@ -167,8 +167,8 @@ class TestMultiEnvReport:
     
     def test_generate_html(self, tmp_path):
         """Test HTML report generation."""
-        env1 = EnvironmentPlan(label="dev", plan_file_path=Path("test_data/dev-plan.json"))
-        env2 = EnvironmentPlan(label="staging", plan_file_path=Path("test_data/staging-plan.json"))
+        env1 = EnvironmentPlan(label="dev", plan_file_path=Path("tests/fixtures/dev-plan.json"))
+        env2 = EnvironmentPlan(label="staging", plan_file_path=Path("tests/fixtures/staging-plan.json"))
         
         report = MultiEnvReport(environments=[env1, env2])
         report.load_environments()

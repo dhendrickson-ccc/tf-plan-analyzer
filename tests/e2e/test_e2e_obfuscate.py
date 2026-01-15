@@ -15,8 +15,8 @@ import pytest
 
 
 # Test data directory
-TEST_DATA_DIR = Path(__file__).parent / "test_data" / "obfuscate"
-CLI_SCRIPT = Path(__file__).parent / "analyze_plan.py"
+TEST_DATA_DIR = Path(__file__).parent.parent.parent / "tests" / "fixtures" / "obfuscate"
+CLI_SCRIPT = Path(__file__).parent.parent.parent / "src" / "cli" / "analyze_plan.py"
 
 
 def run_obfuscate(args, env=None):

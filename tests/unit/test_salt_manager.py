@@ -5,7 +5,7 @@ import os
 import tempfile
 import base64
 from cryptography.fernet import Fernet, InvalidToken
-from salt_manager import generate_salt, generate_position_seed, store_salt, load_salt, get_encryption_key
+from src.security.salt_manager import generate_salt, generate_position_seed, store_salt, load_salt, get_encryption_key
 
 
 class TestGenerateSalt:

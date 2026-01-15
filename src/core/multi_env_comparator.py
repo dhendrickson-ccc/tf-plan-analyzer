@@ -11,7 +11,7 @@ import json
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Any, Tuple
-from ignore_utils import apply_ignore_config, get_ignored_attributes
+from src.lib.ignore_utils import apply_ignore_config, get_ignored_attributes
 
 # Import shared HTML/CSS generation utilities
 import src.lib.html_generation
