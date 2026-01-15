@@ -9,13 +9,11 @@
 
 ### Session 2026-01-15
 
-*(To be filled during planning)*
-
-- Q: Should test files also be reorganized into a separate `tests/` directory, or should they remain at root? → A: NEEDS CLARIFICATION
-- Q: For the style guide, should it include specific color values and hex codes, or just general principles? → A: NEEDS CLARIFICATION
-- Q: Should the function glossary be auto-generated from docstrings, or manually curated? → A: NEEDS CLARIFICATION
-- Q: Are there specific DRY violations that are known pain points, or should these be discovered during implementation? → A: NEEDS CLARIFICATION
-- Q: Should demo HTML files be moved to a `demos/` or `examples/` directory, or deleted if no longer needed? → A: NEEDS CLARIFICATION
+- Q: How should demo HTML files be handled? → A: Delete all existing HTML files; regenerate fresh examples after UI consistency work (US2) is complete to showcase consistent styling
+- Q: How detailed should the style guide be? → A: Comprehensive: exact hex codes, font stacks, spacing values (px/rem), complete CSS class examples, copy-paste ready code snippets
+- Q: How should the function glossary be generated? → A: Hybrid: Auto-extract function names, locations, signatures; manually add purpose descriptions, usage examples, and notes
+- Q: Should tests be reorganized into tests/unit/ and tests/e2e/ subdirectories, or kept flat in tests/? → A: Organize into tests/unit/ and tests/e2e/ subdirectories
+- Q: How should the CLI entry point be handled during the transition? → A: Set up proper pip package with entry points (pyproject.toml), install in editable mode during development, enable `tf-plan-analyzer` command immediately
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -29,11 +27,14 @@ Developers working on the codebase need a cleaner project structure where source
 
 **Acceptance Scenarios**:
 
-1. **Given** all Python source files are currently at root, **When** reorganization is complete, **Then** source files are in `src/` directory and all existing tests pass
-2. **Given** test files are currently at root, **When** reorganization is complete, **Then** test files are in `tests/` directory and pytest can still discover and run them
-3. **Given** demo/example HTML files are scattered at root, **When** reorganization is complete, **Then** they are in an `examples/` or `demos/` directory or removed if obsolete
+1. **Given** all Python source files are currently at root, **When** reorganization is complete, **Then** source files are in `src/` directory with subdirectories (lib/, core/, security/) and all existing tests pass
+2. **Given** test files are currently at root, **When** reorganization is complete, **Then** test files are in `tests/unit/` and `tests/e2e/` subdirectories
+3. **Given** demo/example HTML files are scattered at root, **When** reorganization is complete, **Then** all existing HTML files are deleted and examples/ directory is created for future regenerated samples
+4. **Given** the CLI is invoked with `python analyze_plan.py`, **When** files are reorganized, **Then** the package is pip-installable and `tf-plan-analyzer` commands/` or `demos/` directory or removed if obsolete
 4. **Given** the CLI is invoked with `python analyze_plan.py`, **When** files are reorganized, **Then** the CLI entry point still works correctly
 5. **Given** documentation files (IMPLEMENTATION_SUMMARY.md, etc.) are at root, **When** reorganization is complete, **Then** they are in a `docs/` directory
+6. **Given** shared utility functions are scattered across modules, **When** reorganization is complete, **Then** common library functions are extracted to `src/lib/` directory
+7. **Given** the project needs pip installation, **When** reorganization is complete, **Then** pyproject.toml exists with proper entry points and `pip install -e .` enables the `tf-plan-analyzer` CLI command
 
 ---
 
@@ -92,20 +93,20 @@ AI agents and developers working on new features need comprehensive documentatio
 ---
 
 ### User Story 5 - Consolidate Duplicate Code (Priority: P2)
+ in a dedicated library directory, reducing maintenance burden and eliminating inconsistencies.
 
-Developers maintaining the codebase need a DRY (Don't Repeat Yourself) implementation where common logic is extracted to shared utilities, reducing maintenance burden and eliminating inconsistencies.
-
-**Why this priority**: Code duplication leads to bugs when fixes are applied to only one copy. Consolidating duplicate code now prevents future maintenance issues.
+**Why this priority**: Code duplication leads to bugs when fixes are applied to only one copy. Consolidating duplicate code now prevents future maintenance issues. A dedicated `src/lib/` directory provides a clear home for reusable functions.
 
 **Independent Test**: Can be tested by running all existing tests after consolidation to ensure behavior is preserved, and code review to verify duplicates were eliminated.
 
 **Acceptance Scenarios**:
 
-1. **Given** HTML style generation is duplicated across 3 files, **When** consolidation is complete, **Then** a single `generate_html_styles()` function exists and all reports use it
-2. **Given** JSON formatting logic may be duplicated, **When** consolidation is complete, **Then** shared formatting utilities are used consistently
-3. **Given** file I/O patterns are repeated, **When** consolidation is complete, **Then** common file operations use shared utility functions
-4. **Given** duplicate code existed before consolidation, **When** a bug fix is needed, **Then** it only needs to be fixed in one place
+1. **Given** HTML style generation is duplicated across 3 files, **When** consolidation is complete, **Then** a single function exists in `src/lib/html_generation.py` and all reports use it
+2. **Given** JSON formatting logic may be duplicated, **When** consolidation is complete, **Then** shared formatting utilities in `src/lib/json_utils.py` are used consistently
+3. **Given** file I/O patterns are repeated, **When** consolidation is complete, **Then** common file operations use shared utility functions in `src/lib/file_utils.py`
+4. **Given** duplicate code existed before consolidation, **When** a bug fix is needed, **Then** it only needs to be fixed in one place in the `src/lib/` directory
 5. **Given** all tests pass before consolidation, **When** consolidation is complete, **Then** all tests still pass with identical behavior
+6. **Given** the `src/lib/` directory is created, **When** developers search for reusable functions, **Then** they find all shared utilities organized by category (html_generation, json_utils, file_utils, etc.)
 
 ---
 
@@ -122,74 +123,88 @@ Developers maintaining the codebase need a DRY (Don't Repeat Yourself) implement
 ### Functional Requirements
 
 #### Root-Level Organization (US1)
-- **FR-001**: System MUST organize Python source files into a `src/` directory
-- **FR-002**: System MUST organize test files into a `tests/` directory
-- **FR-003**: System MUST organize documentation into a `docs/` directory
-- **FR-004**: System MUST organize examples/demos into an `examples/` directory or remove if obsolete
-- **FR-005**: CLI entry point MUST remain functional after reorganization
-- **FR-006**: All existing tests MUST pass after reorganization
-- **FR-007**: Import statements MUST be updated to reflect new module paths
+- **FR-001**: System MUST organize Python source files into a `src/` directory with subdirectories (lib/, core/, security/)
+- **FR-002**: System MUST create a `src/lib/` directory for all shared utilities (HTML generation, JSON utils, file I/O, ignore config, etc.)
+- **FR-003**: System MUST organize test files into `tests/unit/` and `tests/e2e/` subdirectories
+- **FR-004**: System MUST organize documentation into a `docs/` directory
+- **FR-005**: System MUST delete all existing HTML demo files; create `examples/` directory for future regenerated samples
+- **FR-006**: System MUST create `pyproject.toml` with entry point definition for pip installation
+- **FR-007**: CLI MUST work via `tf-plan-analyzer` command after `pip install -e .`
+- **FR-008**: All existing tests MUST pass after reorganization
+- **FR-009**: Import statements MUST be updated to reflect new module paths
 
 #### Shared HTML Styles (US2)
-- **FR-008**: System MUST extract CSS styles to a shared module or template
-- **FR-009**: All HTML reports MUST use consistent color values for semantic meanings (success, error, warning)
-- **FR-010**: All HTML reports MUST use consistent font families (sans-serif for body, monospace for code)
-- **FR-011**: All HTML reports MUST use consistent spacing values (padding, margin, border-radius)
-- **FR-012**: Changes to shared styles MUST automatically apply to all report types
+- **FR-010**: System MUST extract CSS styles to a shared module in `src/lib/html_generation.py`
+- **FR-011**: All HTML reports MUST use consistent color values for semantic meanings (success, error, warning)
+- **FR-012**: All HTML reports MUST use consistent font families (sans-serif for body, monospace for code)
+- **FR-013**: All HTML reports MUST use consistent spacing values (padding, margin, border-radius)
+- **FR-014**: Changes to shared styles MUST automatically apply to all report types
+- **FR-015**: After CSS consolidation, fresh example HTML reports MUST be generated to examples/ directory showcasing consistent styling
 
 #### UI Style Guide (US3)
-- **FR-013**: Style guide MUST document color palette with hex values and semantic usage
-- **FR-014**: Style guide MUST document typography (font families, sizes, weights)
-- **FR-015**: Style guide MUST document spacing system (padding, margin, gap values)
-- **FR-016**: Style guide MUST include code examples for common UI components (cards, headers, buttons)
-- **FR-017**: Style guide MUST be referenced in `.specify/memory/constitution.md`
+- **FR-016**: Style guide MUST document exact color palette with hex values and semantic usage
+- **FR-017**: Style guide MUST document complete typography (font families with fallback stacks, sizes in px/rem, weights)
+- **FR-018**: Style guide MUST document spacing system with exact values (padding, margin, gap in px/rem)
+- **FR-019**: Style guide MUST include complete CSS class examples that are copy-paste ready
+- **FR-020**: Style guide MUST include code snippets for common UI components (cards, headers, buttons, tables)
+- **FR-021**: Style guide MUST be referenced in `.specify/memory/constitution.md`
 
 #### Function Glossary (US4)
-- **FR-018**: Glossary MUST list all public functions in the codebase
-- **FR-019**: Glossary entries MUST include function location (file path and line number)
-- **FR-020**: Glossary entries MUST include function purpose/description
-- **FR-021**: Glossary entries MUST include parameter types and descriptions
-- **FR-022**: Glossary entries MUST include return type and description
-- **FR-023**: Glossary MUST be searchable (Markdown with table of contents)
-- **FR-024**: Glossary MUST be referenced in `.specify/memory/constitution.md`
+- **FR-022**: Glossary generation MUST use hybrid approach: auto-extract function names, locations, and signatures
+- **FR-023**: Glossary entries MUST be manually enhanced with purpose descriptions and usage examples
+- **FR-024**: Glossary entries MUST include function location (file path and line number)
+- **FR-025**: Glossary entries MUST include parameter types and descriptions
+- **FR-026**: Glossary entries MUST include return type and description
+- **FR-027**: Glossary MUST be searchable (Markdown with table of contents)
+- **FR-028**: Glossary MUST include all public functions in codebase including those in `src/lib/`
+- **FR-029**: Glossary MUST be referenced in `.specify/memory/constitution.md`
 
 #### Code Consolidation (US5)
-- **FR-025**: Duplicate CSS generation logic MUST be consolidated into a single function
-- **FR-026**: Duplicate JSON formatting logic MUST use shared utilities
-- **FR-027**: All consolidated code MUST maintain backward compatibility
-- **FR-028**: All existing tests MUST pass after consolidation
+- **FR-030**: Duplicate CSS generation logic MUST be consolidated into `src/lib/html_generation.py`
+- **FR-031**: Duplicate JSON formatting logic MUST be extracted to `src/lib/json_utils.py`
+- **FR-032**: Common file I/O operations MUST be consolidated into `src/lib/file_utils.py`
+- **FR-033**: Diff highlighting logic MUST be extracted to `src/lib/diff_utils.py` if duplicated
+- **FR-034**: All library functions in `src/lib/` MUST have comprehensive docstrings
+- **FR-035**: All consolidated code MUST maintain backward compatibility
+- **FR-036**: All existing tests MUST pass after consolidation
+- **FR-037**: The `src/lib/` directory MUST have an `__init__.py` that exports commonly used functions
 
 ### Key Entities *(include if feature involves data)*
-
+- **LibraryModule**: Categorized shared utility modules in `src/lib/` (html_generation, json_utils, file_utils, diff_utils)
 - **StyleConfig**: CSS configuration including colors, fonts, spacing
 - **FunctionMetadata**: Function name, location, parameters, return type, description
 - **ProjectStructure**: New directory organization mapping
 
 ## Success Criteria *(mandatory)*
 
-### Measurable Outcomes
+### Completeness Criteria
 
-- **SC-001**: Root-level file count reduced from 40+ to <10 files (excluding .gitignore, README, etc.)
-- **SC-002**: CSS code duplication reduced by 100% (single source of truth)
+- **SC-001**: All 45+ root files relocated to appropriate new locations (src/, tests/, docs/, examples/)
+- **SC-002**: Centralized CSS module in `src/lib/html_generation.py` is single source of truth for all styles
 - **SC-003**: All 158 existing tests pass without modification to test logic
-- **SC-004**: Function glossary includes 100% of public functions across all modules
+- **SC-004**: Function glossary includes 100% of public functions across all modules including `src/lib/`
 - **SC-005**: Style guide referenced in constitution with enforcement in planning workflow
 - **SC-006**: Code coverage maintained or improved after refactoring
-- **SC-007**: No breaking changes to CLI interface or Python API
+- **SC-007**: No breaking changes to CLI interface (users install with pip and use `tf-plan-analyzer` command)
+- **SC-008**: All shared utilities consolidated into `src/lib/` with clear module organization
+- **SC-009**: At least 3 library modules created (html_generation, json_utils, file_utils)
+- **SC-010**: Package is pip-installable with `pip install -e .` for development
+- **SC-011**: After installation, `tf-plan-analyzer --help` command works correctly
 
 ### Quality Metrics
 
-- **SC-008**: All HTML reports generated before and after refactoring are visually identical (or improved)
-- **SC-009**: Import statements follow Python best practices (relative imports where appropriate)
-- **SC-010**: No dead code or unused imports remain after cleanup
-- **SC-011**: Documentation builds successfully with updated paths
-- **SC-012**: Git history preserves file history through moves (using `git mv`)
+- **SC-012**: All HTML reports generated before and after refactoring are visually identical (or improved)
+- **SC-013**: Import statements follow Python best practices (absolute imports from src.)
+- **SC-014**: No dead code or unused imports remain after cleanup
+- **SC-015**: Documentation builds successfully with updated paths
+- **SC-016**: Git history preserves file history through moves (using `git mv`)
+- **SC-017**: Fresh example HTML files showcase consistent styling after US2 completion
 
 ## Technical Constraints
 
 - **TC-001**: Must maintain Python 3.9.6 compatibility
-- **TC-002**: Must not break existing CLI interface (`python analyze_plan.py [command]`)
-- **TC-003**: Must preserve pytest discovery patterns
+- **TC-002**: Must enable pip installation with proper entry points (`tf-plan-analyzer` command)
+- **TC-003**: Must preserve pytest discovery patterns in tests/unit/ and tests/e2e/ structure
 - **TC-004**: File reorganization must use `git mv` to preserve history
 - **TC-005**: All changes must be backward compatible for external users
 

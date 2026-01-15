@@ -108,24 +108,22 @@ specs/005-cleanup-and-refactor/
 │
 ├── src/
 │   ├── __init__.py
-│   ├── cli/
+│   ├── lib/
 │   │   ├── __init__.py
-│   │   └── analyze_plan.py          # Main CLI entry point
+│   │   ├── html_generation.py       # NEW: Shared CSS and HTML utilities
+│   │   ├── diff_utils.py            # NEW: Diff highlighting functions
+│   │   ├── json_utils.py            # NEW: JSON loading/formatting
+│   │   ├── file_utils.py            # NEW: File I/O utilities
+│   │   ├── ignore_utils.py          # Moved from root
+│   │   └── analyze_plan.py          # Main CLI entry point (moved from root)
 │   ├── core/
 │   │   ├── __init__.py
 │   │   ├── multi_env_comparator.py
 │   │   └── hcl_value_resolver.py
-│   ├── security/
-│   │   ├── __init__.py
-│   │   ├── salt_manager.py
-│   │   └── sensitive_obfuscator.py
-│   ├── utils/
-│   │   ├── __init__.py
-│   │   └── ignore_utils.py
-│   └── templates/
+│   └── security/
 │       ├── __init__.py
-│       ├── html_styles.py           # NEW: Shared CSS
-│       └── report_template.py       # NEW: Shared HTML structure
+│       ├── salt_manager.py
+│       └── sensitive_obfuscator.py
 │
 ├── tests/
 │   ├── __init__.py
@@ -230,7 +228,7 @@ Changes only affect code organization and presentation layer (CSS).
 ### High-Level Implementation Strategy
 
 1. **US2 First (CSS Extraction)**: Lowest risk, highest immediate impact
-   - Extract shared CSS to `src/templates/html_styles.py`
+   - Extract shared CSS to `src/lib/html_generation.py`
    - Update all HTML generators to use shared styles
    - Validate visual consistency
    - Commit

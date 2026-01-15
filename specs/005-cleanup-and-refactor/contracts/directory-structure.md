@@ -18,22 +18,23 @@ This contract defines the new project directory structure and the migration path
 
 | Current Path | New Path | Module Import |
 |--------------|----------|---------------|
-| `analyze_plan.py` | `src/cli/analyze_plan.py` | `from src.cli import analyze_plan` |
+| `analyze_plan.py` | `src/lib/analyze_plan.py` | `from src.lib import analyze_plan` |
 | `multi_env_comparator.py` | `src/core/multi_env_comparator.py` | `from src.core import multi_env_comparator` |
 | `hcl_value_resolver.py` | `src/core/hcl_value_resolver.py` | `from src.core import hcl_value_resolver` |
-| `ignore_utils.py` | `src/utils/ignore_utils.py` | `from src.utils import ignore_utils` |
+| `ignore_utils.py` | `src/lib/ignore_utils.py` | `from src.lib import ignore_utils` |
 | `salt_manager.py` | `src/security/salt_manager.py` | `from src.security import salt_manager` |
 | `sensitive_obfuscator.py` | `src/security/sensitive_obfuscator.py` | `from src.security import sensitive_obfuscator` |
 | `generate_html_report.py` | **DEPRECATED** | *(functionality merged into analyze_plan.py)* |
 | `generate_large_test_plan.py` | `examples/demo_data/generate_large_test_plan.py` | *(not importable, standalone script)* |
 
-### New Template Files (US2 Deliverables)
+### New Library Files (US2 & US5 Deliverables)
 
 | New Path | Purpose | Module Import |
 |----------|---------|---------------|
-| `src/templates/__init__.py` | Package marker | - |
-| `src/templates/html_styles.py` | Shared CSS definitions | `from src.templates import html_styles` |
-| `src/templates/report_template.py` | Shared HTML structure | `from src.templates import report_template` |
+| `src/lib/html_generation.py` | Shared CSS and HTML utilities | `from src.lib import html_generation` |
+| `src/lib/diff_utils.py` | Diff highlighting functions | `from src.lib import diff_utils` |
+| `src/lib/json_utils.py` | JSON loading and formatting | `from src.lib import json_utils` |
+| `src/lib/file_utils.py` | File I/O utilities | `from src.lib import file_utils` |
 
 ### Test Files
 
@@ -109,7 +110,7 @@ from ignore_utils import load_ignore_config
 **New**:
 ```python
 from src.core.multi_env_comparator import MultiEnvReport
-from src.utils.ignore_utils import load_ignore_config
+from src.lib.ignore_utils import load_ignore_config
 ```
 
 ### Test Imports
@@ -122,18 +123,18 @@ from multi_env_comparator import ResourceComparison
 
 **New**:
 ```python
-from src.cli import analyze_plan
+from src.lib import analyze_plan
 from src.core.multi_env_comparator import ResourceComparison
 ```
 
-### Relative Imports (within same package)
+### Absolute Imports (from src/)
 
-**Example** in `src/cli/analyze_plan.py`:
+**Example** in `src/lib/analyze_plan.py`:
 ```python
 from src.core.multi_env_comparator import MultiEnvReport
-from src.utils.ignore_utils import load_ignore_config
+from src.lib.ignore_utils import load_ignore_config
 from src.security.sensitive_obfuscator import SensitiveObfuscator
-from src.templates.html_styles import get_base_styles
+from src.lib.html_generation import generate_full_styles
 ```
 
 ---
@@ -145,16 +146,17 @@ from src.templates.html_styles import get_base_styles
 **Option 1: Maintain root-level entry point (symlink)**
 ```bash
 # Create symlink for backward compatibility
-ln -s src/cli/analyze_plan.py analyze_plan.py
+ln -s src/lib/analyze_plan.py analyze_plan.py
 ```
 
 **Option 2: Update usage instructions**
 ```bash
 # Old way (deprecated)
 python analyze_plan.py compare dev.json prod.json
-
-# New way (recommended)
-python -m src.cli.analyze_plan compare dev.json prod.json
+# New way (recommended with pip install)
+tf-plan-analyzer compare dev.json prod.json
+# Alternative (module invocation)
+python -m src.lib.analyze_plan compare dev.json prod.json
 ```
 
 **Recommended**: Option 1 for transition period, then Option 2 long-term.
@@ -211,7 +213,7 @@ dependencies = []
 test = ["pytest>=8.0"]
 
 [project.scripts]
-tf-plan-analyzer = "src.cli.analyze_plan:main"
+tf-plan-analyzer = "src.lib.analyze_plan:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -231,10 +233,10 @@ python_functions = ["test_*"]
 - [ ] Create `pytest.ini`
 
 ### Phase 2: Move Source Files
-- [ ] `git mv analyze_plan.py src/cli/`
+- [ ] `git mv analyze_plan.py src/lib/`
 - [ ] `git mv multi_env_comparator.py src/core/`
 - [ ] `git mv hcl_value_resolver.py src/core/`
-- [ ] `git mv ignore_utils.py src/utils/`
+- [ ] `git mv ignore_utils.py src/lib/`
 - [ ] `git mv salt_manager.py src/security/`
 - [ ] `git mv sensitive_obfuscator.py src/security/`
 
@@ -300,9 +302,9 @@ If issues arise:
 
 ✅ **Success** if:
 - All 158 tests pass with updated imports
-- CLI commands work: `python -m src.cli.analyze_plan compare ...`
+- CLI commands work: `tf-plan-analyzer compare ...` or `python -m src.lib.analyze_plan compare ...`
 - HTML reports generate successfully
-- Git history preserved (`git log --follow src/cli/analyze_plan.py` shows full history)
+- Git history preserved (`git log --follow src/lib/analyze_plan.py` shows full history)
 - Root directory has <10 files (excluding directories)
 
 ❌ **Failure** if:
