@@ -44,6 +44,28 @@ Code reuse is mandatory to ensure maintainability, consistency, and reduced tech
 
 **Rationale**: Duplicated code leads to inconsistent behavior, increased maintenance burden, and bugs when fixes are applied to only one copy. This principle ensures a single source of truth for each piece of functionality.
 
+#### Function Glossary Reference
+
+Before creating new functions, consult `docs/function-glossary.md` to:
+- Search for existing functions that solve the same problem
+- Understand parameter signatures and return types of available utilities
+- Review usage examples for proper integration patterns
+- Identify which module (lib, core, security, cli) should house new functionality
+
+The glossary documents all 23+ public functions across src/ with:
+- Detailed descriptions and parameter documentation
+- Comprehensive usage examples with actual code
+- Performance notes and security considerations
+- Related functions and cross-references
+
+**Quick Reference - Commonly Reused Functions**:
+- `generate_full_styles()` - Complete CSS for HTML reports
+- `highlight_json_diff()` - Character-level diff highlighting with sensitive field marking
+- `load_ignore_config()` - Load and validate ignore configuration
+- `safe_read_file()` / `safe_write_file()` - Safe file I/O with error handling
+- `load_json_file()` - Load and parse JSON files
+- `filter_ignored_fields()` - Recursively remove ignored fields from nested dicts
+
 #### Style Guide Reference
 
 Before implementing new UI components for HTML reports, consult `docs/style-guide.md` for:

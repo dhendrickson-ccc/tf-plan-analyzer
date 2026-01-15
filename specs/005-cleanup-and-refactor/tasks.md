@@ -180,20 +180,20 @@
 
 ### Implementation for User Story 4
 
-- [ ] T080 [US4] Create temporary script examples/utilities/generate_glossary.py that uses ast module to parse all Python files in src/ and extract function definitions (name, file path, line number, parameters, docstring) - this script will be deleted after T092
-- [ ] T081 [US4] Run examples/utilities/generate_glossary.py to auto-generate skeleton of docs/function-glossary.md with table of contents organized by module (lib/, core/, security/)
-- [ ] T082 [US4] For each function in src/lib/html_generation.py, manually enhance glossary entry with: Purpose description (1-2 sentences), Parameter descriptions with types and examples, Return type with description, Usage example code snippet
-- [ ] T083 [US4] For each function in src/lib/diff_utils.py, manually enhance glossary entry with: Purpose, Parameters (old: str, new: str for highlight_char_diff; before: dict, after: dict, sensitive_paths: list for highlight_json_diff), Return type, Usage examples showing both simple and complex diffs
-- [ ] T084 [US4] For each function in src/lib/json_utils.py and src/lib/file_utils.py, manually enhance glossary entries with purpose, parameters, return types, and usage examples
-- [ ] T085 [US4] For key functions in src/core/multi_env_comparator.py (ResourceComparison class, compare methods), add glossary entries with detailed descriptions
-- [ ] T086 [US4] For key functions in src/cli/analyze_plan.py (TerraformPlanAnalyzer class, analyze/compare commands), add glossary entries with CLI usage context
-- [ ] T087 [US4] For functions in src/security/ (SaltManager, SensitiveObfuscator), add glossary entries with security considerations and examples
-- [ ] T088 [US4] Add "Quick Reference" section at top of docs/function-glossary.md with most commonly used functions: load_ignore_config, highlight_json_diff, generate_full_styles, safe_read_file
-- [ ] T089 [US4] Add "Module Organization" section to docs/function-glossary.md explaining the purpose of each src/ subdirectory (lib/: shared utilities, core/: analysis logic, security/: sensitive data handling, cli/: command-line interface)
-- [ ] T090 [US4] Add search instructions to docs/function-glossary.md: "Use Cmd+F / Ctrl+F to search by function name, module, or keyword"
-- [ ] T091 [US4] Add reference to function glossary in .specify/memory/constitution.md under Principle I (Code Duplication Prohibited): Add "Function Glossary Reference" section stating "Before creating new functions, search docs/function-glossary.md to verify similar functionality does not already exist. All new public functions MUST be added to the glossary with purpose, parameters, and usage examples."
-- [ ] T092 [US4] Verify glossary completeness: Use `grep -r "^def " src/` to count all function definitions and compare against glossary entry count (should be 100% coverage of public functions, private functions marked with _ are optional)
-- [ ] T092a [US4] Delete temporary script examples/utilities/generate_glossary.py (no longer needed after glossary is complete)
+- [X] T080 [US4] Create temporary script examples/utilities/generate_glossary.py that uses ast module to parse all Python files in src/ and extract function definitions (name, file path, line number, parameters, docstring) - this script will be deleted after T092
+- [X] T081 [US4] Run examples/utilities/generate_glossary.py to auto-generate skeleton of docs/function-glossary.md with table of contents organized by module (lib/, core/, security/)
+- [X] T082 [US4] For each function in src/lib/html_generation.py, manually enhance glossary entry with: Purpose description (1-2 sentences), Parameter descriptions with types and examples, Return type with description, Usage example code snippet
+- [X] T083 [US4] For each function in src/lib/diff_utils.py, manually enhance glossary entry with: Purpose, Parameters (old: str, new: str for highlight_char_diff; before: dict, after: dict, sensitive_paths: list for highlight_json_diff), Return type, Usage examples showing both simple and complex diffs
+- [X] T084 [US4] For each function in src/lib/json_utils.py and src/lib/file_utils.py, manually enhance glossary entries with purpose, parameters, return types, and usage examples
+- [X] T085 [US4] For key functions in src/core/multi_env_comparator.py (ResourceComparison class, compare methods), add glossary entries with detailed descriptions
+- [X] T086 [US4] For key functions in src/cli/analyze_plan.py (TerraformPlanAnalyzer class, analyze/compare commands), add glossary entries with CLI usage context
+- [X] T087 [US4] For functions in src/security/ (SaltManager, SensitiveObfuscator), add glossary entries with security considerations and examples
+- [X] T088 [US4] Add "Quick Reference" section at top of docs/function-glossary.md with most commonly used functions: load_ignore_config, highlight_json_diff, generate_full_styles, safe_read_file
+- [X] T089 [US4] Add "Module Organization" section to docs/function-glossary.md explaining the purpose of each src/ subdirectory (lib/: shared utilities, core/: analysis logic, security/: sensitive data handling, cli/: command-line interface)
+- [X] T090 [US4] Add search instructions to docs/function-glossary.md: "Use Cmd+F / Ctrl+F to search by function name, module, or keyword"
+- [X] T091 [US4] Add reference to function glossary in .specify/memory/constitution.md under Principle I (Code Duplication Prohibited): Add "Function Glossary Reference" section stating "Before creating new functions, search docs/function-glossary.md to verify similar functionality does not already exist. All new public functions MUST be added to the glossary with purpose, parameters, and usage examples."
+- [X] T092 [US4] Verify glossary completeness: Use `grep -r "^def " src/` to count all function definitions and compare against glossary entry count (should be 100% coverage of public functions, private functions marked with _ are optional)
+- [X] T092a [US4] Delete temporary script examples/utilities/generate_glossary.py (no longer needed after glossary is complete)
 
 **Checkpoint**: Function glossary complete with 100% coverage of public functions, comprehensive descriptions and examples, referenced in constitution
 
