@@ -31,3 +31,10 @@ __pycache__/
 .coverage
 coverage.json
 *.coverage
+baseline-coverage.json
+baseline-coverage-summary.txt
+
+# Build artifacts
+*.egg-info
+dist/
+build/

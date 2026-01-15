@@ -3,57 +3,69 @@
 A Python tool to analyze Terraform plan JSON files and identify resource changes. Supports both single-plan analysis and multi-environment comparison with HTML and text output formats.
 
 ## Table of Contents
+- [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Single Plan Analysis](#single-plan-analysis)
 - [Multi-Environment Comparison](#multi-environment-comparison)
 - [Sensitive Data Obfuscation](#sensitive-data-obfuscation)
+- [Project Structure](#project-structure)
 - [Key Features](#key-features)
 - [Output Formats](#output-formats)
 - [Ignore Configuration](#ignore-configuration)
+
+## Installation
+
+Install the package in development mode:
+
+```bash
+pip install -e .
+```
+
+This installs the `tf-plan-analyzer` command globally.
 
 ## Quick Start
 
 ### Single Plan Analysis
 ```bash
 # Generate HTML report
-python analyze_plan.py report plan.json --html
+tf-plan-analyzer report plan.json --html
 
 # Text output with HCL resolution
-python analyze_plan.py report plan.json --tf-dir ./terraform
+tf-plan-analyzer report plan.json --tf-dir ./terraform
 
 # Verbose text output
-python analyze_plan.py report plan.json -v
+tf-plan-analyzer report plan.json -v
 ```
 
 ### Multi-Environment Comparison
 ```bash
 # Compare multiple environments (text output)
-python analyze_plan.py compare dev.json staging.json prod.json
+tf-plan-analyzer compare dev.json staging.json prod.json
 
 # Generate HTML comparison report
-python analyze_plan.py compare dev.json staging.json --html comparison.html
+tf-plan-analyzer compare dev.json staging.json --html comparison.html
 
 # Compare with custom environment names
-python analyze_plan.py compare dev.json staging.json --env-names "Development,Staging"
+tf-plan-analyzer compare dev.json staging.json --env-names "Development,Staging"
 
 # Show only resources with differences
-python analyze_plan.py compare dev.json staging.json --diff-only
+tf-plan-analyzer compare dev.json staging.json --diff-only
 
 # Verbose text output
-python analyze_plan.py compare dev.json staging.json -v
+tf-plan-analyzer compare dev.json staging.json -v
 ```
 
 ### Sensitive Data Obfuscation
 ```bash
 # Basic obfuscation (sanitize for sharing)
-python analyze_plan.py obfuscate plan.json
+tf-plan-analyzer obfuscate plan.json
 
 # Reuse salt for drift detection across environments
-python analyze_plan.py obfuscate dev.json -o dev-obf.json
-python analyze_plan.py obfuscate prod.json -o prod-obf.json -s dev-obf.json.salt
+tf-plan-analyzer obfuscate dev.json -o dev-obf.json
+tf-plan-analyzer obfuscate prod.json -o prod-obf.json -s dev-obf.json.salt
 
 # Show obfuscation statistics
-python analyze_plan.py obfuscate plan.json --show-stats
+tf-plan-analyzer obfuscate plan.json --show-stats
 ```
 
 ## Single Plan Analysis
@@ -62,7 +74,7 @@ The `report` subcommand analyzes a single Terraform plan file and categorizes re
 
 ### Usage
 ```bash
-python analyze_plan.py report <plan_file> [options]
+tf-plan-analyzer report <plan_file> [options]
 ```
 
 ### Options
@@ -74,16 +86,16 @@ python analyze_plan.py report <plan_file> [options]
 ### Examples
 ```bash
 # Generate HTML report with HCL resolution (recommended)
-python analyze_plan.py report plan.json --config ignore_config.json --html
+tf-plan-analyzer report plan.json --config ignore_config.json --html
 
 # Specify custom Terraform directory for HCL resolution
-python analyze_plan.py report plan.json --tf-dir ../terraform --html
+tf-plan-analyzer report plan.json --tf-dir ../terraform --html
 
 # Text analysis with ignore config
-python analyze_plan.py report plan.json --config ignore_config.json
+tf-plan-analyzer report plan.json --config ignore_config.json
 
 # Verbose text output
-python analyze_plan.py report plan.json -v
+tf-plan-analyzer report plan.json -v
 ```
 
 ## Multi-Environment Comparison
@@ -92,7 +104,7 @@ The `compare` subcommand compares resource configurations across multiple enviro
 
 ### Usage
 ```bash
-python analyze_plan.py compare <plan_file1> <plan_file2> [plan_file3 ...] [options]
+tf-plan-analyzer compare <plan_file1> <plan_file2> [plan_file3 ...] [options]
 ```
 
 ### Options
@@ -110,40 +122,40 @@ python analyze_plan.py compare <plan_file1> <plan_file2> [plan_file3 ...] [optio
 **Basic Comparison:**
 ```bash
 # Compare two environments with auto-detected names
-python analyze_plan.py compare dev-plan.json prod-plan.json
+tf-plan-analyzer compare dev-plan.json prod-plan.json
 
 # Compare three environments with custom names
-python analyze_plan.py compare dev.json staging.json prod.json \
+tf-plan-analyzer compare dev.json staging.json prod.json \
   --env-names "Development,Staging,Production"
 ```
 
 **HTML Reports:**
 ```bash
 # Generate HTML comparison report
-python analyze_plan.py compare dev.json staging.json prod.json --html
+tf-plan-analyzer compare dev.json staging.json prod.json --html
 
 # Custom output path
-python analyze_plan.py compare dev.json staging.json --html reports/comparison.html
+tf-plan-analyzer compare dev.json staging.json --html reports/comparison.html
 
 # Show only differences
-python analyze_plan.py compare dev.json staging.json prod.json --diff-only --html
+tf-plan-analyzer compare dev.json staging.json prod.json --diff-only --html
 ```
 
 **Advanced Features:**
 ```bash
 # Compare with HCL resolution
-python analyze_plan.py compare dev.json staging.json \
+tf-plan-analyzer compare dev.json staging.json \
   --tf-dir ./terraform \
   --tfvars-files dev.tfvars,staging.tfvars \
   --html
 
 # Compare with ignore configuration
-python analyze_plan.py compare dev.json staging.json \
+tf-plan-analyzer compare dev.json staging.json \
   --config ignore_config.json \
   --diff-only
 
 # Verbose text output with sensitive values visible
-python analyze_plan.py compare dev.json staging.json -v --show-sensitive
+tf-plan-analyzer compare dev.json staging.json -v --show-sensitive
 ```
 
 ### Multi-Environment Comparison Features
@@ -165,7 +177,7 @@ The `obfuscate` subcommand removes sensitive data from Terraform plan files usin
 
 ### Usage
 ```bash
-python analyze_plan.py obfuscate <plan_file> [options]
+tf-plan-analyzer obfuscate <plan_file> [options]
 ```
 
 ### Options
@@ -194,29 +206,29 @@ python analyze_plan.py obfuscate <plan_file> [options]
 **Basic Obfuscation:**
 ```bash
 # Obfuscate a plan for safe sharing
-python analyze_plan.py obfuscate plan.json
+tf-plan-analyzer obfuscate plan.json
 
 # Output files:
 #   plan-obfuscated.json       - Sanitized plan file
 #   plan-obfuscated.json.salt  - Encrypted salt (keep secure!)
 
 # Custom output path
-python analyze_plan.py obfuscate plan.json --output sanitized/plan.json
+tf-plan-analyzer obfuscate plan.json --output sanitized/plan.json
 
 # Overwrite existing file
-python analyze_plan.py obfuscate plan.json --force
+tf-plan-analyzer obfuscate plan.json --force
 ```
 
 **Drift Detection Across Environments:**
 ```bash
 # Step 1: Obfuscate dev environment (generates new salt)
-python analyze_plan.py obfuscate dev.json -o dev-obf.json
+tf-plan-analyzer obfuscate dev.json -o dev-obf.json
 
 # Step 2: Obfuscate prod using SAME salt (for comparison)
-python analyze_plan.py obfuscate prod.json -o prod-obf.json -s dev-obf.json.salt
+tf-plan-analyzer obfuscate prod.json -o prod-obf.json -s dev-obf.json.salt
 
 # Step 3: Compare obfuscated plans
-python analyze_plan.py compare dev-obf.json prod-obf.json --html drift-report.html
+tf-plan-analyzer compare dev-obf.json prod-obf.json --html drift-report.html
 ```
 
 ### Security & Best Practices
@@ -226,6 +238,41 @@ python analyze_plan.py compare dev-obf.json prod-obf.json --html drift-report.ht
 - Use `TF_ANALYZER_SALT_KEY` environment variable for CI/CD workflows
 - Salt files are encrypted using Fernet symmetric encryption
 - Processes 10MB files (10,000 resources) in under 0.5 seconds
+
+
+## Project Structure
+
+```
+tf-plan-analyzer/
+├── src/
+│   ├── cli/           # Command-line interface
+│   │   └── analyze_plan.py
+│   ├── core/          # Core analysis logic
+│   │   ├── multi_env_comparator.py
+│   │   └── hcl_value_resolver.py
+│   ├── lib/           # Reusable utilities
+│   │   ├── html_generation.py
+│   │   ├── diff_utils.py
+│   │   ├── json_utils.py
+│   │   ├── file_utils.py
+│   │   └── ignore_utils.py
+│   └── security/      # Sensitive data handling
+│       ├── salt_manager.py
+│       └── sensitive_obfuscator.py
+├── tests/
+│   ├── unit/          # Unit tests
+│   ├── e2e/           # End-to-end tests
+│   └── fixtures/      # Test data
+├── docs/              # Documentation
+│   ├── JSON_REPORT_GUIDE.md
+│   └── IMPLEMENTATION_SUMMARY.md
+├── examples/          # Example configurations
+│   ├── ignore_config.example.json
+│   └── demo_data/
+├── pyproject.toml     # Package configuration
+├── setup.py           # Build configuration
+└── README.md          # This file
+```
 
 
 ## Key Features
@@ -313,8 +360,8 @@ Create an `ignore_config.json` file to filter out expected differences:
 Usage:
 ```bash
 # Single plan analysis
-python analyze_plan.py report plan.json --config ignore_config.json --html
+tf-plan-analyzer report plan.json --config ignore_config.json --html
 
 # Multi-environment comparison
-python analyze_plan.py compare dev.json staging.json --config ignore_config.json --html
+tf-plan-analyzer compare dev.json staging.json --config ignore_config.json --html
 ```
