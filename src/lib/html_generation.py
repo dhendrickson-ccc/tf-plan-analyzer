@@ -16,7 +16,7 @@ Functions:
 def get_base_css() -> str:
     """
     Get base CSS for typography, layout, and containers.
-    
+
     Returns:
         str: CSS stylesheet with foundational styles including:
             - CSS reset (margin, padding, box-sizing)
@@ -24,7 +24,7 @@ def get_base_css() -> str:
             - Container styles (max-width, shadows, border-radius)
             - Header styling (gradient background)
             - Responsive design rules
-    
+
     Example:
         >>> css = get_base_css()
         >>> "font-family" in css
@@ -97,14 +97,14 @@ def get_base_css() -> str:
 def get_summary_card_css() -> str:
     """
     Get CSS for summary cards displaying metrics.
-    
+
     Returns:
         str: CSS stylesheet for summary cards including:
             - Grid layout for responsive card placement
             - Card styling (background, padding, shadows)
             - Number and label typography
             - Semantic color coding (total=purple, created=green, updated=orange, deleted=red)
-    
+
     Example:
         >>> css = get_summary_card_css()
         >>> ".summary-card" in css
@@ -154,7 +154,7 @@ def get_summary_card_css() -> str:
 def get_diff_highlight_css() -> str:
     """
     Get CSS for diff highlighting (removed/added/unchanged values).
-    
+
     Returns:
         str: CSS stylesheet for diff visualization including:
             - Line-level highlighting (.removed, .added, .unchanged)
@@ -162,7 +162,7 @@ def get_diff_highlight_css() -> str:
             - Known-after-apply highlighting (.known-after-apply)
             - Baseline comparison styles (.baseline-removed, .baseline-added)
             - Opacity utilities for faded text
-    
+
     Example:
         >>> css = get_diff_highlight_css()
         >>> ".char-removed" in css
@@ -237,7 +237,7 @@ def get_diff_highlight_css() -> str:
 def get_resource_card_css() -> str:
     """
     Get CSS for resource cards and expandable sections.
-    
+
     Returns:
         str: CSS stylesheet for resource display including:
             - Resource list grids
@@ -250,7 +250,7 @@ def get_resource_card_css() -> str:
             - Legend/help section styling
             - Ignored resources/fields styling
             - Toggle buttons and interactive elements
-    
+
     Example:
         >>> css = get_resource_card_css()
         >>> ".resource-card" in css
@@ -552,16 +552,16 @@ def get_resource_card_css() -> str:
 def generate_full_styles() -> str:
     """
     Generate complete <style> block combining all CSS functions.
-    
+
     This is the main entry point for getting all CSS. It combines:
     - Base typography and layout (get_base_css)
     - Summary cards with semantic colors (get_summary_card_css)
     - Diff highlighting for before/after comparison (get_diff_highlight_css)
     - Resource cards with expandable sections (get_resource_card_css)
-    
+
     Returns:
         str: Complete HTML <style> block ready for insertion in <head>
-    
+
     Example:
         >>> styles = generate_full_styles()
         >>> styles.startswith("<style>")
@@ -570,7 +570,7 @@ def generate_full_styles() -> str:
         True
         >>> "font-family" in styles
         True
-    
+
     Usage in HTML generation:
         >>> html = f'''
         ... <html>

@@ -3,15 +3,18 @@
 
 import sys
 import os
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 from src.cli.analyze_plan import TerraformPlanAnalyzer
+
 
 # Create a mock analyzer instance
 class MockAnalyzer(TerraformPlanAnalyzer):
     def __init__(self):
         self.show_sensitive = False
         self.ignore_azure_casing = False
+
 
 analyzer = MockAnalyzer()
 
@@ -68,12 +71,12 @@ print("Test 4: Nested dict with changed sensitive field")
 before_val = {
     "authentication_type": "keyBased",
     "connection_string": "old_secret",
-    "container_name": "files"
+    "container_name": "files",
 }
 after_val = {
     "authentication_type": "keyBased",
     "connection_string": "new_secret",
-    "container_name": "files"
+    "container_name": "files",
 }
 before_sens = {"connection_string": True}
 after_sens = {"connection_string": True}
@@ -89,12 +92,8 @@ print()
 
 # Test case 5: List with sensitive value that changed
 print("Test 5: List with changed sensitive value")
-before_val = [{
-    "connection_string": "old_secret"
-}]
-after_val = [{
-    "connection_string": "new_secret"
-}]
+before_val = [{"connection_string": "old_secret"}]
+after_val = [{"connection_string": "new_secret"}]
 before_sens = [{"connection_string": True}]
 after_sens = [{"connection_string": True}]
 

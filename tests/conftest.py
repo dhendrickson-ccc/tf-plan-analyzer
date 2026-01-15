@@ -13,4 +13,4 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # Set PYTHONPATH for subprocess calls in e2e tests
-os.environ['PYTHONPATH'] = str(project_root)
+os.environ["PYTHONPATH"] = str(project_root)

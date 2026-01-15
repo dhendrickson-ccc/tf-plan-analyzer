@@ -3,9 +3,11 @@
 
 import sys
 import os
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 from src.cli.analyze_plan import TerraformPlanAnalyzer
+
 
 # Create a mock analyzer instance
 class MockAnalyzer(TerraformPlanAnalyzer):
@@ -13,25 +15,28 @@ class MockAnalyzer(TerraformPlanAnalyzer):
         self.show_sensitive = False
         self.ignore_azure_casing = False
 
+
 analyzer = MockAnalyzer()
 
 print("=" * 80)
-print("Test: IoT Hub file_upload.connection_string changing to different storage account")
+print(
+    "Test: IoT Hub file_upload.connection_string changing to different storage account"
+)
 print("=" * 80)
 print()
 
 # Simulate the before state (old storage account)
 before_val = {
     "authentication_type": "keyBased",
-    "connection_string": "azurerm_storage_account.account[\"oldfiles\"].primary_blob_connection_string",
-    "container_name": "inst-files"
+    "connection_string": 'azurerm_storage_account.account["oldfiles"].primary_blob_connection_string',
+    "container_name": "inst-files",
 }
 
 # Simulate the after state (new storage account)
 after_val = {
     "authentication_type": "keyBased",
-    "connection_string": "azurerm_storage_account.account[\"instfiles\"].primary_blob_connection_string",
-    "container_name": "inst-files"
+    "connection_string": 'azurerm_storage_account.account["instfiles"].primary_blob_connection_string',
+    "container_name": "inst-files",
 }
 
 # Sensitivity map shows connection_string is sensitive
@@ -67,27 +72,39 @@ checks = []
 before_conn_str = display_before[0]["connection_string"]
 has_redacted_changed = "<REDACTED (changed)>" in before_conn_str
 has_before_hcl = "oldfiles" in before_conn_str
-checks.append(("Before shows '<REDACTED (changed)>' with HCL reference", 
-               has_redacted_changed and has_before_hcl,
-               before_conn_str))
+checks.append(
+    (
+        "Before shows '<REDACTED (changed)>' with HCL reference",
+        has_redacted_changed and has_before_hcl,
+        before_conn_str,
+    )
+)
 
 # Check 2: connection_string in after should show <REDACTED (changed)> with HCL reference
 after_conn_str = display_after[0]["connection_string"]
 has_redacted_changed = "<REDACTED (changed)>" in after_conn_str
 has_after_hcl = "instfiles" in after_conn_str
-checks.append(("After shows '<REDACTED (changed)>' with HCL reference", 
-               has_redacted_changed and has_after_hcl,
-               after_conn_str))
+checks.append(
+    (
+        "After shows '<REDACTED (changed)>' with HCL reference",
+        has_redacted_changed and has_after_hcl,
+        after_conn_str,
+    )
+)
 
 # Check 3: values_changed should be True
-checks.append(("values_changed flag is True", 
-               values_changed == True,
-               str(values_changed)))
+checks.append(
+    ("values_changed flag is True", values_changed == True, str(values_changed))
+)
 
 # Check 4: Non-sensitive fields should not be redacted
-checks.append(("container_name not redacted", 
-               display_before[0]["container_name"] == "inst-files",
-               display_before[0]["container_name"]))
+checks.append(
+    (
+        "container_name not redacted",
+        display_before[0]["container_name"] == "inst-files",
+        display_before[0]["container_name"],
+    )
+)
 
 # Print results
 all_passed = True

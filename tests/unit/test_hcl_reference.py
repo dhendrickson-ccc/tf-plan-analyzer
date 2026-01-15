@@ -3,9 +3,11 @@
 
 import sys
 import os
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 from src.cli.analyze_plan import TerraformPlanAnalyzer
+
 
 # Create a mock analyzer instance
 class MockAnalyzer(TerraformPlanAnalyzer):
@@ -13,13 +15,22 @@ class MockAnalyzer(TerraformPlanAnalyzer):
         self.show_sensitive = False
         self.ignore_azure_casing = False
 
+
 analyzer = MockAnalyzer()
 
 # Test cases
 test_cases = [
     ("${var.foo}", True, "Variable interpolation"),
-    ("azurerm_storage_account.account[\"instfiles\"].primary_blob_connection_string", True, "Direct Azure reference with array index"),
-    ("azurerm_storage_account.old.primary_connection_string", True, "Direct Azure reference"),
+    (
+        'azurerm_storage_account.account["instfiles"].primary_blob_connection_string',
+        True,
+        "Direct Azure reference with array index",
+    ),
+    (
+        "azurerm_storage_account.old.primary_connection_string",
+        True,
+        "Direct Azure reference",
+    ),
     ("aws_s3_bucket.mybucket.arn", True, "Direct AWS reference"),
     ("google_storage_bucket.bucket.url", True, "Direct Google reference"),
     ("data.azurerm_storage_account.existing.id", True, "Data source reference"),
