@@ -1,0 +1,21 @@
+{
+  "global_ignores": {
+    "tags": "Tags are managed separately and don't affect resource functionality",
+    "metadata": "Auto-generated metadata that varies between environments"
+  },
+  "resource_ignores": {
+    "azurerm_monitor_metric_alert": {
+      "description": "Description is conditionally set based on environment",
+      "action": "Dynamic block conversion causes inconsequential changes"
+    },
+    "azurerm_monitor_activity_log_alert": {
+      "action": "Dynamic block conversion causes inconsequential changes (empty map to null)"
+    },
+    "azurerm_application_insights_workbook": {
+      "display_name": "Display name is conditionally set based on environment"
+    },
+    "azurerm_kusto_cluster": {
+      "identity.type": "Identity type may vary between environments for managed identity testing"
+    }
+  }
+}

@@ -11,6 +11,27 @@ import json
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Any, Tuple
+from ignore_utils import apply_ignore_config, get_ignored_attributes
+
+
+class AttributeDiff:
+    """Represents a single attribute's values across environments."""
+    
+    def __init__(self, attribute_name: str, env_values: Dict[str, Any], 
+                 is_different: bool, attribute_type: str):
+        """
+        Initialize an attribute diff.
+        
+        Args:
+            attribute_name: The name of the attribute (e.g., 'location', 'tags')
+            env_values: Map of environment label -> attribute value
+            is_different: Whether the attribute differs across environments
+            attribute_type: Type of the attribute ('primitive', 'object', 'array')
+        """
+        self.attribute_name = attribute_name
+        self.env_values = env_values
+        self.is_different = is_different
+        self.attribute_type = attribute_type
 
 
 def _highlight_char_diff(before_str: str, after_str: str) -> Tuple[str, str]:
@@ -308,6 +329,8 @@ class ResourceComparison:
         self.env_configs_raw: Dict[str, Optional[Dict]] = {}  # Store unmasked configs for comparison
         self.is_present_in: Set[str] = set()
         self.has_differences = False
+        self.ignored_attributes: Set[str] = set()  # Track which attributes were ignored
+        self.attribute_diffs: List[AttributeDiff] = []  # Attribute-level diffs for HTML rendering
     
     def add_environment_config(self, env_label: str, config: Optional[Dict], config_raw: Optional[Dict] = None) -> None:
         """
@@ -346,6 +369,67 @@ class ResourceComparison:
                 return
         
         self.has_differences = False
+    
+    def compute_attribute_diffs(self) -> None:
+        """
+        Compute attribute-level diffs for rendering in HTML reports.
+        
+        Extracts top-level attributes from each environment's config and
+        creates AttributeDiff objects that can be rendered as table rows.
+        Skips attributes that are in the ignored_attributes set.
+        """
+        self.attribute_diffs = []
+        
+        # Get all non-None configs
+        env_labels = list(self.env_configs.keys())
+        present_configs = {label: cfg for label, cfg in self.env_configs.items() if cfg is not None}
+        
+        if not present_configs:
+            return
+        
+        # Extract all unique top-level attribute names across all environments
+        all_attributes: Set[str] = set()
+        for config in present_configs.values():
+            if isinstance(config, dict):
+                all_attributes.update(config.keys())
+        
+        # Remove ignored attributes
+        all_attributes = all_attributes - self.ignored_attributes
+        
+        # Build AttributeDiff for each attribute
+        for attr_name in sorted(all_attributes):
+            env_values: Dict[str, Any] = {}
+            baseline_value = None
+            is_different = False
+            
+            # Collect values from each environment
+            for env_label in env_labels:
+                config = self.env_configs.get(env_label)
+                if config is not None and isinstance(config, dict):
+                    value = config.get(attr_name, None)
+                    env_values[env_label] = value
+                    
+                    # Check if this attribute differs from baseline
+                    if baseline_value is None and value is not None:
+                        baseline_value = value
+                    elif value is not None and baseline_value is not None:
+                        # Compare serialized versions for deep equality
+                        if json.dumps(value, sort_keys=True) != json.dumps(baseline_value, sort_keys=True):
+                            is_different = True
+                else:
+                    env_values[env_label] = None
+            
+            # Determine attribute type
+            attr_type = 'primitive'
+            if baseline_value is not None:
+                if isinstance(baseline_value, dict):
+                    attr_type = 'object'
+                elif isinstance(baseline_value, list):
+                    attr_type = 'array'
+            
+            # Create AttributeDiff
+            attr_diff = AttributeDiff(attr_name, env_values, is_different, attr_type)
+            self.attribute_diffs.append(attr_diff)
     
     def mark_changed_sensitive_values(self) -> None:
         """
@@ -478,6 +562,12 @@ class MultiEnvReport:
         self.ignore_config = ignore_config
         self.resource_comparisons: List[ResourceComparison] = []
         self.summary_stats: Dict[str, int] = {}
+        self.ignore_statistics: Dict[str, Any] = {
+            'total_ignored_attributes': 0,
+            'resources_with_ignores': 0,
+            'all_changes_ignored': 0,
+            'ignore_breakdown': {}  # Map attribute name -> count
+        }
     
     def load_environments(self) -> None:
         """Load all environment plan files."""
@@ -498,56 +588,55 @@ class MultiEnvReport:
             
             comparison = ResourceComparison(address, resource_type)
             
+            # Track which attributes were actually ignored for this resource
+            ignored_for_resource: Set[str] = set()
+            
             # Add config from each environment (with ignore config applied)
             for env in self.environments:
                 config = env.before_values.get(address)
                 config_raw = env.before_values_raw.get(address)
                 
+                # Apply ignore filtering if config exists
                 if config is not None and self.ignore_config:
-                    config = self._apply_ignore_config(config, resource_type)
+                    # Track what gets ignored before filtering
+                    ignored_attrs = get_ignored_attributes(config, self.ignore_config, resource_type)
+                    ignored_for_resource.update(ignored_attrs)
+                    
+                    # Apply filtering
+                    config = apply_ignore_config(config, self.ignore_config, resource_type)
+                    
                 if config_raw is not None and self.ignore_config:
-                    config_raw = self._apply_ignore_config(config_raw, resource_type)
+                    config_raw = apply_ignore_config(config_raw, self.ignore_config, resource_type)
                     
                 comparison.add_environment_config(env.label, config, config_raw)
             
-            # Detect differences (uses raw values)
+            # Store ignored attributes for this resource
+            comparison.ignored_attributes = ignored_for_resource
+            
+            # Detect differences (uses raw values AFTER ignore filtering)
             comparison.detect_differences()
+            
+            # Compute attribute-level diffs for HTML rendering
+            comparison.compute_attribute_diffs()
             
             # Mark changed sensitive values with (changed) indicator
             comparison.mark_changed_sensitive_values()
             
-            self.resource_comparisons.append(comparison)
-    
-    def _apply_ignore_config(self, config: Dict, resource_type: str) -> Dict:
-        """
-        Apply ignore configuration to filter out ignored fields.
-        
-        Args:
-            config: Resource configuration
-            resource_type: Resource type (e.g., "aws_instance")
+            # Update ignore statistics
+            if ignored_for_resource:
+                self.ignore_statistics['resources_with_ignores'] += 1
+                self.ignore_statistics['total_ignored_attributes'] += len(ignored_for_resource)
+                
+                # Track breakdown by attribute name
+                for attr in ignored_for_resource:
+                    self.ignore_statistics['ignore_breakdown'][attr] = \
+                        self.ignore_statistics['ignore_breakdown'].get(attr, 0) + 1
+                
+                # Check if ALL changes were ignored (resource became identical after filtering)
+                if not comparison.has_differences:
+                    self.ignore_statistics['all_changes_ignored'] += 1
             
-        Returns:
-            Configuration with ignored fields removed
-        """
-        if not self.ignore_config:
-            return config
-        
-        import copy
-        filtered_config = copy.deepcopy(config)
-        
-        # Get ignore rules for this resource type
-        ignore_rules = self.ignore_config.get('ignore_fields', {})
-        global_ignore = ignore_rules.get('*', [])
-        type_specific_ignore = ignore_rules.get(resource_type, [])
-        
-        fields_to_ignore = set(global_ignore + type_specific_ignore)
-        
-        # Remove ignored fields
-        for field in fields_to_ignore:
-            if field in filtered_config:
-                del filtered_config[field]
-        
-        return filtered_config
+            self.resource_comparisons.append(comparison)
     
     def calculate_summary(self) -> None:
         """Calculate summary statistics for the report."""
@@ -679,6 +768,18 @@ class MultiEnvReport:
         html_parts.append(f'                <div class="number">{self.summary_stats["resources_consistent"]}</div>')
         html_parts.append('                <div class="label">Consistent</div>')
         html_parts.append('            </div>')
+        
+        # Show ignore statistics if any ignoring was applied
+        if self.ignore_config and self.ignore_statistics['total_ignored_attributes'] > 0:
+            html_parts.append('            <div class="summary-card total" style="background: #fff4e6; border-left: 4px solid #f59e0b;">')
+            html_parts.append(f'                <div class="number">{self.ignore_statistics["total_ignored_attributes"]}</div>')
+            html_parts.append('                <div class="label">Attributes Ignored</div>')
+            html_parts.append('            </div>')
+            html_parts.append('            <div class="summary-card created" style="background: #ecfdf5; border-left: 4px solid #10b981;">')
+            html_parts.append(f'                <div class="number">{self.ignore_statistics["all_changes_ignored"]}</div>')
+            html_parts.append('                <div class="label">All Changes Ignored</div>')
+            html_parts.append('            </div>')
+        
         html_parts.append('        </div>')
         
         # Comparison section with collapsible resource blocks
@@ -704,74 +805,23 @@ class MultiEnvReport:
             html_parts.append('                    <span class="toggle-icon collapsed">▼</span>')
             html_parts.append(f'                    <span class="resource-name">{rc.resource_address}</span>')
             html_parts.append(f'                    <span class="resource-status {status_class}">{status_text}</span>')
+            
+            # Show ignored attributes indicator
+            if rc.ignored_attributes:
+                ignored_count = len(rc.ignored_attributes)
+                ignored_list = ', '.join(sorted(rc.ignored_attributes))
+                html_parts.append(f'                    <span class="badge" style="background: #fbbf24; color: #78350f;" title="Ignored: {ignored_list}">{ignored_count} attributes ignored</span>')
+            
             if has_sensitive_diff:
                 html_parts.append('                    <span class="sensitive-indicator">⚠️ SENSITIVE DIFF</span>')
+            
             html_parts.append('                </div>')
             html_parts.append('                <div class="resource-change-content">')
-            html_parts.append('                    <div class="change-diff">')
             
-            # Get baseline environment (first in the list)
-            baseline_label = env_labels[0]
-            baseline_config = rc.env_configs.get(baseline_label)
+            # Render attribute table instead of full JSON
+            attribute_table_html = self._render_attribute_table(rc, env_labels)
+            html_parts.append(attribute_table_html)
             
-            # Show each environment's configuration
-            for idx, env_label in enumerate(env_labels):
-                config = rc.env_configs.get(env_label)
-                html_parts.append('                        <div class="diff-column">')
-                html_parts.append(f'                            <div class="diff-header">{env_label}</div>')
-                html_parts.append('                            <div class="env-content">')
-                
-                if config is None:
-                    html_parts.append('                                <div class="env-action missing">NOT PRESENT</div>')
-                    html_parts.append('                                <p style="color: #868e96; font-size: 0.9em;">Resource not found in this environment</p>')
-                else:
-                    # Determine action type (for multi-env we don't have before/after, just config)
-                    html_parts.append('                                <div class="env-action no-op">PRESENT</div>')
-                    
-                    # First environment (baseline) shows blue-highlighted diff
-                    if idx == 0:
-                        # Find next available environment to compare against
-                        next_config = None
-                        for next_idx in range(1, len(env_labels)):
-                            next_config = rc.env_configs.get(env_labels[next_idx])
-                            if next_config is not None:
-                                break
-                        
-                        if next_config is not None:
-                            # Show baseline with blue highlighting
-                            before_html, _ = _highlight_json_diff(config, next_config)
-                            # Replace red/green classes with blue for baseline (both line and character level)
-                            baseline_html = (before_html
-                                .replace('class="removed"', 'class="baseline-removed"')
-                                .replace('class="added"', 'class="baseline-added"')
-                                .replace('char-added', 'baseline-char-added')
-                                .replace('char-removed', 'baseline-char-removed'))
-                            html_parts.append(f'                                {baseline_html}')
-                        else:
-                            # No other environment to compare to, show plain JSON
-                            config_json = json.dumps(config, indent=2, sort_keys=True)
-                            html_parts.append(f'                                <pre class="config-json">{config_json}</pre>')
-                    else:
-                        # Non-baseline environments: show character-level diff against baseline
-                        if baseline_config is None:
-                            # Baseline doesn't have this resource, show as added
-                            config_json = json.dumps(config, indent=2, sort_keys=True)
-                            html_parts.append('                                <div style="background: #fff4e6; color: #d97706; padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 0.85em;">')
-                            html_parts.append('                                    ⚠️ BASELINE MISSING - Resource not present in baseline environment')
-                            html_parts.append('                                </div>')
-                            # Show highlighted as all "added"
-                            lines = config_json.split('\n')
-                            highlighted_lines = [f'<span class="added">{html.escape(line)}</span>' for line in lines]
-                            html_parts.append(f'                                <pre class="json-content">{"<br>".join(highlighted_lines)}</pre>')
-                        else:
-                            # Generate character-level diff HTML
-                            _, after_html = _highlight_json_diff(baseline_config, config)
-                            html_parts.append(f'                                {after_html}')
-                
-                html_parts.append('                            </div>')
-                html_parts.append('                        </div>')
-            
-            html_parts.append('                    </div>')
             html_parts.append('                </div>')
             html_parts.append('            </div>')
         
@@ -783,6 +833,136 @@ class MultiEnvReport:
         # Write HTML file
         with open(output_path, 'w') as f:
             f.write('\n'.join(html_parts))
+    
+    def _render_attribute_table(self, rc: 'ResourceComparison', env_labels: List[str]) -> str:
+        """
+        Render attribute-level diff table for a resource.
+        
+        Args:
+            rc: ResourceComparison object with attribute_diffs
+            env_labels: List of environment labels
+            
+        Returns:
+            HTML string for the attribute table
+        """
+        parts = []
+        parts.append('                    <div class="attribute-table-container">')
+        
+        # Check if resource is present in all environments
+        if len(rc.is_present_in) < len(env_labels):
+            parts.append('                        <div style="padding: 15px; background: #fff4e6; border-left: 4px solid #f59e0b; margin-bottom: 15px;">')
+            parts.append('                            <strong>⚠️ Resource Presence Mismatch</strong><br>')
+            parts.append(f'                            Present in: {", ".join(sorted(rc.is_present_in))}<br>')
+            missing = set(env_labels) - rc.is_present_in
+            parts.append(f'                            Missing from: {", ".join(sorted(missing))}')
+            parts.append('                        </div>')
+        
+        # If no attribute diffs, show "No differences" message
+        if not rc.attribute_diffs:
+            parts.append('                        <div style="padding: 20px; text-align: center; color: #10b981; font-size: 1.1em;">')
+            parts.append('                            ✓ No differences detected')
+            parts.append('                        </div>')
+        else:
+            # Render attribute table
+            parts.append('                        <table class="attribute-table" style="width: 100%; border-collapse: collapse; background: white;">')
+            parts.append('                            <thead>')
+            parts.append('                                <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">')
+            parts.append('                                    <th style="padding: 12px; text-align: left; font-weight: 600; width: 200px;">Attribute</th>')
+            
+            # Column headers for each environment
+            for env_label in env_labels:
+                parts.append(f'                                    <th style="padding: 12px; text-align: left; font-weight: 600;">{env_label}</th>')
+            
+            parts.append('                                </tr>')
+            parts.append('                            </thead>')
+            parts.append('                            <tbody>')
+            
+            # Render each attribute
+            for attr_diff in rc.attribute_diffs:
+                # Only show changed attributes by default, or all if resource is identical
+                if not attr_diff.is_different and rc.has_differences:
+                    continue
+                
+                row_class = 'changed' if attr_diff.is_different else 'unchanged'
+                row_style = 'background: #fff3cd;' if attr_diff.is_different else ''
+                
+                parts.append(f'                                <tr style="border-bottom: 1px solid #dee2e6; {row_style}">')
+                
+                # Attribute name column with type indicator
+                parts.append(f'                                    <td style="padding: 12px; vertical-align: top; font-weight: 500;">')
+                parts.append(f'                                        <code>{html.escape(attr_diff.attribute_name)}</code>')
+                
+                # Add badge for sensitive attributes
+                if any(isinstance(val, str) and 'SENSITIVE' in val for val in attr_diff.env_values.values()):
+                    parts.append('                                        <br><span style="background: #dc3545; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; margin-top: 4px; display: inline-block;">🔒 SENSITIVE</span>')
+                
+                parts.append('                                    </td>')
+                
+                # Value columns for each environment
+                for env_label in env_labels:
+                    value = attr_diff.env_values.get(env_label)
+                    value_html = self._render_attribute_value(value, attr_diff, env_labels, env_label)
+                    parts.append(f'                                    <td style="padding: 12px; vertical-align: top;">{value_html}</td>')
+                
+                parts.append('                                </tr>')
+            
+            parts.append('                            </tbody>')
+            parts.append('                        </table>')
+        
+        parts.append('                    </div>')
+        return '\n'.join(parts)
+    
+    def _render_attribute_value(self, value: Any, attr_diff: AttributeDiff, 
+                                env_labels: List[str], current_env: str) -> str:
+        """
+        Render a single attribute value with appropriate formatting and highlighting.
+        
+        Args:
+            value: The attribute value to render
+            attr_diff: The AttributeDiff object containing all environment values
+            env_labels: List of all environment labels
+            current_env: Current environment being rendered
+            
+        Returns:
+            HTML string for the value
+        """
+        if value is None:
+            return '<span style="color: #868e96; font-style: italic;">null</span>'
+        
+        # Handle primitive values (strings, numbers, booleans)
+        if isinstance(value, (str, int, float, bool)):
+            # Check if this is a sensitive value
+            if isinstance(value, str) and 'SENSITIVE' in value:
+                return f'<code style="background: #f8d7da; padding: 2px 6px; border-radius: 3px;">{html.escape(str(value))}</code>'
+            
+            # For different values, apply character-level diff highlighting
+            if attr_diff.is_different and attr_diff.attribute_type == 'primitive':
+                # Get baseline value (first non-None value)
+                baseline_val = None
+                for env in env_labels:
+                    if attr_diff.env_values.get(env) is not None:
+                        baseline_val = attr_diff.env_values[env]
+                        break
+                
+                # Apply char-level diff if values are strings and similar
+                if baseline_val is not None and value != baseline_val:
+                    if isinstance(value, str) and isinstance(baseline_val, str):
+                        _, highlighted = _highlight_char_diff(str(baseline_val), str(value))
+                        return f'<code style="background: #d1ecf1; padding: 2px 6px; border-radius: 3px;">{highlighted}</code>'
+            
+            # Default: show value without highlighting
+            return f'<code>{html.escape(str(value))}</code>'
+        
+        # Handle complex objects (dict, list)
+        if isinstance(value, (dict, list)):
+            value_json = json.dumps(value, indent=2, sort_keys=True)
+            # Truncate if too long
+            if len(value_json) > 500:
+                value_json = value_json[:500] + '\n  ...(truncated)...\n}'
+            return f'<pre style="margin: 0; background: #f8f9fa; padding: 8px; border-radius: 4px; font-size: 0.85em; max-height: 200px; overflow-y: auto;">{html.escape(value_json)}</pre>'
+        
+        # Fallback
+        return f'<code>{html.escape(str(value))}</code>'
     
     def generate_text(self, verbose: bool = False) -> str:
         """Generate text comparison report for terminal output.
@@ -820,6 +1000,19 @@ class MultiEnvReport:
         lines.append(f"Resources with Differences: {self.summary_stats['resources_with_differences']}")
         lines.append(f"Resources Consistent: {self.summary_stats['resources_consistent']}")
         lines.append(f"Resources Missing from Some: {self.summary_stats['resources_missing_from_some']}")
+        
+        # Show ignore statistics if any ignoring was applied
+        if self.ignore_config and self.ignore_statistics['total_ignored_attributes'] > 0:
+            lines.append("")
+            lines.append("IGNORE STATISTICS")
+            lines.append(f"Total Ignored Attributes: {self.ignore_statistics['total_ignored_attributes']}")
+            lines.append(f"Resources with Ignores: {self.ignore_statistics['resources_with_ignores']}")
+            lines.append(f"Resources with All Changes Ignored: {self.ignore_statistics['all_changes_ignored']}")
+            if self.ignore_statistics['ignore_breakdown']:
+                lines.append("Breakdown by Attribute:")
+                for attr, count in sorted(self.ignore_statistics['ignore_breakdown'].items()):
+                    lines.append(f"  - {attr}: {count} resource(s)")
+        
         lines.append("")
         
         # Resource comparison section
@@ -838,6 +1031,10 @@ class MultiEnvReport:
             # Resource header
             lines.append(f"Resource: {rc.resource_address}")
             lines.append(f"Status: {status}")
+            
+            # Show ignored attributes count if any
+            if rc.ignored_attributes:
+                lines.append(f"Ignored Attributes: {len(rc.ignored_attributes)} ({', '.join(sorted(rc.ignored_attributes))})")
             
             # Check for sensitive differences
             if rc.has_sensitive_differences():
