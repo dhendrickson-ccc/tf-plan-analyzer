@@ -1,0 +1,2 @@
+[console_scripts]
+tf-plan-analyzer = src.lib.analyze_plan:main
