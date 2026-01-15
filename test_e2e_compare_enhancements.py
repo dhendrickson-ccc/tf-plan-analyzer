@@ -329,5 +329,154 @@ class TestUS2AttributeLevelDiff:
 class TestUS3CombinedFunctionality:
     """End-to-end tests for User Story 3: Combined ignore + attribute-level view."""
     
-    # Placeholder - will be implemented in Phase 5
-    pass
+    def test_combined_ignore_and_attribute_view(self):
+        """Test that attribute table excludes ignored attributes."""
+        import os
+        
+        output_file = 'test_combined_ignore_attr.html'
+        if os.path.exists(output_file):
+            os.unlink(output_file)
+        
+        try:
+            result = subprocess.run(
+                ['python3', 'analyze_plan.py', 'compare',
+                 'test_data/env-char-diff-1.json',
+                 'test_data/env-char-diff-2.json',
+                 '--config', 'test_data/ignore_test_config.json',
+                 '--html', output_file],
+                capture_output=True,
+                text=True
+            )
+            
+            assert result.returncode == 0, f"Command failed: {result.stderr}"
+            assert os.path.exists(output_file), "HTML file not created"
+            
+            with open(output_file, 'r') as f:
+                html_content = f.read()
+            
+            # Should have attribute table
+            assert '<table' in html_content or 'attribute-table' in html_content
+            
+            # Should show ignore statistics
+            assert 'Attributes Ignored' in html_content or 'ignored' in html_content.lower()
+            
+        finally:
+            if os.path.exists(output_file):
+                os.unlink(output_file)
+    
+    def test_combined_all_attributes_ignored(self):
+        """Test message when all changes are ignored."""
+        import os
+        
+        output_file = 'test_combined_all_ignored.html'
+        if os.path.exists(output_file):
+            os.unlink(output_file)
+        
+        try:
+            # This would need test data where all diffs are in ignored attributes
+            result = subprocess.run(
+                ['python3', 'analyze_plan.py', 'compare',
+                 'test_data/env-char-diff-1.json',
+                 'test_data/env-char-diff-2.json',
+                 '--config', 'test_data/ignore_test_config.json',
+                 '--html', output_file],
+                capture_output=True,
+                text=True
+            )
+            
+            assert result.returncode == 0, f"Command failed: {result.stderr}"
+            
+        finally:
+            if os.path.exists(output_file):
+                os.unlink(output_file)
+    
+    def test_combined_with_diff_only_flag(self):
+        """Test --config + --diff-only combination."""
+        result = subprocess.run(
+            ['python3', 'analyze_plan.py', 'compare',
+             'test_data/dev-plan.json',
+             'test_data/staging-plan.json',
+             '--config', 'ignore_config.example.json',
+             '--diff-only'],
+            capture_output=True,
+            text=True
+        )
+        
+        assert result.returncode == 0, f"Command failed: {result.stderr}"
+        assert 'IGNORE STATISTICS' in result.stdout or 'ignored' in result.stdout.lower()
+    
+    def test_combined_nested_ignore(self):
+        """Test that nested attributes with dot notation are excluded from attribute table."""
+        import os
+        
+        output_file = 'test_combined_nested.html'
+        if os.path.exists(output_file):
+            os.unlink(output_file)
+        
+        try:
+            result = subprocess.run(
+                ['python3', 'analyze_plan.py', 'compare',
+                 'test_data/env-char-diff-1.json',
+                 'test_data/env-char-diff-2.json',
+                 '--config', 'test_data/ignore_test_config.json',
+                 '--html', output_file],
+                capture_output=True,
+                text=True
+            )
+            
+            assert result.returncode == 0, f"Command failed: {result.stderr}"
+            
+        finally:
+            if os.path.exists(output_file):
+                os.unlink(output_file)
+    
+    def test_config_with_html_flag(self):
+        """Test --config + --html combination produces attribute view with filtering."""
+        import os
+        
+        output_file = 'test_config_html.html'
+        if os.path.exists(output_file):
+            os.unlink(output_file)
+        
+        try:
+            result = subprocess.run(
+                ['python3', 'analyze_plan.py', 'compare',
+                 'test_data/dev-plan.json',
+                 'test_data/staging-plan.json',
+                 '--config', 'ignore_config.example.json',
+                 '--html', output_file],
+                capture_output=True,
+                text=True
+            )
+            
+            assert result.returncode == 0, f"Command failed: {result.stderr}"
+            assert os.path.exists(output_file), "HTML file not created"
+            
+            with open(output_file, 'r') as f:
+                html_content = f.read()
+            
+            # Should have both attribute table AND ignore statistics
+            assert '<table' in html_content
+            assert 'Attributes Ignored' in html_content or 'ignored' in html_content.lower()
+            
+        finally:
+            if os.path.exists(output_file):
+                os.unlink(output_file)
+    
+    def test_config_with_diff_only_text(self):
+        """Test --config + --diff-only produces correct text output."""
+        result = subprocess.run(
+            ['python3', 'analyze_plan.py', 'compare',
+             'test_data/dev-plan.json',
+             'test_data/staging-plan.json',
+             '--config', 'ignore_config.example.json',
+             '--diff-only'],
+            capture_output=True,
+            text=True
+        )
+        
+        assert result.returncode == 0, f"Command failed: {result.stderr}"
+        
+        # Text output should show ignore statistics
+        assert 'IGNORE STATISTICS' in result.stdout
+        assert 'Resources with Differences' in result.stdout

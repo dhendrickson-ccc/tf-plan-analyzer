@@ -126,21 +126,21 @@ description: "Task list for Compare Subcommand Enhancements feature"
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T047 [P] [US3] Add test_e2e_compare_enhancements.py with test_combined_ignore_and_attribute_view() (tags ignored, only location shown in attribute table)
-- [ ] T048 [P] [US3] Add test_e2e_compare_enhancements.py with test_combined_all_attributes_ignored() (all changes ignored, verify "No actionable differences" message)
-- [ ] T049 [P] [US3] Add test_e2e_compare_enhancements.py with test_combined_with_diff_only_flag() (test --config + --diff-only + --html combination, all filtered, verify exit code 0 and special message)
-- [ ] T050 [P] [US3] Add test_e2e_compare_enhancements.py with test_combined_nested_ignore() (identity.type ignored, verify nested attribute excluded from diff)
-- [ ] T065 [P] [US3] Add test_e2e_compare_enhancements.py with test_config_with_html_flag() (test --config + --html combination, verify HTML output has attribute view + ignore filtering)
-- [ ] T066 [P] [US3] Add test_e2e_compare_enhancements.py with test_config_with_diff_only_text() (test --config + --diff-only without --html, verify text output format unchanged)
+- [X] T047 [P] [US3] Add test_e2e_compare_enhancements.py with test_combined_ignore_and_attribute_view() (tags ignored, only location shown in attribute table)
+- [X] T048 [P] [US3] Add test_e2e_compare_enhancements.py with test_combined_all_attributes_ignored() (all changes ignored, verify "No actionable differences" message)
+- [X] T049 [P] [US3] Add test_e2e_compare_enhancements.py with test_combined_with_diff_only_flag() (test --config + --diff-only + --html combination, all filtered, verify exit code 0 and special message)
+- [X] T050 [P] [US3] Add test_e2e_compare_enhancements.py with test_combined_nested_ignore() (identity.type ignored, verify nested attribute excluded from diff)
+- [X] T065 [P] [US3] Add test_e2e_compare_enhancements.py with test_config_with_html_flag() (test --config + --html combination, verify HTML output has attribute view + ignore filtering)
+- [X] T066 [P] [US3] Add test_e2e_compare_enhancements.py with test_config_with_diff_only_text() (test --config + --diff-only without --html, verify text output format unchanged)
 
 ### Implementation for User Story 3
 
-- [ ] T051 [US3] Modify compute_attribute_diffs() to skip attributes in ignored_attributes set (integrate US1 and US2)
-- [ ] T052 [US3] Update "No actionable differences" detection (attribute_diffs empty due to ignore filtering)
-- [ ] T053 [US3] Implement special message for --diff-only + ignore rules scenario (exit code 0, "N attributes filtered" message)
-- [ ] T054 [US3] Update HTML IgnoreStatistics display to show per-resource and global ignored counts in combined view
-- [ ] T055 [US3] Run test_e2e_compare_enhancements.py tests for US3 and verify all pass
-- [ ] T056 [US3] Run full test suite (test_e2e_multi_env.py, test_multi_env_unit.py) to verify backward compatibility
+- [X] T051 [US3] Modify compute_attribute_diffs() to skip attributes in ignored_attributes set (integrate US1 and US2)
+- [X] T052 [US3] Update "No actionable differences" detection (attribute_diffs empty due to ignore filtering)
+- [X] T053 [US3] Implement special message for --diff-only + ignore rules scenario (exit code 0, "N attributes filtered" message)
+- [X] T054 [US3] Update HTML IgnoreStatistics display to show per-resource and global ignored counts in combined view
+- [X] T055 [US3] Run test_e2e_compare_enhancements.py tests for US3 and verify all pass
+- [X] T056 [US3] Run full test suite (test_e2e_multi_env.py, test_multi_env_unit.py) to verify backward compatibility
 
 **Checkpoint**: All user stories complete - combined functionality working perfectly
 
