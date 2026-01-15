@@ -217,8 +217,8 @@ def get_diff_highlight_css() -> str:
         }
         
         .baseline-added {
-            background-color: #e3f2fd;
-            color: #1565c0;
+            background-color: #c8e6c9;
+            color: #1b5e20;
             display: block;
         }
         
@@ -228,8 +228,8 @@ def get_diff_highlight_css() -> str:
         }
         
         .baseline-char-added {
-            background-color: #e3f2fd;
-            color: #1565c0;
+            background-color: #81c784;
+            color: #2e7d32;
         }
 """
 

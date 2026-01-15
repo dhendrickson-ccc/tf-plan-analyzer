@@ -45,14 +45,14 @@ class AttributeDiff:
 
 # The diff highlighting functions now use shared utilities from src.lib.diff_utils
 # Kept as module-level wrappers for backward compatibility
-def _highlight_char_diff(before_str: str, after_str: str) -> Tuple[str, str]:
-    """Wrapper for shared highlight_char_diff utility."""
-    return highlight_char_diff(before_str, after_str, is_known_after_apply=False)
+def _highlight_char_diff(before_str: str, after_str: str, is_baseline: bool = True) -> Tuple[str, str]:
+    """Wrapper for shared highlight_char_diff utility with baseline comparison styling."""
+    return highlight_char_diff(before_str, after_str, is_known_after_apply=False, is_baseline_comparison=is_baseline)
 
 
-def _highlight_json_diff(before: Any, after: Any) -> Tuple[str, str]:
-    """Wrapper for shared highlight_json_diff utility."""
-    return highlight_json_diff(before, after, is_known_after_apply=False)
+def _highlight_json_diff(before: Any, after: Any, is_baseline: bool = True) -> Tuple[str, str]:
+    """Wrapper for shared highlight_json_diff utility with baseline comparison styling."""
+    return highlight_json_diff(before, after, is_known_after_apply=False, is_baseline_comparison=is_baseline)
 
 
 class EnvironmentPlan:
@@ -953,24 +953,73 @@ class MultiEnvReport:
             if attr_diff.is_different and attr_diff.attribute_type == "primitive":
                 # Get baseline value (first non-None value)
                 baseline_val = None
+                baseline_env = None
                 for env in env_labels:
                     if attr_diff.env_values.get(env) is not None:
                         baseline_val = attr_diff.env_values[env]
+                        baseline_env = env
                         break
 
-                # Apply char-level diff if values are strings and similar
-                if baseline_val is not None and value != baseline_val:
+                # If this IS the baseline environment, we need to compare against other envs
+                if current_env == baseline_env and baseline_val is not None:
+                    # Find any different value to compare against
+                    other_val = None
+                    for env in env_labels:
+                        if env != baseline_env:
+                            other_val = attr_diff.env_values.get(env)
+                            if other_val is not None and other_val != baseline_val:
+                                break
+                    
+                    if other_val is not None and isinstance(value, str) and isinstance(other_val, str):
+                        baseline_highlighted, _ = _highlight_char_diff(
+                            str(value), str(other_val)
+                        )
+                        return f'<code class="baseline-removed">{baseline_highlighted}</code>'
+                
+                # For non-baseline environments, compare against baseline
+                elif baseline_val is not None and value != baseline_val:
                     if isinstance(value, str) and isinstance(baseline_val, str):
-                        _, highlighted = _highlight_char_diff(
+                        _, value_highlighted = _highlight_char_diff(
                             str(baseline_val), str(value)
                         )
-                        return f'<code style="background: #d1ecf1; padding: 2px 6px; border-radius: 3px;">{highlighted}</code>'
+                        return f'<code class="baseline-added">{value_highlighted}</code>'
 
             # Default: show value without highlighting
             return f"<code>{html.escape(str(value))}</code>"
 
         # Handle complex objects (dict, list)
         if isinstance(value, (dict, list)):
+            # For objects/arrays with differences, apply JSON diff highlighting
+            if attr_diff.is_different:
+                # Get baseline value
+                baseline_val = None
+                baseline_env = None
+                for env in env_labels:
+                    if attr_diff.env_values.get(env) is not None:
+                        baseline_val = attr_diff.env_values[env]
+                        baseline_env = env
+                        break
+                
+                # If this IS the baseline environment, compare against other envs
+                if current_env == baseline_env and baseline_val is not None:
+                    # Find any different value to compare against
+                    other_val = None
+                    for env in env_labels:
+                        if env != baseline_env:
+                            other_val = attr_diff.env_values.get(env)
+                            if other_val is not None and json.dumps(other_val, sort_keys=True) != json.dumps(baseline_val, sort_keys=True):
+                                break
+                    
+                    if other_val is not None:
+                        baseline_highlighted, _ = _highlight_json_diff(value, other_val)
+                        return f'<pre class="json-content baseline-removed" style="margin: 0; background: #f8f9fa; padding: 8px; border-radius: 4px; font-size: 0.85em; max-height: 200px; overflow-y: auto;">{baseline_highlighted}</pre>'
+                
+                # For non-baseline environments, compare against baseline
+                elif baseline_val is not None and json.dumps(value, sort_keys=True) != json.dumps(baseline_val, sort_keys=True):
+                    _, value_highlighted = _highlight_json_diff(baseline_val, value)
+                    return f'<pre class="json-content baseline-added" style="margin: 0; background: #f8f9fa; padding: 8px; border-radius: 4px; font-size: 0.85em; max-height: 200px; overflow-y: auto;">{value_highlighted}</pre>'
+            
+            # No differences - show plain JSON
             value_json = json.dumps(value, indent=2, sort_keys=True)
             # Truncate if too long
             if len(value_json) > 500:
