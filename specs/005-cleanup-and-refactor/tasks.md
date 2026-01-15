@@ -50,19 +50,19 @@
 
 ### Implementation for User Story 2
 
-- [ ] T006 [P] [US2] Create src/lib/html_generation.py with function `get_base_css() -> str` that returns complete CSS stylesheet (extract from analyze_plan.py lines 992-1300)
-- [ ] T007 [P] [US2] Add function `get_diff_highlight_css() -> str` to src/lib/html_generation.py with classes for removed/added/unchanged/char-removed/char-added/known-after-apply
-- [ ] T008 [P] [US2] Add function `get_summary_card_css() -> str` to src/lib/html_generation.py with classes for summary-card, total/created/updated/removed color values
-- [ ] T009 [P] [US2] Add function `get_resource_card_css() -> str` to src/lib/html_generation.py with classes for resource-card, diff-header, json-content, resource-name
-- [ ] T010 [US2] Consolidate font family to Monaco/Menlo/Consolas/monospace (replacing all instances of 'Courier New' based on research.md Section 2.3 findings)
-- [ ] T011 [US2] Add function `generate_full_styles() -> str` to src/lib/html_generation.py that combines all CSS functions and returns complete <style> block
-- [ ] T012 [P] [US2] Update analyze_plan.py to import html_generation module (before US1: `import src.lib.html_generation`; imports will be updated to absolute in US1) and replace inline CSS (lines 992-1300) with generate_full_styles() function call
-- [ ] T013 [P] [US2] Update multi_env_comparator.py to import generate_full_styles from src.lib.html_generation and replace inline CSS (lines 671-720) with function call
-- [ ] T014 [P] [US2] Delete generate_html_report.py (deprecated file per research.md findings)
-- [ ] T015 [US2] Run all 158 existing tests with `pytest tests/ -v` to ensure no regressions from CSS extraction
-- [ ] T016 [US2] Generate sample reports (analyze, compare, obfuscated) and visually validate consistent styling across all reports
-- [ ] T017 [US2] Delete all existing HTML demo files from root: comparison_report.html, demo-*.html, test_*.html, manual_validation.html, prod-vs-test-comparison.html, etc. (13+ files per research.md Section 1.1)
-- [ ] T018 [US2] Generate fresh example HTML reports to examples/sample_reports/: single_plan.html, multi_env_comparison.html, obfuscated_report.html using new consistent styles
+- [X] T006 [P] [US2] Create src/lib/html_generation.py with function `get_base_css() -> str` that returns complete CSS stylesheet (extract from analyze_plan.py lines 992-1300)
+- [X] T007 [P] [US2] Add function `get_diff_highlight_css() -> str` to src/lib/html_generation.py with classes for removed/added/unchanged/char-removed/char-added/known-after-apply
+- [X] T008 [P] [US2] Add function `get_summary_card_css() -> str` to src/lib/html_generation.py with classes for summary-card, total/created/updated/removed color values
+- [X] T009 [P] [US2] Add function `get_resource_card_css() -> str` to src/lib/html_generation.py with classes for resource-card, diff-header, json-content, resource-name
+- [X] T010 [US2] Consolidate font family to Monaco/Menlo/Consolas/monospace (replacing all instances of 'Courier New' based on research.md Section 2.3 findings)
+- [X] T011 [US2] Add function `generate_full_styles() -> str` to src/lib/html_generation.py that combines all CSS functions and returns complete <style> block
+- [X] T012 [P] [US2] Update analyze_plan.py to import html_generation module (before US1: `import src.lib.html_generation`; imports will be updated to absolute in US1) and replace inline CSS (lines 992-1300) with generate_full_styles() function call
+- [X] T013 [P] [US2] Update multi_env_comparator.py to import generate_full_styles from src.lib.html_generation and replace inline CSS (lines 671-720) with function call
+- [X] T014 [P] [US2] Delete generate_html_report.py (deprecated file per research.md findings)
+- [X] T015 [US2] Run all 158 existing tests with `pytest tests/ -v` to ensure no regressions from CSS extraction
+- [X] T016 [US2] Generate sample reports (analyze, compare, obfuscated) and visually validate consistent styling across all reports
+- [X] T017 [US2] Delete all existing HTML demo files from root: comparison_report.html, demo-*.html, test_*.html, manual_validation.html, prod-vs-test-comparison.html, etc. (13+ files per research.md Section 1.1)
+- [X] T018 [US2] Generate fresh example HTML reports to examples/sample_reports/: single_plan.html, multi_env_comparison.html, obfuscated_report.html using new consistent styles
 
 **Checkpoint**: At this point, all HTML styling is centralized in src/lib/html_generation.py, all reports use consistent CSS, and fresh examples showcase the unified design
 
