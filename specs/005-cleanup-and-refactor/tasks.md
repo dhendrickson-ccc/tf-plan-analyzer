@@ -157,16 +157,16 @@
 
 ### Implementation for User Story 3
 
-- [ ] T070 [US3] Create docs/style-guide.md with title "Terraform Plan Analyzer - UI Style Guide" and introduction explaining purpose (consistency across all HTML reports)
-- [ ] T071 [US3] Add "Color Palette" section to docs/style-guide.md documenting semantic colors with exact hex codes: Primary (#667eea), Success/Added (#51cf66, #d3f9d8), Warning/Updated (#ffa94d, #ffe8cc), Error/Removed (#c92a2a, #ffe0e0), Neutral (#495057, #f5f5f5, #333)
-- [ ] T072 [US3] Add "Typography" section to docs/style-guide.md with complete font stacks: Body text (-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif), Code/Monospace (Monaco, Menlo, Consolas, 'Courier New', monospace), font sizes (body: 16px/1.6, h1: 2em, h2: 1.5em, code: 14px), font weights (normal: 400, medium: 500, bold: 700)
-- [ ] T073 [US3] Add "Spacing System" section to docs/style-guide.md documenting exact spacing values: Padding (card: 24px, section: 16px, inline: 8px 12px), Margin (section: 24px, card: 16px, element: 8px), Border radius (card: 8px, button: 6px, badge: 4px), Gap (grid: 20px, flex: 12px)
-- [ ] T074 [US3] Add "CSS Classes Reference" section to docs/style-guide.md with copy-paste ready examples for: .summary-card (with variants .total, .created, .updated, .removed), .resource-card, .diff-header, .json-content, .removed/.added/.unchanged, .char-removed/.char-added, .known-after-apply
-- [ ] T075 [US3] Add "Component Patterns" section to docs/style-guide.md with complete HTML+CSS code snippets for: Summary card with icon and number, Resource comparison card with diff, Expandable section with toggle, Badge/tag components, Button styles
-- [ ] T076 [US3] Add "Layout Guidelines" section to docs/style-guide.md documenting: Container max-width (1200px), Grid patterns (2-column, 3-column for summary cards), Flexbox patterns for headers, Responsive breakpoints if applicable
-- [ ] T077 [US3] Add "Usage Examples" section to docs/style-guide.md showing how to import styles: `from src.lib.html_generation import generate_full_styles`, and how to apply semantic colors to new elements
-- [ ] T078 [US3] Add reference to style guide in .specify/memory/constitution.md: Add "Style Guide Reference" section under Principle I stating "Before implementing new UI components, consult docs/style-guide.md for color palette, typography, spacing, and component patterns"
-- [ ] T079 [US3] Code review: Verify all color codes, font families, and spacing values in docs/style-guide.md match actual implementation in src/lib/html_generation.py
+- [X] T070 [US3] Create docs/style-guide.md with title "Terraform Plan Analyzer - UI Style Guide" and introduction explaining purpose (consistency across all HTML reports)
+- [X] T071 [US3] Add "Color Palette" section to docs/style-guide.md documenting semantic colors with exact hex codes: Primary (#667eea), Success/Added (#51cf66, #d3f9d8), Warning/Updated (#ffa94d, #ffe8cc), Error/Removed (#c92a2a, #ffe0e0), Neutral (#495057, #f5f5f5, #333)
+- [X] T072 [US3] Add "Typography" section to docs/style-guide.md with complete font stacks: Body text (-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif), Code/Monospace (Monaco, Menlo, Consolas, 'Courier New', monospace), font sizes (body: 16px/1.6, h1: 2em, h2: 1.5em, code: 14px), font weights (normal: 400, medium: 500, bold: 700)
+- [X] T073 [US3] Add "Spacing System" section to docs/style-guide.md documenting exact spacing values: Padding (card: 24px, section: 16px, inline: 8px 12px), Margin (section: 24px, card: 16px, element: 8px), Border radius (card: 8px, button: 6px, badge: 4px), Gap (grid: 20px, flex: 12px)
+- [X] T074 [US3] Add "CSS Classes Reference" section to docs/style-guide.md with copy-paste ready examples for: .summary-card (with variants .total, .created, .updated, .removed), .resource-card, .diff-header, .json-content, .removed/.added/.unchanged, .char-removed/.char-added, .known-after-apply
+- [X] T075 [US3] Add "Component Patterns" section to docs/style-guide.md with complete HTML+CSS code snippets for: Summary card with icon and number, Resource comparison card with diff, Expandable section with toggle, Badge/tag components, Button styles
+- [X] T076 [US3] Add "Layout Guidelines" section to docs/style-guide.md documenting: Container max-width (1200px), Grid patterns (2-column, 3-column for summary cards), Flexbox patterns for headers, Responsive breakpoints if applicable
+- [X] T077 [US3] Add "Usage Examples" section to docs/style-guide.md showing how to import styles: `from src.lib.html_generation import generate_full_styles`, and how to apply semantic colors to new elements
+- [X] T078 [US3] Add reference to style guide in .specify/memory/constitution.md: Add "Style Guide Reference" section under Principle I stating "Before implementing new UI components, consult docs/style-guide.md for color palette, typography, spacing, and component patterns"
+- [X] T079 [US3] Code review: Verify all color codes, font families, and spacing values in docs/style-guide.md match actual implementation in src/lib/html_generation.py
 
 **Checkpoint**: Comprehensive style guide complete with exact values, copy-paste examples, referenced in constitution for enforcement
 

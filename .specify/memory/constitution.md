@@ -44,6 +44,18 @@ Code reuse is mandatory to ensure maintainability, consistency, and reduced tech
 
 **Rationale**: Duplicated code leads to inconsistent behavior, increased maintenance burden, and bugs when fixes are applied to only one copy. This principle ensures a single source of truth for each piece of functionality.
 
+#### Style Guide Reference
+
+Before implementing new UI components for HTML reports, consult `docs/style-guide.md` for:
+- Color palette with exact hex codes for semantic colors (primary, success, warning, error)
+- Typography specifications (font families, sizes, weights, line heights)
+- Spacing system (padding, margin, border radius, gap values)
+- CSS class reference with copy-paste ready examples
+- Component patterns for common UI elements (cards, badges, buttons, expandable sections)
+- Layout guidelines (grid patterns, flexbox, responsive breakpoints)
+
+**Purpose**: The style guide ensures visual consistency across all HTML reports (single-plan analysis, multi-environment comparison, sensitive data obfuscation) and prevents developers from creating divergent or conflicting styles. All UI-related values MUST reference the style guide to maintain a cohesive design system.
+
 ### II. Shared Data Model Is Canonical
 
 The shared data model serves as the single source of truth for all data structures in the project.
