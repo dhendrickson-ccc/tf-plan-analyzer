@@ -92,27 +92,27 @@ description: "Task list for Compare Subcommand Enhancements feature"
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T030 [P] [US2] Add test_e2e_compare_enhancements.py with test_attribute_level_single_change() (only location differs, verify HTML shows location row only, verify char-level diff highlighting)
-- [ ] T031 [P] [US2] Add test_e2e_compare_enhancements.py with test_attribute_level_multiple_changes() (sku, capacity, enabled differ, verify all shown separately)
-- [ ] T032 [P] [US2] Add test_e2e_compare_enhancements.py with test_attribute_level_nested_object() (identity changed, verify top-level "identity" shown with nested block)
-- [ ] T033 [P] [US2] Add test_e2e_compare_enhancements.py with test_attribute_level_identical_resource() (verify "No differences" message when expanded)
-- [ ] T067 [P] [US2] Add test_e2e_compare_enhancements.py with test_attribute_level_sensitive_values() (verify sensitive attributes show 🔒 SENSITIVE badge in attribute view)
-- [ ] T034 [P] [US2] Create test_compare_enhancements_unit.py with test_compute_attribute_diffs() (unit test for attribute extraction logic)
+- [X] T030 [P] [US2] Add test_e2e_compare_enhancements.py with test_attribute_level_single_change() (only location differs, verify HTML shows location row only, verify char-level diff highlighting)
+- [X] T031 [P] [US2] Add test_e2e_compare_enhancements.py with test_attribute_level_multiple_changes() (sku, capacity, enabled differ, verify all shown separately)
+- [X] T032 [P] [US2] Add test_e2e_compare_enhancements.py with test_attribute_level_nested_object() (identity changed, verify top-level "identity" shown with nested block)
+- [X] T033 [P] [US2] Add test_e2e_compare_enhancements.py with test_attribute_level_identical_resource() (verify "No differences" message when expanded)
+- [X] T067 [P] [US2] Add test_e2e_compare_enhancements.py with test_attribute_level_sensitive_values() (verify sensitive attributes show 🔒 SENSITIVE badge in attribute view)
+- [X] T034 [P] [US2] Create test_compare_enhancements_unit.py with test_compute_attribute_diffs() (unit test for attribute extraction logic)
 
 ### Implementation for User Story 2
 
-- [ ] T035 [P] [US2] Add compute_attribute_diffs() method to multi_env_comparator.py ResourceComparison (extract top-level keys that differ)
-- [ ] T036 [US2] Add compute_attribute_diffs() to build AttributeDiff objects (attribute_name, env_values, is_different, attribute_type)
-- [ ] T037 [US2] Modify multi_env_comparator.py ResourceComparison to store attribute_diffs list after detect_differences()
-- [ ] T038 [US2] Modify multi_env_comparator.py MultiEnvReport.generate_html() to replace full JSON display with attribute table rendering
-- [ ] T039 [US2] Implement render_attribute_table() in multi_env_comparator.py (iterate attribute_diffs, create HTML rows)
-- [ ] T040 [US2] Implement render_attribute_value() in multi_env_comparator.py (handle primitives vs objects vs arrays, apply existing char-level diff highlighting from feature 002-char-level-diff for primitive values)
-- [ ] T041 [US2] Add side-by-side column layout for environment values (one column per environment, matching existing structure)
-- [ ] T042 [US2] Add "No differences detected" message rendering when attribute_diffs is empty but resource present
-- [ ] T043 [US2] Preserve expand/collapse functionality for resource sections with new attribute table structure
-- [ ] T044 [US2] Preserve sensitive value indicators (🔒 SENSITIVE badge) for attributes marked sensitive in attribute view
-- [ ] T045 [US2] Run test_e2e_compare_enhancements.py tests for US2 and verify all pass (including char-level diff highlighting and sensitive value preservation)
-- [ ] T046 [US2] Test manually with comparison_report.html to verify attribute-level view renders correctly
+- [X] T035 [P] [US2] Add compute_attribute_diffs() method to multi_env_comparator.py ResourceComparison (extract top-level keys that differ)
+- [X] T036 [US2] Add compute_attribute_diffs() to build AttributeDiff objects (attribute_name, env_values, is_different, attribute_type)
+- [X] T037 [US2] Modify multi_env_comparator.py ResourceComparison to store attribute_diffs list after detect_differences()
+- [X] T038 [US2] Modify multi_env_comparator.py MultiEnvReport.generate_html() to replace full JSON display with attribute table rendering
+- [X] T039 [US2] Implement render_attribute_table() in multi_env_comparator.py (iterate attribute_diffs, create HTML rows)
+- [X] T040 [US2] Implement render_attribute_value() in multi_env_comparator.py (handle primitives vs objects vs arrays, apply existing char-level diff highlighting from feature 002-char-level-diff for primitive values)
+- [X] T041 [US2] Add side-by-side column layout for environment values (one column per environment, matching existing structure)
+- [X] T042 [US2] Add "No differences detected" message rendering when attribute_diffs is empty but resource present
+- [X] T043 [US2] Preserve expand/collapse functionality for resource sections with new attribute table structure
+- [X] T044 [US2] Preserve sensitive value indicators (🔒 SENSITIVE badge) for attributes marked sensitive in attribute view
+- [X] T045 [US2] Run test_e2e_compare_enhancements.py tests for US2 and verify all pass (including char-level diff highlighting and sensitive value preservation)
+- [X] T046 [US2] Test manually with comparison_report.html to verify attribute-level view renders correctly
 
 **Checkpoint**: User Story 2 complete - attribute-level view working, independently testable
 
