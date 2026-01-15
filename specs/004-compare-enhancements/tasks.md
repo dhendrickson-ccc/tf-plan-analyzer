@@ -151,11 +151,11 @@ description: "Task list for Compare Subcommand Enhancements feature"
 **Purpose**: Improvements that affect multiple user stories and final validation
 
 - [ ] T057 [P] Update quickstart.md with actual CLI examples and screenshots (if needed)
-- [ ] T058 [P] Verify backward compatibility: run existing compare tests without --config flag
-- [ ] T059 [P] Verify backward compatibility: test text output format unchanged (attribute view only affects HTML)
-- [ ] T060 Performance test: generate HTML for comparison with 100+ resources, verify <3 seconds (SC-007)
-- [ ] T061 [P] Code cleanup: remove debug logging, ensure consistent error messages
-- [ ] T062 [P] Code review: verify ignore_utils.py follows existing code patterns in analyze_plan.py
+- [X] T058 [P] Verify backward compatibility: run existing compare tests without --config flag
+- [X] T059 [P] Verify backward compatibility: test text output format unchanged (attribute view only affects HTML)
+- [X] T060 Performance test: generate HTML for comparison with 100+ resources, verify <3 seconds (SC-007)
+- [X] T061 [P] Code cleanup: remove debug logging, ensure consistent error messages
+- [X] T062 [P] Code review: verify ignore_utils.py follows existing code patterns in analyze_plan.py
 - [ ] T063 Update PR_DESCRIPTION.md with feature summary, testing results, screenshots
 - [ ] T064 Run quickstart.md validation scenarios manually (filter tags, resource-specific ignores, combined diff-only)
 
