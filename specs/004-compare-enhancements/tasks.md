@@ -23,9 +23,9 @@ description: "Task list for Compare Subcommand Enhancements feature"
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Verify Python 3.9.6 environment and pytest 8.4.2 installation
-- [ ] T002 Review existing codebase structure (analyze_plan.py, multi_env_comparator.py, test patterns)
-- [ ] T003 Review ignore_config.example.json schema and analyze_plan.py lines 1833-1865 for existing ignore logic
+- [X] T001 Verify Python 3.9.6 environment and pytest 8.4.2 installation
+- [X] T002 Review existing codebase structure (analyze_plan.py, multi_env_comparator.py, test patterns)
+- [X] T003 Review ignore_config.example.json schema and analyze_plan.py lines 1833-1865 for existing ignore logic
 
 ---
 
@@ -35,13 +35,13 @@ description: "Task list for Compare Subcommand Enhancements feature"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Create ignore_utils.py with load_ignore_config(file_path: Path) -> Dict function (parse JSON, validate schema, raise FileNotFoundError or JSONDecodeError)
-- [ ] T005 Create ignore_utils.py apply_ignore_config(resource_config: Dict, ignore_rules: Dict, resource_type: str) -> Dict function (accepts resource dict, ignore rules, returns filtered dict)
-- [ ] T006 Create ignore_utils.py get_ignored_attributes(resource_config: Dict, ignore_rules: Dict, resource_type: str) -> Set[str] function (returns set of ignored attribute names that were actually present)
-- [ ] T007 Create ignore_utils.py supports_dot_notation(attribute_path: str, config: Dict) -> bool function (handle nested attributes like "identity.type", return True if attribute exists at path)
-- [ ] T008 [P] Create test_ignore_utils.py with unit tests for load_ignore_config (valid JSON, malformed JSON, file not found)
-- [ ] T009 [P] Create test_ignore_utils.py with unit tests for apply_ignore_config (global rules, resource-specific rules, nested attributes)
-- [ ] T010 Run tests for ignore_utils to validate foundational logic
+- [X] T004 Create ignore_utils.py with load_ignore_config(file_path: Path) -> Dict function (parse JSON, validate schema, raise FileNotFoundError or JSONDecodeError)
+- [X] T005 Create ignore_utils.py apply_ignore_config(resource_config: Dict, ignore_rules: Dict, resource_type: str) -> Dict function (accepts resource dict, ignore rules, returns filtered dict)
+- [X] T006 Create ignore_utils.py get_ignored_attributes(resource_config: Dict, ignore_rules: Dict, resource_type: str) -> Set[str] function (returns set of ignored attribute names that were actually present)
+- [X] T007 Create ignore_utils.py supports_dot_notation(attribute_path: str, config: Dict) -> bool function (handle nested attributes like "identity.type", return True if attribute exists at path)
+- [X] T008 [P] Create test_ignore_utils.py with unit tests for load_ignore_config (valid JSON, malformed JSON, file not found)
+- [X] T009 [P] Create test_ignore_utils.py with unit tests for apply_ignore_config (global rules, resource-specific rules, nested attributes)
+- [X] T010 Run tests for ignore_utils to validate foundational logic
 
 **Checkpoint**: Foundation ready - ignore utilities tested and working
 
@@ -57,28 +57,28 @@ description: "Task list for Compare Subcommand Enhancements feature"
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T011 [P] [US1] Create test_e2e_compare_enhancements.py with test_ignore_global_rules() (tags ignored across all resources)
-- [ ] T012 [P] [US1] Create test_e2e_compare_enhancements.py with test_ignore_resource_specific() (description ignored for specific resource type)
-- [ ] T013 [P] [US1] Create test_e2e_compare_enhancements.py with test_ignore_nested_attributes() (identity.type ignored using dot notation)
-- [ ] T014 [P] [US1] Create test_e2e_compare_enhancements.py with test_ignore_config_file_not_found() (exit code 1, error message)
-- [ ] T015 [P] [US1] Create test_e2e_compare_enhancements.py with test_ignore_config_malformed_json() (exit code 2, error message)
-- [ ] T016 [P] [US1] Create test_data/ignore_test_config.json with global and resource-specific rules for testing
+- [X] T011 [P] [US1] Create test_e2e_compare_enhancements.py with test_ignore_global_rules() (tags ignored across all resources)
+- [X] T012 [P] [US1] Create test_e2e_compare_enhancements.py with test_ignore_resource_specific() (description ignored for specific resource type)
+- [X] T013 [P] [US1] Create test_e2e_compare_enhancements.py with test_ignore_nested_attributes() (identity.type ignored using dot notation)
+- [X] T014 [P] [US1] Create test_e2e_compare_enhancements.py with test_ignore_config_file_not_found() (exit code 1, error message)
+- [X] T015 [P] [US1] Create test_e2e_compare_enhancements.py with test_ignore_config_malformed_json() (exit code 2, error message)
+- [X] T016 [P] [US1] Create test_data/ignore_test_config.json with global and resource-specific rules for testing
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Modify analyze_plan.py handle_compare_subcommand() to import ignore_utils and load config file when --config provided
-- [ ] T018 [US1] Modify analyze_plan.py handle_compare_subcommand() to handle file not found (exit code 1) and JSON parse errors (exit code 2)
-- [ ] T019 [US1] Modify analyze_plan.py handle_compare_subcommand() to pass ignore_config to MultiEnvReport constructor
-- [ ] T020 [US1] Modify multi_env_comparator.py MultiEnvReport.__init__() to accept ignore_config parameter (optional)
-- [ ] T021 [US1] Modify multi_env_comparator.py MultiEnvReport.build_comparisons() to apply ignore filtering before detect_differences()
-- [ ] T022 [US1] Modify multi_env_comparator.py MultiEnvReport.build_comparisons() to track ignored_attributes per ResourceComparison
-- [ ] T023 [US1] Modify multi_env_comparator.py MultiEnvReport.build_comparisons() to calculate IgnoreStatistics (total_ignored_attributes, resources_with_ignores)
-- [ ] T024 [US1] Modify multi_env_comparator.py ResourceComparison.detect_differences() to recalculate has_differences after ignore filtering
-- [ ] T025 [US1] Update summary statistics calculation to count resources as "identical" if all changes ignored, "different" only if non-ignored changes exist
-- [ ] T026 [US1] Add IgnoreStatistics display to HTML report header (total ignored, breakdown by attribute name)
-- [ ] T027 [US1] Add "N attributes ignored" indicator per resource in HTML (visible when ignored_attributes > 0)
-- [ ] T028 [US1] Run test_e2e_compare_enhancements.py tests for US1 and verify all pass
-- [ ] T029 [US1] Test manually with dev-plan.json, staging-plan.json, prod-plan.json and ignore_config.json from test_data/
+- [X] T017 [US1] Modify analyze_plan.py handle_compare_subcommand() to import ignore_utils and load config file when --config provided
+- [X] T018 [US1] Modify analyze_plan.py handle_compare_subcommand() to handle file not found (exit code 1) and JSON parse errors (exit code 2)
+- [X] T019 [US1] Modify analyze_plan.py handle_compare_subcommand() to pass ignore_config to MultiEnvReport constructor
+- [X] T020 [US1] Modify multi_env_comparator.py MultiEnvReport.__init__() to accept ignore_config parameter (optional)
+- [X] T021 [US1] Modify multi_env_comparator.py MultiEnvReport.build_comparisons() to apply ignore filtering before detect_differences()
+- [X] T022 [US1] Modify multi_env_comparator.py MultiEnvReport.build_comparisons() to track ignored_attributes per ResourceComparison
+- [X] T023 [US1] Modify multi_env_comparator.py MultiEnvReport.build_comparisons() to calculate IgnoreStatistics (total_ignored_attributes, resources_with_ignores)
+- [X] T024 [US1] Modify multi_env_comparator.py ResourceComparison.detect_differences() to recalculate has_differences after ignore filtering
+- [X] T025 [US1] Update summary statistics calculation to count resources as "identical" if all changes ignored, "different" only if non-ignored changes exist
+- [X] T026 [US1] Add IgnoreStatistics display to HTML report header (total ignored, breakdown by attribute name)
+- [X] T027 [US1] Add "N attributes ignored" indicator per resource in HTML (visible when ignored_attributes > 0)
+- [X] T028 [US1] Run test_e2e_compare_enhancements.py tests for US1 and verify all pass
+- [X] T029 [US1] Test manually with dev-plan.json, staging-plan.json, prod-plan.json and ignore_config.json from test_data/
 
 **Checkpoint**: User Story 1 complete - ignore rules working for compare subcommand, independently testable
 

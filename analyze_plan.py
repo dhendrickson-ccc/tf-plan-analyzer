@@ -1971,6 +1971,7 @@ def handle_compare_subcommand(args):
     """Handle the 'compare' subcommand for multi-environment comparison."""
     from multi_env_comparator import EnvironmentPlan, MultiEnvReport
     from pathlib import Path
+    from ignore_utils import load_ignore_config
     
     # Validate at least 2 plan files
     if len(args.plan_files) < 2:
@@ -2049,16 +2050,17 @@ def handle_compare_subcommand(args):
     # Load ignore configuration if provided
     ignore_config = None
     if args.config:
-        if not Path(args.config).exists():
+        try:
+            ignore_config = load_ignore_config(Path(args.config))
+        except FileNotFoundError:
             print(f"Error: Ignore config file not found: {args.config}")
             sys.exit(1)
-        
-        try:
-            with open(args.config, 'r') as f:
-                ignore_config = json.load(f)
         except json.JSONDecodeError as e:
-            print(f"Error: Invalid JSON in config file: {e}")
-            sys.exit(1)
+            print(f"Error: Malformed JSON in config file: {e}")
+            sys.exit(2)
+        except ValueError as e:
+            print(f"Error: Invalid config file structure: {e}")
+            sys.exit(2)
     
     # Create MultiEnvReport and perform comparison
     diff_only = getattr(args, 'diff_only', False)

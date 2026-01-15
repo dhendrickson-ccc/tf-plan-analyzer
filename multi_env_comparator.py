@@ -11,6 +11,7 @@ import json
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Any, Tuple
+from ignore_utils import apply_ignore_config, get_ignored_attributes
 
 
 def _highlight_char_diff(before_str: str, after_str: str) -> Tuple[str, str]:
@@ -308,6 +309,7 @@ class ResourceComparison:
         self.env_configs_raw: Dict[str, Optional[Dict]] = {}  # Store unmasked configs for comparison
         self.is_present_in: Set[str] = set()
         self.has_differences = False
+        self.ignored_attributes: Set[str] = set()  # Track which attributes were ignored
     
     def add_environment_config(self, env_label: str, config: Optional[Dict], config_raw: Optional[Dict] = None) -> None:
         """
@@ -478,6 +480,12 @@ class MultiEnvReport:
         self.ignore_config = ignore_config
         self.resource_comparisons: List[ResourceComparison] = []
         self.summary_stats: Dict[str, int] = {}
+        self.ignore_statistics: Dict[str, Any] = {
+            'total_ignored_attributes': 0,
+            'resources_with_ignores': 0,
+            'all_changes_ignored': 0,
+            'ignore_breakdown': {}  # Map attribute name -> count
+        }
     
     def load_environments(self) -> None:
         """Load all environment plan files."""
@@ -498,56 +506,52 @@ class MultiEnvReport:
             
             comparison = ResourceComparison(address, resource_type)
             
+            # Track which attributes were actually ignored for this resource
+            ignored_for_resource: Set[str] = set()
+            
             # Add config from each environment (with ignore config applied)
             for env in self.environments:
                 config = env.before_values.get(address)
                 config_raw = env.before_values_raw.get(address)
                 
+                # Apply ignore filtering if config exists
                 if config is not None and self.ignore_config:
-                    config = self._apply_ignore_config(config, resource_type)
+                    # Track what gets ignored before filtering
+                    ignored_attrs = get_ignored_attributes(config, self.ignore_config, resource_type)
+                    ignored_for_resource.update(ignored_attrs)
+                    
+                    # Apply filtering
+                    config = apply_ignore_config(config, self.ignore_config, resource_type)
+                    
                 if config_raw is not None and self.ignore_config:
-                    config_raw = self._apply_ignore_config(config_raw, resource_type)
+                    config_raw = apply_ignore_config(config_raw, self.ignore_config, resource_type)
                     
                 comparison.add_environment_config(env.label, config, config_raw)
             
-            # Detect differences (uses raw values)
+            # Store ignored attributes for this resource
+            comparison.ignored_attributes = ignored_for_resource
+            
+            # Detect differences (uses raw values AFTER ignore filtering)
             comparison.detect_differences()
             
             # Mark changed sensitive values with (changed) indicator
             comparison.mark_changed_sensitive_values()
             
-            self.resource_comparisons.append(comparison)
-    
-    def _apply_ignore_config(self, config: Dict, resource_type: str) -> Dict:
-        """
-        Apply ignore configuration to filter out ignored fields.
-        
-        Args:
-            config: Resource configuration
-            resource_type: Resource type (e.g., "aws_instance")
+            # Update ignore statistics
+            if ignored_for_resource:
+                self.ignore_statistics['resources_with_ignores'] += 1
+                self.ignore_statistics['total_ignored_attributes'] += len(ignored_for_resource)
+                
+                # Track breakdown by attribute name
+                for attr in ignored_for_resource:
+                    self.ignore_statistics['ignore_breakdown'][attr] = \
+                        self.ignore_statistics['ignore_breakdown'].get(attr, 0) + 1
+                
+                # Check if ALL changes were ignored (resource became identical after filtering)
+                if not comparison.has_differences:
+                    self.ignore_statistics['all_changes_ignored'] += 1
             
-        Returns:
-            Configuration with ignored fields removed
-        """
-        if not self.ignore_config:
-            return config
-        
-        import copy
-        filtered_config = copy.deepcopy(config)
-        
-        # Get ignore rules for this resource type
-        ignore_rules = self.ignore_config.get('ignore_fields', {})
-        global_ignore = ignore_rules.get('*', [])
-        type_specific_ignore = ignore_rules.get(resource_type, [])
-        
-        fields_to_ignore = set(global_ignore + type_specific_ignore)
-        
-        # Remove ignored fields
-        for field in fields_to_ignore:
-            if field in filtered_config:
-                del filtered_config[field]
-        
-        return filtered_config
+            self.resource_comparisons.append(comparison)
     
     def calculate_summary(self) -> None:
         """Calculate summary statistics for the report."""
@@ -679,6 +683,18 @@ class MultiEnvReport:
         html_parts.append(f'                <div class="number">{self.summary_stats["resources_consistent"]}</div>')
         html_parts.append('                <div class="label">Consistent</div>')
         html_parts.append('            </div>')
+        
+        # Show ignore statistics if any ignoring was applied
+        if self.ignore_config and self.ignore_statistics['total_ignored_attributes'] > 0:
+            html_parts.append('            <div class="summary-card total" style="background: #fff4e6; border-left: 4px solid #f59e0b;">')
+            html_parts.append(f'                <div class="number">{self.ignore_statistics["total_ignored_attributes"]}</div>')
+            html_parts.append('                <div class="label">Attributes Ignored</div>')
+            html_parts.append('            </div>')
+            html_parts.append('            <div class="summary-card created" style="background: #ecfdf5; border-left: 4px solid #10b981;">')
+            html_parts.append(f'                <div class="number">{self.ignore_statistics["all_changes_ignored"]}</div>')
+            html_parts.append('                <div class="label">All Changes Ignored</div>')
+            html_parts.append('            </div>')
+        
         html_parts.append('        </div>')
         
         # Comparison section with collapsible resource blocks
@@ -704,8 +720,16 @@ class MultiEnvReport:
             html_parts.append('                    <span class="toggle-icon collapsed">▼</span>')
             html_parts.append(f'                    <span class="resource-name">{rc.resource_address}</span>')
             html_parts.append(f'                    <span class="resource-status {status_class}">{status_text}</span>')
+            
+            # Show ignored attributes indicator
+            if rc.ignored_attributes:
+                ignored_count = len(rc.ignored_attributes)
+                ignored_list = ', '.join(sorted(rc.ignored_attributes))
+                html_parts.append(f'                    <span class="badge" style="background: #fbbf24; color: #78350f;" title="Ignored: {ignored_list}">{ignored_count} attributes ignored</span>')
+            
             if has_sensitive_diff:
                 html_parts.append('                    <span class="sensitive-indicator">⚠️ SENSITIVE DIFF</span>')
+            
             html_parts.append('                </div>')
             html_parts.append('                <div class="resource-change-content">')
             html_parts.append('                    <div class="change-diff">')
@@ -820,6 +844,19 @@ class MultiEnvReport:
         lines.append(f"Resources with Differences: {self.summary_stats['resources_with_differences']}")
         lines.append(f"Resources Consistent: {self.summary_stats['resources_consistent']}")
         lines.append(f"Resources Missing from Some: {self.summary_stats['resources_missing_from_some']}")
+        
+        # Show ignore statistics if any ignoring was applied
+        if self.ignore_config and self.ignore_statistics['total_ignored_attributes'] > 0:
+            lines.append("")
+            lines.append("IGNORE STATISTICS")
+            lines.append(f"Total Ignored Attributes: {self.ignore_statistics['total_ignored_attributes']}")
+            lines.append(f"Resources with Ignores: {self.ignore_statistics['resources_with_ignores']}")
+            lines.append(f"Resources with All Changes Ignored: {self.ignore_statistics['all_changes_ignored']}")
+            if self.ignore_statistics['ignore_breakdown']:
+                lines.append("Breakdown by Attribute:")
+                for attr, count in sorted(self.ignore_statistics['ignore_breakdown'].items()):
+                    lines.append(f"  - {attr}: {count} resource(s)")
+        
         lines.append("")
         
         # Resource comparison section
@@ -838,6 +875,10 @@ class MultiEnvReport:
             # Resource header
             lines.append(f"Resource: {rc.resource_address}")
             lines.append(f"Status: {status}")
+            
+            # Show ignored attributes count if any
+            if rc.ignored_attributes:
+                lines.append(f"Ignored Attributes: {len(rc.ignored_attributes)} ({', '.join(sorted(rc.ignored_attributes))})")
             
             # Check for sensitive differences
             if rc.has_sensitive_differences():
