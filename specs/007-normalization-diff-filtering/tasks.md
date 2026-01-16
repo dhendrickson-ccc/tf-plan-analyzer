@@ -23,8 +23,8 @@ description: "Implementation tasks for normalization-based difference filtering"
 
 **Purpose**: Project initialization and example configuration files
 
-- [ ] T001 Create examples/normalizations.json with reference patterns from az-env-compare-config (name_patterns for environments, resource_id_patterns for subscriptions/tenants)
-- [ ] T002 [P] Create test_data/normalizations_test.json with minimal test patterns for unit testing
+- [X] T001 Create examples/normalizations.json with reference patterns from az-env-compare-config (name_patterns for environments, resource_id_patterns for subscriptions/tenants)
+- [X] T002 [P] Create test_data/normalizations_test.json with minimal test patterns for unit testing
 
 ---
 
@@ -143,29 +143,29 @@ description: "Implementation tasks for normalization-based difference filtering"
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T043 [P] [US3] Unit test for _calculate_ignore_counts() function in tests/unit/test_multi_env_comparator.py (separate config vs normalization counts)
-- [ ] T044 [P] [US3] Unit test for _render_ignore_badge() with both types of ignores in tests/unit/test_multi_env_comparator.py
-- [ ] T045 [P] [US3] Unit test for _render_ignore_badge() with only normalization ignores in tests/unit/test_multi_env_comparator.py
+- [X] T043 [P] [US3] Unit test for _calculate_ignore_counts() function in tests/unit/test_multi_env_comparator.py (separate config vs normalization counts)
+- [X] T044 [P] [US3] Unit test for _render_ignore_badge() with both types of ignores in tests/unit/test_multi_env_comparator.py
+- [X] T045 [P] [US3] Unit test for _render_ignore_badge() with only normalization ignores in tests/unit/test_multi_env_comparator.py
 
 ### Implementation for User Story 3
 
-- [ ] T046 [P] [US3] Implement _calculate_ignore_counts() function in src/core/multi_env_comparator.py (count ignored_due_to_config and ignored_due_to_normalization separately)
-- [ ] T047 [P] [US3] Update _render_attribute_table() in src/core/multi_env_comparator.py to render badge with combined counts and tooltip breakdown
-- [ ] T048 [US3] Add CSS for badge tooltip styling in src/lib/html_generation.py (ensure tooltip shows two sections: Config and Normalized)
-- [ ] T049 [US3] Update calculate_summary() in src/core/multi_env_comparator.py to include normalization-ignored count in summary stats
-- [ ] T050 [US3] Update generate_text() in src/core/multi_env_comparator.py to output normalization-ignored count in console summary (FR-014)
+- [X] T046 [P] [US3] Implement _calculate_ignore_counts() function in src/core/multi_env_comparator.py (count ignored_due_to_config and ignored_due_to_normalization separately)
+- [X] T047 [P] [US3] Update _render_attribute_table() in src/core/multi_env_comparator.py to render badge with combined counts and tooltip breakdown
+- [X] T048 [US3] Add CSS for badge tooltip styling in src/lib/html_generation.py (ensure tooltip shows two sections: Config and Normalized)
+- [X] T049 [US3] Update calculate_summary() in src/core/multi_env_comparator.py to include normalization-ignored count in summary stats
+- [X] T050 [US3] Update generate_text() in src/core/multi_env_comparator.py to output normalization-ignored count in console summary (FR-014)
 
 ### End-to-End Tests for User Story 3
 
-- [ ] T051 [P] [US3] E2E test for badge rendering with both ignore types in tests/e2e/test_e2e_normalization.py (verify badge shows "X ignored (Y config, Z normalized)")
-- [ ] T052 [P] [US3] E2E test for tooltip content in tests/e2e/test_e2e_normalization.py (verify separate sections for Config and Normalized)
-- [ ] T053 [P] [US3] E2E test for summary statistics in console output in tests/e2e/test_e2e_normalization.py (verify normalization count displayed)
+- [X] T051 [P] [US3] E2E test for badge rendering with both ignore types in tests/e2e/test_e2e_normalization.py (verify badge shows "X ignored (Y config, Z normalized)")
+- [X] T052 [P] [US3] E2E test for tooltip content in tests/e2e/test_e2e_normalization.py (verify separate sections for Config and Normalized)
+- [X] T053 [P] [US3] E2E test for summary statistics in console output in tests/e2e/test_e2e_normalization.py (verify normalization count displayed)
 
 ### Live Testing for User Story 3 (Constitution Principle III)
 
-- [ ] T054 [US3] Run live comparison with both ignore config and normalization config, verify badge shows combined counts
-- [ ] T055 [US3] Hover over badge in HTML report to verify tooltip shows separate sections
-- [ ] T056 [US3] Verify console output shows summary with both config and normalization counts
+- [X] T054 [US3] Run live comparison with both ignore config and normalization config, verify badge shows combined counts
+- [X] T055 [US3] Hover over badge in HTML report to verify tooltip shows separate sections
+- [X] T056 [US3] Verify console output shows summary with both config and normalization counts
 
 **Checkpoint**: At this point, User Story 3 should be fully functional and testable independently. Commit all changes (Constitution Principle IV).
 

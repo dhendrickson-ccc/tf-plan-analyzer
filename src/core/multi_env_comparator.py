@@ -58,6 +58,74 @@ def _highlight_json_diff(before: Any, after: Any, is_baseline: bool = True) -> T
     return highlight_json_diff(before, after, is_known_after_apply=False, is_baseline_comparison=is_baseline)
 
 
+def _calculate_ignore_counts(
+    config_ignored: Set[str], attr_diffs: List[AttributeDiff]
+) -> Tuple[int, int]:
+    """
+    Calculate separate counts for config-ignored and normalization-ignored attributes.
+    
+    Args:
+        config_ignored: Set of attribute names ignored via config
+        attr_diffs: List of attribute diffs
+        
+    Returns:
+        Tuple of (config_count, normalization_count)
+    """
+    config_count = len(config_ignored)
+    
+    # Count attributes ignored due to normalization
+    norm_count = sum(1 for diff in attr_diffs if diff.ignored_due_to_normalization)
+    
+    return config_count, norm_count
+
+
+def _render_ignore_badge(
+    config_count: int,
+    norm_count: int,
+    config_ignored: Set[str],
+    normalized_attrs: List[str]
+) -> str:
+    """
+    Render the ignore badge with separate counts and tooltip breakdown.
+    
+    Args:
+        config_count: Number of config-ignored attributes
+        norm_count: Number of normalization-ignored attributes
+        config_ignored: Set of config-ignored attribute names
+        normalized_attrs: List of normalization-ignored attribute names
+        
+    Returns:
+        HTML string for the badge
+    """
+    total_count = config_count + norm_count
+    
+    if total_count == 0:
+        return ""
+    
+    # Build tooltip content with sections
+    tooltip_parts = []
+    
+    if config_count > 0:
+        config_list = ", ".join(sorted(config_ignored))
+        tooltip_parts.append(f"Config: {config_list}")
+    
+    if norm_count > 0:
+        norm_list = ", ".join(sorted(normalized_attrs))
+        tooltip_parts.append(f"Normalized: {norm_list}")
+    
+    tooltip_text = " | ".join(tooltip_parts)
+    
+    # Build badge text
+    if config_count > 0 and norm_count > 0:
+        badge_text = f"{total_count} attributes ignored ({config_count} config, {norm_count} normalized)"
+    elif norm_count > 0:
+        badge_text = f"{norm_count} attributes ignored (normalized)"
+    else:
+        badge_text = f"{config_count} attributes ignored (config)"
+    
+    return f'<span class="badge" style="background: #fbbf24; color: #78350f;" title="{html.escape(tooltip_text)}">{badge_text}</span>'
+
+
 class EnvironmentPlan:
     """Represents a single environment's Terraform plan with extracted before state."""
 
@@ -563,6 +631,7 @@ class MultiEnvReport:
         self.summary_stats: Dict[str, int] = {}
         self.ignore_statistics: Dict[str, Any] = {
             "total_ignored_attributes": 0,
+            "normalization_ignored_attributes": 0,  # Feature 007 US3
             "resources_with_ignores": 0,
             "all_changes_ignored": 0,
             "ignore_breakdown": {},  # Map attribute name -> count
@@ -630,6 +699,14 @@ class MultiEnvReport:
 
             # Mark changed sensitive values with (changed) indicator
             comparison.mark_changed_sensitive_values()
+            
+            # Track normalization ignores (feature 007 US3)
+            norm_ignored_count = sum(
+                1 for diff in comparison.attribute_diffs 
+                if diff.ignored_due_to_normalization
+            )
+            if norm_ignored_count > 0:
+                self.ignore_statistics["normalization_ignored_attributes"] += norm_ignored_count
 
             # Update ignore statistics
             if ignored_for_resource:
@@ -797,18 +874,35 @@ class MultiEnvReport:
         # Show ignore statistics if any ignoring was applied
         if (
             self.ignore_config
-            and self.ignore_statistics["total_ignored_attributes"] > 0
+            and (self.ignore_statistics["total_ignored_attributes"] > 0 
+                 or self.ignore_statistics["normalization_ignored_attributes"] > 0)
         ):
-            html_parts.append(
-                '            <div class="summary-card total" style="background: #fff4e6; border-left: 4px solid #f59e0b;">'
-            )
-            html_parts.append(
-                f'                <div class="number">{self.ignore_statistics["total_ignored_attributes"]}</div>'
-            )
-            html_parts.append(
-                '                <div class="label">Attributes Ignored</div>'
-            )
-            html_parts.append("            </div>")
+            # Config-ignored attributes
+            if self.ignore_statistics["total_ignored_attributes"] > 0:
+                html_parts.append(
+                    '            <div class="summary-card total" style="background: #fff4e6; border-left: 4px solid #f59e0b;">'
+                )
+                html_parts.append(
+                    f'                <div class="number">{self.ignore_statistics["total_ignored_attributes"]}</div>'
+                )
+                html_parts.append(
+                    '                <div class="label">Config Ignored</div>'
+                )
+                html_parts.append("            </div>")
+            
+            # Normalization-ignored attributes (US3 - feature 007)
+            if self.ignore_statistics["normalization_ignored_attributes"] > 0:
+                html_parts.append(
+                    '            <div class="summary-card total" style="background: #e0f2fe; border-left: 4px solid #0284c7;">'
+                )
+                html_parts.append(
+                    f'                <div class="number">{self.ignore_statistics["normalization_ignored_attributes"]}</div>'
+                )
+                html_parts.append(
+                    '                <div class="label">Normalized</div>'
+                )
+                html_parts.append("            </div>")
+            
             html_parts.append(
                 '            <div class="summary-card created" style="background: #ecfdf5; border-left: 4px solid #10b981;">'
             )
@@ -871,13 +965,23 @@ class MultiEnvReport:
                 f'                    <span class="resource-status {status_class}">{status_text}</span>'
             )
 
-            # Show ignored attributes indicator
-            if rc.ignored_attributes:
-                ignored_count = len(rc.ignored_attributes)
-                ignored_list = ", ".join(sorted(rc.ignored_attributes))
-                html_parts.append(
-                    f'                    <span class="badge" style="background: #fbbf24; color: #78350f;" title="Ignored: {ignored_list}">{ignored_count} attributes ignored</span>'
-                )
+            # Show combined ignore badge (US3 - feature 007)
+            if rc.ignored_attributes or any(diff.ignored_due_to_normalization for diff in rc.attribute_diffs):
+                # Collect normalized attribute names
+                normalized_attrs = [
+                    diff.attribute_name 
+                    for diff in rc.attribute_diffs 
+                    if diff.ignored_due_to_normalization
+                ]
+                
+                # Calculate separate counts
+                config_count, norm_count = _calculate_ignore_counts(rc.ignored_attributes, rc.attribute_diffs)
+                
+                # Render badge with breakdown
+                badge_html = _render_ignore_badge(config_count, norm_count, rc.ignored_attributes, normalized_attrs)
+                if badge_html:
+                    html_parts.append(f'                    {badge_html}')
+            
 
             if has_sensitive_diff:
                 html_parts.append(
@@ -948,12 +1052,23 @@ class MultiEnvReport:
                     f'                            <span class="resource-status {status_class}">{status_text}</span>'
                 )
                 
-                if rc.ignored_attributes:
-                    ignored_count = len(rc.ignored_attributes)
-                    ignored_list = ", ".join(sorted(rc.ignored_attributes))
-                    html_parts.append(
-                        f'                            <span class="badge" style="background: #fbbf24; color: #78350f;" title="Ignored: {ignored_list}">{ignored_count} attributes ignored</span>'
-                    )
+                # Render combined ignore badge (US3 - feature 007)
+                if rc.ignored_attributes or any(diff.ignored_due_to_normalization for diff in rc.attribute_diffs):
+                    # Collect normalized attribute names
+                    normalized_attrs = [
+                        diff.attribute_name 
+                        for diff in rc.attribute_diffs 
+                        if diff.ignored_due_to_normalization
+                    ]
+                    
+                    # Calculate separate counts
+                    config_count, norm_count = _calculate_ignore_counts(rc.ignored_attributes, rc.attribute_diffs)
+                    
+                    # Render badge with breakdown
+                    badge_html = _render_ignore_badge(config_count, norm_count, rc.ignored_attributes, normalized_attrs)
+                    if badge_html:
+                        html_parts.append(f'                            {badge_html}')
+                
                 
                 if has_sensitive_diff:
                     html_parts.append(
@@ -1275,13 +1390,24 @@ class MultiEnvReport:
         # Show ignore statistics if any ignoring was applied
         if (
             self.ignore_config
-            and self.ignore_statistics["total_ignored_attributes"] > 0
+            and (self.ignore_statistics["total_ignored_attributes"] > 0 
+                 or self.ignore_statistics["normalization_ignored_attributes"] > 0)
         ):
             lines.append("")
             lines.append("IGNORE STATISTICS")
-            lines.append(
-                f"Total Ignored Attributes: {self.ignore_statistics['total_ignored_attributes']}"
-            )
+            
+            # Config-ignored attributes
+            if self.ignore_statistics["total_ignored_attributes"] > 0:
+                lines.append(
+                    f"Config Ignored Attributes: {self.ignore_statistics['total_ignored_attributes']}"
+                )
+            
+            # Normalization-ignored attributes (US3 - feature 007)
+            if self.ignore_statistics["normalization_ignored_attributes"] > 0:
+                lines.append(
+                    f"Normalized Attributes: {self.ignore_statistics['normalization_ignored_attributes']}"
+                )
+            
             lines.append(
                 f"Resources with Ignores: {self.ignore_statistics['resources_with_ignores']}"
             )
