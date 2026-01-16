@@ -7,6 +7,8 @@ Auto-generated from all feature plans. Last updated: 2026-01-13
 - File-based (input tfplan.json, output obfuscated.json, encrypted .salt file with binary format) (003-sensitive-obfuscation)
 - Python 3.9.6 + Python stdlib (json, pathlib, difflib, html), pytest 8.4.2 (testing) (004-compare-enhancements)
 - Filesystem (JSON plan files, HTML output files) (004-compare-enhancements)
+- Python 3.9.6 + No new dependencies - pure HTML+CSS modifications (006-comparison-ui-improvements)
+- HTML file output (static reports) (006-comparison-ui-improvements)
 
 - Python 3.8+ (matching existing codebase) (001-multi-env-comparison)
 
@@ -26,10 +28,10 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.8+ (matching existing codebase): Follow standard conventions
 
 ## Recent Changes
+- 006-comparison-ui-improvements: Added Python 3.9.6 + No new dependencies - pure HTML+CSS modifications
 - 004-compare-enhancements: Added Python 3.9.6 + Python stdlib (json, pathlib, difflib, html), pytest 8.4.2 (testing)
 - 003-sensitive-obfuscation: Added Python 3.11+ (matches existing project)
 
-- 001-multi-env-comparison: Added Python 3.8+ (matching existing codebase)
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
