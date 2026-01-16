@@ -191,3 +191,79 @@ def load_normalization_config(file_path: Path) -> NormalizationConfig:
         resource_id_patterns=resource_id_patterns,
         source_file=file_path
     )
+
+
+def apply_normalization_patterns(value: str, patterns: List[NormalizationPattern]) -> str:
+    """
+    Apply normalization patterns to a string value in order.
+    
+    Each pattern is applied once using regex.sub() (FR-011 first-match-wins strategy).
+    Patterns are applied sequentially - each pattern operates on the result of the previous pattern.
+    
+    Args:
+        value: String value to normalize
+        patterns: List of NormalizationPattern objects to apply in order
+        
+    Returns:
+        Normalized string with all patterns applied in sequence
+        
+    Example:
+        >>> patterns = [
+        ...     NormalizationPattern(re.compile(r"-(dev)-"), "-ENV-", "", "-(dev)-"),
+        ...     NormalizationPattern(re.compile(r"eastus"), "REGION", "", "eastus")
+        ... ]
+        >>> apply_normalization_patterns("storage-dev-eastus", patterns)
+        'storage-ENV-REGION'
+    """
+    if not patterns:
+        return value
+    
+    result = value
+    for pattern in patterns:
+        # Each pattern runs regex.sub() once (first-match-wins per pattern)
+        result = pattern.pattern.sub(pattern.replacement, result)
+    
+    return result
+
+
+def normalize_attribute_value(
+    attribute_name: str,
+    value: Any,
+    config: NormalizationConfig
+) -> Any:
+    """
+    Normalize an attribute value using name patterns.
+    
+    Only string values are normalized - other types (int, bool, dict, list, None) 
+    are returned unchanged. This function applies name_patterns only (US1).
+    Resource ID normalization (US2) will be added later.
+    
+    Args:
+        attribute_name: Name of the attribute (for future use in classification)
+        value: Attribute value to normalize
+        config: NormalizationConfig with patterns to apply
+        
+    Returns:
+        Normalized value (or original if non-string or no patterns)
+        
+    Example:
+        >>> config = NormalizationConfig(
+        ...     name_patterns=[NormalizationPattern(re.compile(r"-(dev)-"), "-ENV-", "", "-(dev)-")],
+        ...     resource_id_patterns=[],
+        ...     source_file=Path("/fake.json")
+        ... )
+        >>> normalize_attribute_value("name", "storage-dev-eastus", config)
+        'storage-ENV-eastus'
+        >>> normalize_attribute_value("count", 42, config)
+        42
+    """
+    # Only normalize string values
+    if not isinstance(value, str):
+        return value
+    
+    # If no name patterns, return original
+    if not config.name_patterns:
+        return value
+    
+    # Apply name patterns
+    return apply_normalization_patterns(value, config.name_patterns)

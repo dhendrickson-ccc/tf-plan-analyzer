@@ -1,0 +1,5 @@
+{
+  "ignore_attributes": [],
+  "ignore_resource_types": [],
+  "normalization_config_path": "../examples/normalizations.json"
+}

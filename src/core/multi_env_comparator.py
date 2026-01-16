@@ -292,6 +292,8 @@ class ResourceComparison:
         Extracts top-level attributes from each environment's config and
         creates AttributeDiff objects that can be rendered as table rows.
         Skips attributes that are in the ignored_attributes set.
+        
+        Applies normalization if normalization_config is set (feature 007).
         """
         self.attribute_diffs = []
 
@@ -348,7 +350,57 @@ class ResourceComparison:
 
             # Create AttributeDiff
             attr_diff = AttributeDiff(attr_name, env_values, is_different, attr_type)
+            
+            # Apply normalization if config exists and attribute differs (US1)
+            if is_different and self.normalization_config is not None:
+                from src.lib.normalization_utils import normalize_attribute_value
+                
+                # Normalize all environment values
+                normalized_values = {}
+                for env_label, value in env_values.items():
+                    if value is not None:
+                        normalized_values[env_label] = normalize_attribute_value(
+                            attr_name, value, self.normalization_config
+                        )
+                    else:
+                        normalized_values[env_label] = None
+                
+                # Check if normalized values are all equal
+                # Get first non-None normalized value as baseline
+                normalized_baseline = None
+                all_normalized_equal = True
+                
+                for norm_value in normalized_values.values():
+                    if norm_value is not None:
+                        if normalized_baseline is None:
+                            normalized_baseline = norm_value
+                        else:
+                            # Compare normalized values
+                            if json.dumps(norm_value, sort_keys=True) != json.dumps(
+                                normalized_baseline, sort_keys=True
+                            ):
+                                all_normalized_equal = False
+                                break
+                
+                # If all normalized values match, mark as ignored
+                if all_normalized_equal and normalized_baseline is not None:
+                    attr_diff.ignored_due_to_normalization = True
+                    attr_diff.normalized_values = normalized_values
+            
             self.attribute_diffs.append(attr_diff)
+        
+        # Update has_differences based on remaining non-normalized differences
+        # After normalization filtering, check if any attribute diffs remain
+        has_any_unignored_diff = any(
+            diff.is_different and not diff.ignored_due_to_normalization
+            for diff in self.attribute_diffs
+        )
+        
+        # If all differences were normalized away, update has_differences
+        if not has_any_unignored_diff and self.has_differences:
+            # Only update if we actually had normalization applied
+            if any(diff.ignored_due_to_normalization for diff in self.attribute_diffs):
+                self.has_differences = False
 
     def mark_changed_sensitive_values(self) -> None:
         """
@@ -534,6 +586,10 @@ class MultiEnvReport:
             resource_type = address.split(".")[0] if "." in address else address
 
             comparison = ResourceComparison(address, resource_type)
+            
+            # Pass normalization config if available (feature 007)
+            if self.ignore_config and "normalization_config" in self.ignore_config:
+                comparison.normalization_config = self.ignore_config["normalization_config"]
 
             # Track which attributes were actually ignored for this resource
             ignored_for_resource: Set[str] = set()
@@ -985,6 +1041,10 @@ class MultiEnvReport:
         else:
             # Render attribute sections (v2.0 layout)
             for attr_diff in rc.attribute_diffs:
+                # Skip attributes ignored due to normalization (feature 007)
+                if attr_diff.ignored_due_to_normalization:
+                    continue
+                
                 # For env-specific resources (not present in all environments), show ALL attributes
                 # For resources present in all environments, only show changed attributes
                 is_env_specific = len(rc.is_present_in) < len(env_labels)

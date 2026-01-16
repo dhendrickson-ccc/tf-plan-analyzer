@@ -58,34 +58,34 @@ description: "Implementation tasks for normalization-based difference filtering"
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T011 [P] [US1] Unit test for load_normalization_config() with valid config in tests/unit/test_normalization_utils.py
-- [ ] T012 [P] [US1] Unit test for load_normalization_config() with file not found error in tests/unit/test_normalization_utils.py
-- [ ] T013 [P] [US1] Unit test for load_normalization_config() with malformed JSON error in tests/unit/test_normalization_utils.py
-- [ ] T014 [P] [US1] Unit test for load_normalization_config() with invalid regex pattern error in tests/unit/test_normalization_utils.py
-- [ ] T015 [P] [US1] Unit test for apply_normalization_patterns() with single pattern in tests/unit/test_normalization_utils.py
-- [ ] T016 [P] [US1] Unit test for apply_normalization_patterns() with multiple ordered patterns in tests/unit/test_normalization_utils.py
-- [ ] T017 [P] [US1] Unit test for apply_normalization_patterns() with no matches returns original in tests/unit/test_normalization_utils.py
+- [X] T011 [P] [US1] Unit test for load_normalization_config() with valid config in tests/unit/test_normalization_utils.py
+- [X] T012 [P] [US1] Unit test for load_normalization_config() with file not found error in tests/unit/test_normalization_utils.py
+- [X] T013 [P] [US1] Unit test for load_normalization_config() with malformed JSON error in tests/unit/test_normalization_utils.py
+- [X] T014 [P] [US1] Unit test for load_normalization_config() with invalid regex pattern error in tests/unit/test_normalization_utils.py
+- [X] T015 [P] [US1] Unit test for apply_normalization_patterns() with single pattern in tests/unit/test_normalization_utils.py
+- [X] T016 [P] [US1] Unit test for apply_normalization_patterns() with multiple ordered patterns in tests/unit/test_normalization_utils.py
+- [X] T017 [P] [US1] Unit test for apply_normalization_patterns() with no matches returns original in tests/unit/test_normalization_utils.py
 
 ### Implementation for User Story 1
 
-- [ ] T018 [P] [US1] Implement apply_normalization_patterns() function in src/lib/normalization_utils.py (apply patterns in order with first-match-wins strategy)
-- [ ] T019 [P] [US1] Implement normalize_attribute_value() function in src/lib/normalization_utils.py (wrapper that applies name_patterns to string values)
-- [ ] T020 [US1] Add normalization logic to ResourceComparison.compute_attribute_diffs() in src/core/multi_env_comparator.py (apply normalization after creating AttributeDiff objects, check if normalized values match, set ignored_due_to_normalization=True if match)
-- [ ] T021 [US1] Update _render_attribute_table() in src/core/multi_env_comparator.py to skip attributes where ignored_due_to_normalization=True
-- [ ] T022 [US1] Update generate_text() in src/core/multi_env_comparator.py to skip attributes where ignored_due_to_normalization=True in verbose output
+- [X] T018 [P] [US1] Implement apply_normalization_patterns() function in src/lib/normalization_utils.py (apply patterns in order with first-match-wins strategy)
+- [X] T019 [P] [US1] Implement normalize_attribute_value() function in src/lib/normalization_utils.py (wrapper that applies name_patterns to string values)
+- [X] T020 [US1] Add normalization logic to ResourceComparison.compute_attribute_diffs() in src/core/multi_env_comparator.py (apply normalization after creating AttributeDiff objects, check if normalized values match, set ignored_due_to_normalization=True if match)
+- [X] T021 [US1] Update _render_attribute_table() in src/core/multi_env_comparator.py to skip attributes where ignored_due_to_normalization=True
+- [X] T022 [US1] Update generate_text() in src/core/multi_env_comparator.py to skip attributes where ignored_due_to_normalization=True in verbose output
 
 ### End-to-End Tests for User Story 1
 
-- [ ] T023 [P] [US1] E2E test for name normalization in tests/e2e/test_e2e_normalization.py (create test plans with environment suffixes, verify differences ignored)
-- [ ] T024 [P] [US1] E2E test for backward compatibility in tests/e2e/test_e2e_normalization.py (run comparison without normalization config, verify existing tests still pass)
-- [ ] T025 [P] [US1] E2E test for mixed differences in tests/e2e/test_e2e_normalization.py (resources with both normalized and actual differences, verify only normalized ignored)
+- [X] T023 [P] [US1] E2E test for name normalization in tests/e2e/test_e2e_normalization.py (create test plans with environment suffixes, verify differences ignored)
+- [X] T024 [P] [US1] E2E test for backward compatibility in tests/e2e/test_e2e_normalization.py (run comparison without normalization config, verify existing tests still pass)
+- [X] T025 [P] [US1] E2E test for mixed differences in tests/e2e/test_e2e_normalization.py (resources with both normalized and actual differences, verify only normalized ignored)
 - [ ] T025a [P] [US1] Unit test for config precedence over normalization in tests/unit/test_normalization_utils.py (attribute both config-ignored AND would-be-normalization-ignored, verify counted only as config-ignored per FR-013)
 
 ### Live Testing for User Story 1 (Constitution Principle III)
 
-- [ ] T026 [US1] Create test_data/env-name-norm-1.json and env-name-norm-2.json with realistic environment naming patterns (storage-t-eastus vs storage-p-eastus)
-- [ ] T027 [US1] Run live comparison with examples/normalizations.json and verify differences reduced in HTML output
-- [ ] T028 [US1] Verify console output shows summary statistics with normalization-ignored count (FR-014)
+- [X] T026 [US1] Create test_data/env-name-norm-1.json and env-name-norm-2.json with realistic environment naming patterns (storage-t-eastus vs storage-p-eastus)
+- [X] T027 [US1] Run live comparison with examples/normalizations.json and verify differences reduced in HTML output
+- [X] T028 [US1] Verify console output shows summary statistics with normalization-ignored count (FR-014)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently. Commit all changes (Constitution Principle IV).
 
