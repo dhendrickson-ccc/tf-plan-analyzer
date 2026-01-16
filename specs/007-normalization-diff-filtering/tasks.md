@@ -34,15 +34,15 @@ description: "Implementation tasks for normalization-based difference filtering"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Create src/lib/normalization_utils.py with load_normalization_config() function (mirrors ignore_utils.py pattern)
-- [ ] T004 [P] Implement NormalizationConfig dataclass in src/lib/normalization_utils.py (fields: name_patterns, resource_id_patterns, source_file)
-- [ ] T005 [P] Implement NormalizationPattern dataclass in src/lib/normalization_utils.py (fields: pattern, replacement, description, original_pattern)
-- [ ] T006 Add validation logic to load_normalization_config() (validate JSON structure, required fields, compile regex patterns)
-- [ ] T007 Add error handling to load_normalization_config() with detailed messages (file not found, malformed JSON, invalid regex with pattern index)
-- [ ] T008 Extend AttributeDiff class in src/core/multi_env_comparator.py (add ignored_due_to_normalization: bool = False, normalized_values: Dict[str, Any] = {})
-- [ ] T009 Extend ResourceComparison class in src/core/multi_env_comparator.py (add normalization_config: Optional[NormalizationConfig] = None)
-- [ ] T010 Update load_ignore_config() in src/lib/ignore_utils.py to load normalization config if normalization_config_path field present
-- [ ] T010a [P] Integration test for load_ignore_config() with normalization_config_path in tests/unit/test_ignore_utils.py (verify calls load_normalization_config() and returns config object)
+- [X] T003 Create src/lib/normalization_utils.py with load_normalization_config() function (mirrors ignore_utils.py pattern)
+- [X] T004 [P] Implement NormalizationConfig dataclass in src/lib/normalization_utils.py (fields: name_patterns, resource_id_patterns, source_file)
+- [X] T005 [P] Implement NormalizationPattern dataclass in src/lib/normalization_utils.py (fields: pattern, replacement, description, original_pattern)
+- [X] T006 Add validation logic to load_normalization_config() (validate JSON structure, required fields, compile regex patterns)
+- [X] T007 Add error handling to load_normalization_config() with detailed messages (file not found, malformed JSON, invalid regex with pattern index)
+- [X] T008 Extend AttributeDiff class in src/core/multi_env_comparator.py (add ignored_due_to_normalization: bool = False, normalized_values: Dict[str, Any] = {})
+- [X] T009 Extend ResourceComparison class in src/core/multi_env_comparator.py (add normalization_config: Optional[NormalizationConfig] = None)
+- [X] T010 Update load_ignore_config() in src/lib/ignore_utils.py to load normalization config if normalization_config_path field present
+- [X] T010a [P] Integration test for load_ignore_config() with normalization_config_path in tests/unit/test_ignore_utils.py (verify calls load_normalization_config() and returns config object)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 

@@ -11,7 +11,7 @@ resource-specific ignore rules (applied to specific resource types).
 
 import json
 from pathlib import Path
-from typing import Dict, Set, Any, List
+from typing import Dict, Set, Any, List, Optional
 
 
 def load_ignore_config(file_path: Path) -> Dict:
@@ -25,6 +25,7 @@ def load_ignore_config(file_path: Path) -> Dict:
         Dictionary containing ignore configuration with keys:
         - 'global_ignores': Dict[str, str] or List[str] - Attributes to ignore globally
         - 'resource_ignores': Dict[str, Dict[str, str] | List[str]] - Resource-specific ignores
+        - 'normalization_config': Optional[NormalizationConfig] - Loaded normalization patterns if path specified
 
     Raises:
         FileNotFoundError: If the configuration file doesn't exist
@@ -73,6 +74,47 @@ def load_ignore_config(file_path: Path) -> Dict:
                     f"Fields for resource '{resource_type}' must be a dict or list, "
                     f"got {type(fields).__name__}"
                 )
+    
+    # Load normalization config if path specified (feature 007)
+    if "normalization_config_path" in config and config["normalization_config_path"]:
+        from src.lib.normalization_utils import load_normalization_config
+        
+        norm_config_path = Path(config["normalization_config_path"])
+        
+        # Resolve relative paths relative to ignore config location
+        if not norm_config_path.is_absolute():
+            norm_config_path = file_path.parent / norm_config_path
+        
+        try:
+            config["normalization_config"] = load_normalization_config(norm_config_path)
+        except FileNotFoundError as e:
+            raise FileNotFoundError(
+                f"Error loading normalization config from path specified in ignore config:\n"
+                f"  Ignore config: {file_path}\n"
+                f"  Normalization path: {config['normalization_config_path']}\n"
+                f"  Resolved path: {norm_config_path}\n"
+                f"  Error: {str(e)}"
+            ) from e
+        except json.JSONDecodeError as e:
+            raise json.JSONDecodeError(
+                f"Error loading normalization config from path specified in ignore config:\n"
+                f"  Ignore config: {file_path}\n"
+                f"  Normalization path: {config['normalization_config_path']}\n"
+                f"  Resolved path: {norm_config_path}\n"
+                f"  Error: {e.msg}",
+                e.doc,
+                e.pos
+            ) from e
+        except ValueError as e:
+            raise ValueError(
+                f"Error loading normalization config from path specified in ignore config:\n"
+                f"  Ignore config: {file_path}\n"
+                f"  Normalization path: {config['normalization_config_path']}\n"
+                f"  Resolved path: {norm_config_path}\n"
+                f"  Error: {str(e)}"
+            ) from e
+    else:
+        config["normalization_config"] = None
 
     return config
 

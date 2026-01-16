@@ -41,6 +41,9 @@ class AttributeDiff:
         self.env_values = env_values
         self.is_different = is_different
         self.attribute_type = attribute_type
+        # Normalization tracking (feature 007)
+        self.ignored_due_to_normalization = False
+        self.normalized_values: Dict[str, Any] = {}
 
 
 # The diff highlighting functions now use shared utilities from src.lib.diff_utils
@@ -237,6 +240,8 @@ class ResourceComparison:
         self.attribute_diffs: List[AttributeDiff] = (
             []
         )  # Attribute-level diffs for HTML rendering
+        # Normalization config (feature 007)
+        self.normalization_config = None
 
     def add_environment_config(
         self, env_label: str, config: Optional[Dict], config_raw: Optional[Dict] = None
