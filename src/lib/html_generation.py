@@ -598,8 +598,8 @@ def get_attribute_section_css() -> str:
         }
         
         .env-value-column {
-            flex: 1;
-            min-width: 250px;
+            flex: 1 1 0;
+            min-width: 0;
         }
         
         .env-label {
@@ -649,8 +649,30 @@ def get_scrollable_container_css() -> str:
             padding: 8px;
             background: #f8f9fa;
             border-radius: 4px;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
+            overflow-x: auto;
+            overflow-y: auto;
+        }
+        
+        .value-container pre,
+        .value-container pre pre {
+            white-space: pre;
+            overflow-wrap: normal;
+            word-wrap: normal;
+            word-break: normal;
+            margin: 0;
+            overflow: visible;
+            max-width: none;
+        }
+        
+        .value-container code {
+            white-space: pre;
+            overflow-wrap: normal;
+            word-wrap: normal;
+            word-break: normal;
+            margin: 0;
+            display: block;
+            overflow: visible;
+            max-width: none;
         }
         
         /* Webkit scrollbar styling for better UX */

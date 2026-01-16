@@ -672,20 +672,23 @@ class MultiEnvReport:
         html_parts.append('            content.classList.toggle("expanded");')
         html_parts.append('            icon.classList.toggle("collapsed");')
         html_parts.append("        }")
-        html_parts.append("        // Synchronized scrolling for value containers")
+        html_parts.append("        // Synchronized horizontal scrolling for value containers")
         html_parts.append("        document.addEventListener('DOMContentLoaded', function() {")
         html_parts.append("            document.querySelectorAll('.attribute-section').forEach(section => {")
         html_parts.append("                const containers = section.querySelectorAll('.value-container');")
+        html_parts.append("                if (containers.length < 2) return;")
+        html_parts.append("                let isScrolling = false;")
         html_parts.append("                containers.forEach(container => {")
         html_parts.append("                    container.addEventListener('scroll', function() {")
-        html_parts.append("                        const scrollTop = this.scrollTop;")
+        html_parts.append("                        if (isScrolling) return;")
+        html_parts.append("                        isScrolling = true;")
         html_parts.append("                        const scrollLeft = this.scrollLeft;")
         html_parts.append("                        containers.forEach(otherContainer => {")
         html_parts.append("                            if (otherContainer !== this) {")
-        html_parts.append("                                otherContainer.scrollTop = scrollTop;")
         html_parts.append("                                otherContainer.scrollLeft = scrollLeft;")
         html_parts.append("                            }")
         html_parts.append("                        });")
+        html_parts.append("                        setTimeout(() => { isScrolling = false; }, 10);")
         html_parts.append("                    });")
         html_parts.append("                });")
         html_parts.append("            });")
@@ -1140,19 +1143,19 @@ class MultiEnvReport:
                     
                     if other_val is not None:
                         baseline_highlighted, _ = _highlight_json_diff(value, other_val)
-                        return f'<pre class="json-content baseline-removed" style="margin: 0; background: #f8f9fa; padding: 8px; border-radius: 4px; font-size: 0.85em; max-height: 200px; overflow-y: auto;">{baseline_highlighted}</pre>'
+                        return f'<pre class="json-content baseline-removed" style="margin: 0; font-size: 0.85em;">{baseline_highlighted}</pre>'
                 
                 # For non-baseline environments, compare against baseline
                 elif baseline_val is not None and json.dumps(value, sort_keys=True) != json.dumps(baseline_val, sort_keys=True):
                     _, value_highlighted = _highlight_json_diff(baseline_val, value)
-                    return f'<pre class="json-content baseline-added" style="margin: 0; background: #f8f9fa; padding: 8px; border-radius: 4px; font-size: 0.85em; max-height: 200px; overflow-y: auto;">{value_highlighted}</pre>'
+                    return f'<pre class="json-content baseline-added" style="margin: 0; font-size: 0.85em;">{value_highlighted}</pre>'
             
             # No differences - show plain JSON
             value_json = json.dumps(value, indent=2, sort_keys=True)
             # Truncate if too long
             if len(value_json) > 500:
                 value_json = value_json[:500] + "\n  ...(truncated)...\n}"
-            return f'<pre style="margin: 0; background: #f8f9fa; padding: 8px; border-radius: 4px; font-size: 0.85em; max-height: 200px; overflow-y: auto;">{html.escape(value_json)}</pre>'
+            return f'<pre style="margin: 0; font-size: 0.85em;">{html.escape(value_json)}</pre>'
 
         # Fallback
         return f"<code>{html.escape(str(value))}</code>"
