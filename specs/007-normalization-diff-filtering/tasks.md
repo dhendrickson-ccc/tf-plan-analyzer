@@ -42,6 +42,7 @@ description: "Implementation tasks for normalization-based difference filtering"
 - [ ] T008 Extend AttributeDiff class in src/core/multi_env_comparator.py (add ignored_due_to_normalization: bool = False, normalized_values: Dict[str, Any] = {})
 - [ ] T009 Extend ResourceComparison class in src/core/multi_env_comparator.py (add normalization_config: Optional[NormalizationConfig] = None)
 - [ ] T010 Update load_ignore_config() in src/lib/ignore_utils.py to load normalization config if normalization_config_path field present
+- [ ] T010a [P] Integration test for load_ignore_config() with normalization_config_path in tests/unit/test_ignore_utils.py (verify calls load_normalization_config() and returns config object)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -78,6 +79,7 @@ description: "Implementation tasks for normalization-based difference filtering"
 - [ ] T023 [P] [US1] E2E test for name normalization in tests/e2e/test_e2e_normalization.py (create test plans with environment suffixes, verify differences ignored)
 - [ ] T024 [P] [US1] E2E test for backward compatibility in tests/e2e/test_e2e_normalization.py (run comparison without normalization config, verify existing tests still pass)
 - [ ] T025 [P] [US1] E2E test for mixed differences in tests/e2e/test_e2e_normalization.py (resources with both normalized and actual differences, verify only normalized ignored)
+- [ ] T025a [P] [US1] Unit test for config precedence over normalization in tests/unit/test_normalization_utils.py (attribute both config-ignored AND would-be-normalization-ignored, verify counted only as config-ignored per FR-013)
 
 ### Live Testing for User Story 1 (Constitution Principle III)
 
@@ -252,16 +254,16 @@ Foundational (Phase 2) ← BLOCKING: Must complete before ANY user story
 | Phase | Tasks | Can Parallelize | Independent Test |
 |-------|-------|-----------------|------------------|
 | Setup | 2 | 1 | N/A |
-| Foundational | 8 | 4 | N/A |
-| US1 (P1) 🎯 | 18 | 15 | ✅ Compare envs with name suffixes |
+| Foundational | 9 | 5 | N/A |
+| US1 (P1) 🎯 | 19 | 16 | ✅ Compare envs with name suffixes |
 | US2 (P2) | 14 | 12 | ✅ Compare envs with subscription IDs |
 | US3 (P3) | 14 | 12 | ✅ Verify badge shows both counts |
 | Polish | 12 | 11 | N/A |
-| **Total** | **68** | **55 (81%)** | **3 user stories** |
+| **Total** | **70** | **57 (81%)** | **3 user stories** |
 
-**Suggested MVP Scope**: User Story 1 only (26 tasks) - delivers 77% of value
+**Suggested MVP Scope**: User Story 1 only (28 tasks) - delivers 77% of value
 
-**Task Format Validation**: ✅ All 68 tasks follow checklist format (checkbox, ID, labels, file paths)
+**Task Format Validation**: ✅ All 70 tasks follow checklist format (checkbox, ID, labels, file paths)
 
 ---
 

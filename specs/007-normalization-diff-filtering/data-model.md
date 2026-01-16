@@ -108,8 +108,8 @@ normalized = pattern.pattern.sub(pattern.replacement, value)
   - Set to True if: is_different was True, but after normalization all env_values are identical
 - `normalized_values` (Dict[str, Any]): Environment label → normalized value mapping (optional, for verbose logging)
   - Default: {} (empty dict)
-  - Populated only if verbose logging enabled or for debugging
-  - Allows users to see what the normalized values were
+  - Populated when: (1) verbose logging mode enabled (--verbose-normalization flag), OR (2) ignored_due_to_normalization=True (for debugging/audit trail)
+  - Allows users to see what the normalized values were and verify pattern application correctness
 
 **Modified Behavior**:
 - During `compute_attribute_diffs()`: After AttributeDiff created, apply normalization if config present

@@ -96,11 +96,11 @@ As a user reviewing the comparison report, I want to see a clear indication of h
 - **FR-008**: System MUST provide examples/normalizations.json as a pseudo-copy reference config with path instructions
 - **FR-009**: System MUST validate normalization config structure on load (valid JSON, required fields, valid regex patterns)
 - **FR-010**: System MUST fail with clear error messages if normalization config is invalid or file not found. Error messages MUST include problem type, location (e.g., field path or pattern index), and suggestion for resolution
-- **FR-011**: System MUST apply resource ID transformation patterns in the order specified in the config, using first-match-wins strategy (each pattern attempts replacement once; after first successful replacement for a pattern, proceed to next pattern)
+- **FR-011**: System MUST apply resource ID transformation patterns in the order specified in the config, using first-match-wins strategy (each pattern processes the value once via regex.sub(), which replaces all matches within that pattern, then proceeds to the next pattern regardless of whether substitution occurred)
 - **FR-012**: System MUST apply normalization to both environment values before comparing (not just one side)
 - **FR-013**: Config-ignored attributes MUST take precedence over normalization (if both would apply, count only as config-ignored)
 - **FR-014**: System MUST log summary statistics showing total count of normalization-ignored attributes after comparison completes
-- **FR-015**: System MUST support optional verbose logging mode that outputs each normalization operation with before/after values for debugging purposes
+- **FR-015**: System MUST support optional verbose logging mode via `--verbose-normalization` CLI flag that outputs each normalization operation with before/after values for debugging purposes
 
 ### Key Entities
 
@@ -111,7 +111,7 @@ As a user reviewing the comparison report, I want to see a clear indication of h
 - **Attribute Difference**: Existing entity, extended with normalization tracking
   - `ignored_due_to_config`: Boolean (existing)
   - `ignored_due_to_normalization`: Boolean (new)
-  - `normalized_value`: String (new, optional) - stores normalized value for debugging
+  - `normalized_values`: Dict[str, Any] (new, optional) - stores normalized values per environment for debugging
   
 - **Ignore Config**: Extended to include optional normalization_config_path field
   - `normalization_config_path`: String (new, optional) - path to normalizations.json file
@@ -126,7 +126,7 @@ As a user reviewing the comparison report, I want to see a clear indication of h
 - **SC-004**: The HTML report badge accurately reflects both config-ignored and normalization-ignored counts (e.g., "5 ignored (3 config, 2 normalized)")
 - **SC-005**: Users can hover over the ignore badge to see separate lists of config-ignored and normalization-ignored attributes
 - **SC-006**: Invalid normalization configs fail immediately with clear error messages indicating the specific problem (missing field, invalid regex, etc.)
-- **SC-007**: Comparison performance degrades by no more than 10% when normalization is enabled, measured against the same comparison run without normalization config (baseline: same datasets, environments, and ignore config, only difference is presence/absence of normalization patterns)
+- **SC-007**: Comparison performance degrades by no more than 10% when normalization is enabled, measured against the same comparison run without normalization config (baseline: same datasets, environments, and ignore config, only difference is presence/absence of normalization patterns). Measurement method: use time.perf_counter() to measure elapsed time in compute_attribute_diffs() with and without normalization config, compare on identical test data (≥100 resources)
 - **SC-008**: Summary statistics show total count of normalization-ignored attributes in console output after comparison completes
 - **SC-009**: When verbose logging is enabled, users can see individual normalization operations with original and normalized values for troubleshooting pattern effectiveness
 - **SC-010**: All existing tests pass when normalization config is not provided, confirming backward compatibility with pre-feature behavior
