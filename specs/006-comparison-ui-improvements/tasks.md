@@ -134,25 +134,25 @@ This feature improves multi-environment comparison HTML reports with:
 
 ### Tasks
 
-- [ ] T034 [US3] Add `get_env_specific_section_css()` function to src/lib/html_generation.py with styles for `.env-specific-section`, `.env-specific-header`, `.env-specific-content`, `.env-specific-badge`, `.resource-count`, `.presence-info`
-- [ ] T035 [US3] Update `generate_full_styles()` in src/lib/html_generation.py to include `get_env_specific_section_css()`
-- [ ] T036 [US3] In `generate_html_report()` method of src/core/multi_env_comparator.py, separate sorted_comparisons into two lists: regular_resources and env_specific_resources
-- [ ] T037 [US3] Implement logic to check if `len(rc.is_present_in) < len(env_labels)` to determine env-specific resources
-- [ ] T038 [US3] Render regular resources using existing `_render_resource_card()` loop
-- [ ] T039 [US3] Add conditional block: if env_specific_resources, create `<details open class="env-specific-section">` container
-- [ ] T040 [US3] Add `<summary class="env-specific-header">` with warning icon, title, and resource count badge
-- [ ] T041 [US3] Loop through env_specific_resources to render each resource card with modifications
-- [ ] T042 [US3] Add `.env-specific-badge` to resource header showing which environments contain the resource (e.g., "Test only" or "Present in: Test, Staging")
-- [ ] T043 [US3] Add `.presence-info` div showing "Present in:" and "Missing from:" environment lists
-- [ ] T044 [US3] Filter env_labels to only include environments where resource exists when calling `_render_attribute_table()`
-- [ ] T045 [US3] Ensure collapsible section uses HTML5 `<details>` element (no JavaScript required)
-- [ ] T046 [US3] Add custom toggle icon styling with CSS transitions (▼ when open, ▶ when collapsed)
-- [ ] T047 [US3] Generate test comparison with env-specific resources: `tf-plan-analyzer compare --html --output test-story3.html /path/to/test-plan.json /path/to/prod-plan.json`
-- [ ] T048 [US3] Validate Story 3 acceptance criteria: env-specific section visible, badges correct, collapsible works, presence info accurate
-- [ ] T049 [US3] Test keyboard accessibility: Space/Enter toggle, Tab navigation through section
-- [ ] T050 [US3] Test with edge case: all resources env-specific (none in multiple environments)
-- [ ] T051 [US3] Run full test suite: `pytest tests/ -v`
-- [ ] T052 [US3] Commit Story 3 changes with message: "Implement environment-specific resource grouping (Story 3)"
+- [X] T034 [US3] Add `get_env_specific_section_css()` function to src/lib/html_generation.py with styles for `.env-specific-section`, `.env-specific-header`, `.env-specific-content`, `.env-specific-badge`, `.resource-count`, `.presence-info`
+- [X] T035 [US3] Update `generate_full_styles()` in src/lib/html_generation.py to include `get_env_specific_section_css()`
+- [X] T036 [US3] In `generate_html_report()` method of src/core/multi_env_comparator.py, separate sorted_comparisons into two lists: regular_resources and env_specific_resources
+- [X] T037 [US3] Implement logic to check if `len(rc.is_present_in) < len(env_labels)` to determine env-specific resources
+- [X] T038 [US3] Render regular resources using existing `_render_resource_card()` loop
+- [X] T039 [US3] Add conditional block: if env_specific_resources, create `<details open class="env-specific-section">` container
+- [X] T040 [US3] Add `<summary class="env-specific-header">` with warning icon, title, and resource count badge
+- [X] T041 [US3] Loop through env_specific_resources to render each resource card with modifications
+- [X] T042 [US3] Add `.env-specific-badge` to resource header showing which environments contain the resource (e.g., "Test only" or "Present in: Test, Staging")
+- [X] T043 [US3] Add `.presence-info` div showing "Present in:" and "Missing from:" environment lists
+- [X] T044 [US3] Filter env_labels to only include environments where resource exists when calling `_render_attribute_table()`
+- [X] T045 [US3] Ensure collapsible section uses HTML5 `<details>` element (no JavaScript required)
+- [X] T046 [US3] Add custom toggle icon styling with CSS transitions (▼ when open, ▶ when collapsed)
+- [X] T047 [US3] Generate test comparison with env-specific resources: `tf-plan-analyzer compare --html --output test-story3.html /path/to/test-plan.json /path/to/prod-plan.json`
+- [X] T048 [US3] Validate Story 3 acceptance criteria: env-specific section visible, badges correct, collapsible works, presence info accurate
+- [X] T049 [US3] Test keyboard accessibility: Space/Enter toggle, Tab navigation through section
+- [X] T050 [US3] Test with edge case: all resources env-specific (none in multiple environments)
+- [X] T051 [US3] Run full test suite: `pytest tests/ -v`
+- [X] T052 [US3] Commit Story 3 changes with message: "Implement environment-specific resource grouping (Story 3)"
 
 **Story 3 Completion Criteria**: All T034-T052 complete, env-specific grouping working, collapsible section functional, tests passing, committed to git
 

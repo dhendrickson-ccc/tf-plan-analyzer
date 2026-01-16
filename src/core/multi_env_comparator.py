@@ -754,7 +754,20 @@ class MultiEnvReport:
                 rc for rc in self.resource_comparisons if rc.has_differences
             ]
 
+        # Separate regular resources from environment-specific resources (v2.0 feature)
+        regular_resources = []
+        env_specific_resources = []
+        
         for rc in comparisons_to_show:
+            # Resources present in all environments are "regular"
+            if len(rc.is_present_in) == len(env_labels):
+                regular_resources.append(rc)
+            else:
+                # Resources missing from one or more environments are "env-specific"
+                env_specific_resources.append(rc)
+
+        # Render regular resources first
+        for rc in regular_resources:
             is_identical = not rc.has_differences
             status_class = "identical" if is_identical else "different"
             status_text = "✓ Identical" if is_identical else "⚠ Different"
@@ -798,6 +811,98 @@ class MultiEnvReport:
 
             html_parts.append("                </div>")
             html_parts.append("            </div>")
+
+        # Render environment-specific resources in collapsible section (v2.0 feature)
+        if env_specific_resources:
+            env_count = len(env_specific_resources)
+            html_parts.append(
+                '            <details open class="env-specific-section">'
+            )
+            html_parts.append(
+                '                <summary class="env-specific-header">'
+            )
+            html_parts.append(
+                f'                    <span>⚠️ Environment-Specific Resources</span>'
+            )
+            html_parts.append(
+                f'                    <span class="resource-count">{env_count}</span>'
+            )
+            html_parts.append("                </summary>")
+            html_parts.append('                <div class="env-specific-content">')
+            
+            for rc in env_specific_resources:
+                is_identical = not rc.has_differences
+                status_class = "identical" if is_identical else "different"
+                status_text = "✓ Identical" if is_identical else "⚠ Different"
+                has_sensitive_diff = rc.has_sensitive_differences()
+                
+                # Determine which environments have this resource
+                present_envs = sorted(rc.is_present_in)
+                missing_envs = sorted(set(env_labels) - rc.is_present_in)
+                
+                html_parts.append('                    <div class="resource-change">')
+                html_parts.append(
+                    '                        <div class="resource-change-header" onclick="toggleResource(this)">'
+                )
+                html_parts.append(
+                    '                            <span class="toggle-icon collapsed">▼</span>'
+                )
+                html_parts.append(
+                    f'                            <span class="resource-name">{rc.resource_address}</span>'
+                )
+                
+                # Add environment-specific badge
+                if len(present_envs) == 1:
+                    html_parts.append(
+                        f'                            <span class="env-specific-badge">{present_envs[0]} only</span>'
+                    )
+                else:
+                    env_list = ", ".join(present_envs)
+                    html_parts.append(
+                        f'                            <span class="env-specific-badge">Present in: {env_list}</span>'
+                    )
+                
+                html_parts.append(
+                    f'                            <span class="resource-status {status_class}">{status_text}</span>'
+                )
+                
+                if rc.ignored_attributes:
+                    ignored_count = len(rc.ignored_attributes)
+                    ignored_list = ", ".join(sorted(rc.ignored_attributes))
+                    html_parts.append(
+                        f'                            <span class="badge" style="background: #fbbf24; color: #78350f;" title="Ignored: {ignored_list}">{ignored_count} attributes ignored</span>'
+                    )
+                
+                if has_sensitive_diff:
+                    html_parts.append(
+                        '                            <span class="sensitive-indicator">⚠️ SENSITIVE DIFF</span>'
+                    )
+                
+                html_parts.append("                        </div>")
+                html_parts.append(
+                    '                        <div class="resource-change-content">'
+                )
+                
+                # Add presence info box
+                html_parts.append('                            <div class="presence-info">')
+                html_parts.append(
+                    f'                                <strong>Present in:</strong> {", ".join(present_envs)}'
+                )
+                html_parts.append("<br>")
+                html_parts.append(
+                    f'                                <strong>Missing from:</strong> {", ".join(missing_envs)}'
+                )
+                html_parts.append("                            </div>")
+                
+                # Render attribute table with only present environments
+                attribute_table_html = self._render_attribute_table(rc, present_envs)
+                html_parts.append(attribute_table_html)
+                
+                html_parts.append("                        </div>")
+                html_parts.append("                    </div>")
+            
+            html_parts.append("                </div>")
+            html_parts.append("            </details>")
 
         html_parts.append("        </div>")
         html_parts.append("    </div>")

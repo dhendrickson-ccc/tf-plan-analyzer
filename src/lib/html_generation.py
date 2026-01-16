@@ -726,6 +726,104 @@ def get_sticky_header_css() -> str:
 """
 
 
+def get_env_specific_section_css() -> str:
+    """
+    Get CSS for environment-specific resource grouping section.
+
+    Provides styling for collapsible <details> section that groups resources
+    existing in only some environments (not all).
+
+    Returns:
+        str: CSS stylesheet for environment-specific sections including:
+            - .env-specific-section: Details element container
+            - .env-specific-header: Summary element with warning styling
+            - .env-specific-badge: Amber warning badge showing affected envs
+            - .resource-count: Badge showing number of env-specific resources
+            - .presence-info: Shows "Present in" and "Missing from" lists
+
+    Example:
+        >>> css = get_env_specific_section_css()
+        >>> ".env-specific-section" in css
+        True
+    """
+    return """
+        .env-specific-section {
+            margin-top: 30px;
+            border: 2px solid #ffa94d;
+            border-radius: 8px;
+            background: #fff4e6;
+        }
+        
+        .env-specific-header {
+            padding: 15px 20px;
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #e67700;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .env-specific-header:hover {
+            background: #ffe8cc;
+        }
+        
+        .env-specific-header::marker {
+            content: "▼ ";
+            font-size: 0.8em;
+        }
+        
+        details.env-specific-section:not([open]) .env-specific-header::marker {
+            content: "▶ ";
+        }
+        
+        .env-specific-badge {
+            background: #ffa94d;
+            color: #7d4400;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: 600;
+            display: inline-block;
+        }
+        
+        .resource-count {
+            background: #e67700;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+            margin-left: auto;
+        }
+        
+        .presence-info {
+            padding: 10px 15px;
+            background: #fff;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 3px solid #ffa94d;
+        }
+        
+        .presence-info strong {
+            color: #495057;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .presence-info ul {
+            margin: 5px 0 5px 20px;
+            color: #666;
+        }
+        
+        .env-specific-content {
+            padding: 0 20px 20px 20px;
+        }
+"""
+
+
 def generate_full_styles() -> str:
     """
     Generate complete <style> block combining all CSS functions.
@@ -769,4 +867,5 @@ def generate_full_styles() -> str:
 {get_attribute_section_css()}
 {get_scrollable_container_css()}
 {get_sticky_header_css()}
+{get_env_specific_section_css()}
 </style>"""
