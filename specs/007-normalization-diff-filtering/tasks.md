@@ -187,7 +187,7 @@ description: "Implementation tasks for normalization-based difference filtering"
 - [ ] T064 [P] Document badge tooltip CSS in docs/style-guide.md (Constitution Principle I: check style guide before UI changes)
 - [ ] T065 Test verbose logging with --verbose-normalization flag on live data
 - [ ] T066 Run performance benchmarks comparing with/without normalization (must be ≤10% overhead, SC-007)
-- [ ] T067 Update README.md with normalization feature section (link to quickstart.md)
+- [X] T067 Update README.md with normalization feature section (link to quickstart.md)
 - [ ] T068 Update CHANGELOG.md with feature 007 entry
 
 **Final Checkpoint**: All user stories complete, documentation updated, performance validated
