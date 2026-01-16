@@ -624,6 +624,108 @@ def get_attribute_section_css() -> str:
 """
 
 
+def get_scrollable_container_css() -> str:
+    """
+    Get CSS for scrollable value containers.
+
+    Prevents layout breakage from large JSON objects or long strings
+    by adding scrollbars when content exceeds thresholds.
+
+    Returns:
+        str: CSS stylesheet for scrollable containers including:
+            - .value-container: Scrollable wrapper with max dimensions
+            - Webkit scrollbar styling for better UX
+
+    Example:
+        >>> css = get_scrollable_container_css()
+        >>> "max-height: 400px" in css
+        True
+    """
+    return """
+        .value-container {
+            max-height: 400px;
+            max-width: 600px;
+            overflow: auto;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        /* Webkit scrollbar styling for better UX */
+        .value-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        .value-container::-webkit-scrollbar-track {
+            background: #e9ecef;
+            border-radius: 4px;
+        }
+        
+        .value-container::-webkit-scrollbar-thumb {
+            background: #adb5bd;
+            border-radius: 4px;
+        }
+        
+        .value-container::-webkit-scrollbar-thumb:hover {
+            background: #868e96;
+        }
+"""
+
+
+def get_sticky_header_css() -> str:
+    """
+    Get CSS for sticky environment headers.
+
+    Keeps environment column headers visible when scrolling vertically
+    through attribute sections.
+
+    Returns:
+        str: CSS stylesheet for sticky headers including:
+            - .env-headers: Container for environment header row
+            - .env-header: Individual environment label
+            - .sticky-header: Position sticky styling
+
+    Example:
+        >>> css = get_sticky_header_css()
+        >>> "position: sticky" in css
+        True
+    """
+    return """
+        .env-headers {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .env-header {
+            flex: 1;
+            min-width: 250px;
+            font-weight: 700;
+            font-size: 1.1em;
+            color: #667eea;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: white;
+        }
+"""
+
+
 def generate_full_styles() -> str:
     """
     Generate complete <style> block combining all CSS functions.
@@ -634,6 +736,8 @@ def generate_full_styles() -> str:
     - Diff highlighting for before/after comparison (get_diff_highlight_css)
     - Resource cards with expandable sections (get_resource_card_css)
     - Attribute sections with header-based layout (get_attribute_section_css)
+    - Scrollable value containers (get_scrollable_container_css)
+    - Sticky environment headers (get_sticky_header_css)
 
     Returns:
         str: Complete HTML <style> block ready for insertion in <head>
@@ -663,4 +767,6 @@ def generate_full_styles() -> str:
 {get_diff_highlight_css()}
 {get_resource_card_css()}
 {get_attribute_section_css()}
+{get_scrollable_container_css()}
+{get_sticky_header_css()}
 </style>"""

@@ -852,6 +852,12 @@ class MultiEnvReport:
             parts.append("                            ✓ No differences detected")
             parts.append("                        </div>")
         else:
+            # Add sticky environment headers (v2.0 feature)
+            parts.append('                        <div class="env-headers sticky-header">')
+            for env_label in env_labels:
+                parts.append(f'                            <div class="env-header">{env_label}</div>')
+            parts.append('                        </div>')
+            
             # Render attribute sections (v2.0 layout)
             for attr_diff in rc.attribute_diffs:
                 # Only show changed attributes by default, or all if resource is identical
@@ -906,8 +912,15 @@ class MultiEnvReport:
                     parts.append(
                         f'                                    <div class="env-label">{env_label}</div>'
                     )
+                    # Wrap value in scrollable container (v2.0 feature)
                     parts.append(
-                        f'                                    <div>{value_html}</div>'
+                        '                                    <div class="value-container">'
+                    )
+                    parts.append(
+                        f'                                        {value_html}'
+                    )
+                    parts.append(
+                        "                                    </div>"
                     )
                     parts.append(
                         "                                </div>"

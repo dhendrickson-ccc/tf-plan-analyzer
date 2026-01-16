@@ -100,19 +100,19 @@ This feature improves multi-environment comparison HTML reports with:
 
 ### Tasks
 
-- [ ] T021 [US2] Add `get_scrollable_container_css()` function to src/lib/html_generation.py with `.value-container` styles (max-height: 400px, max-width: 600px, overflow: auto)
-- [ ] T022 [P] [US2] Add `get_sticky_header_css()` function to src/lib/html_generation.py with `.env-headers`, `.env-header`, `.sticky-header` styles (position: sticky, top: 0, z-index: 10)
-- [ ] T023 [US2] Update `generate_full_styles()` in src/lib/html_generation.py to include `get_scrollable_container_css()` and `get_sticky_header_css()`
-- [ ] T024 [US2] Wrap value rendering in `<div class="value-container">` in src/core/multi_env_comparator.py `_render_attribute_table()` function
-- [ ] T025 [US2] Add sticky environment headers `<div class="env-headers">` before attribute sections in src/core/multi_env_comparator.py
-- [ ] T026 [US2] Loop through env_labels to create `<div class="env-header sticky-header">{env_label}</div>` for each environment
-- [ ] T027 [US2] Ensure diff highlighting classes (baseline-removed, baseline-added, char-removed, char-added) work inside `.value-container` divs
-- [ ] T028 [US2] Add optional webkit scrollbar styling for better UX in src/lib/html_generation.py
-- [ ] T029 [US2] Generate test comparison with large values: `tf-plan-analyzer compare --html --output test-story2.html /Users/danielhendrickson/workspace/promega/gsp-infrastructure-tf/2_deployApp/tfplan-test-2.json /Users/danielhendrickson/workspace/promega/tmp/tfplan-prod.json`
-- [ ] T030 [US2] Validate Story 2 acceptance criteria: scrollbars appear only when needed, sticky headers work, diff highlighting preserved
-- [ ] T031 [US2] Test scrollbar behavior with edge cases: values exactly at 400px threshold, nested JSON objects, very long strings
-- [ ] T032 [US2] Run test suite to ensure backward compatibility: `pytest tests/ -v`
-- [ ] T033 [US2] Commit Story 2 changes with message: "Implement scrollable value containers with sticky headers (Story 2)"
+- [X] T021 [US2] Add `get_scrollable_container_css()` function to src/lib/html_generation.py with `.value-container` styles (max-height: 400px, max-width: 600px, overflow: auto)
+- [X] T022 [P] [US2] Add `get_sticky_header_css()` function to src/lib/html_generation.py with `.env-headers`, `.env-header`, `.sticky-header` styles (position: sticky, top: 0, z-index: 10)
+- [X] T023 [US2] Update `generate_full_styles()` in src/lib/html_generation.py to include `get_scrollable_container_css()` and `get_sticky_header_css()`
+- [X] T024 [US2] Wrap value rendering in `<div class="value-container">` in src/core/multi_env_comparator.py `_render_attribute_table()` function
+- [X] T025 [US2] Add sticky environment headers `<div class="env-headers">` before attribute sections in src/core/multi_env_comparator.py
+- [X] T026 [US2] Loop through env_labels to create `<div class="env-header sticky-header">{env_label}</div>` for each environment
+- [X] T027 [US2] Ensure diff highlighting classes (baseline-removed, baseline-added, char-removed, char-added) work inside `.value-container` divs
+- [X] T028 [US2] Add optional webkit scrollbar styling for better UX in src/lib/html_generation.py
+- [X] T029 [US2] Generate test comparison with large values: `tf-plan-analyzer compare --html --output test-story2.html /Users/danielhendrickson/workspace/promega/gsp-infrastructure-tf/2_deployApp/tfplan-test-2.json /Users/danielhendrickson/workspace/promega/tmp/tfplan-prod.json`
+- [X] T030 [US2] Validate Story 2 acceptance criteria: scrollbars appear only when needed, sticky headers work, diff highlighting preserved
+- [X] T031 [US2] Test scrollbar behavior with edge cases: values exactly at 400px threshold, nested JSON objects, very long strings
+- [X] T032 [US2] Run test suite to ensure backward compatibility: `pytest tests/ -v`
+- [X] T033 [US2] Commit Story 2 changes with message: "Implement scrollable value containers with sticky headers (Story 2)"
 
 **Story 2 Completion Criteria**: All T021-T033 complete, scrollable containers working, sticky headers functional, tests passing, committed to git
 
