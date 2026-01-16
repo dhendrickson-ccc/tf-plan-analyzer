@@ -91,6 +91,46 @@ def get_base_css() -> str:
                 grid-template-columns: 1fr;
             }
         }
+        
+        /* Tooltip styling for ignored attributes badge */
+        .resource-change-header {
+            overflow: visible !important;
+        }
+        
+        .badge[title] {
+            position: relative;
+            cursor: help;
+        }
+        
+        .badge[title]:hover::after {
+            content: attr(title);
+            position: absolute;
+            bottom: calc(100% + 10px);
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 12px;
+            background: #1f2937;
+            color: white;
+            font-size: 0.85em;
+            font-weight: normal;
+            border-radius: 6px;
+            white-space: nowrap;
+            z-index: 99999;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            pointer-events: none;
+        }
+        
+        .badge[title]:hover::before {
+            content: '';
+            position: absolute;
+            bottom: calc(100% + 4px);
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: #1f2937;
+            z-index: 99999;
+            pointer-events: none;
+        }
 """
 
 
@@ -285,7 +325,7 @@ def get_resource_card_css() -> str:
             margin-bottom: 20px;
             border-radius: 8px;
             border: 1px solid #e9ecef;
-            overflow: hidden;
+            overflow: visible;
         }
         
         .resource-change-header {
