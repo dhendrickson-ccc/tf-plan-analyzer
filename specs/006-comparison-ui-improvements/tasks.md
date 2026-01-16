@@ -162,24 +162,24 @@ This feature improves multi-environment comparison HTML reports with:
 
 **Purpose**: End-to-end validation, documentation updates, and final testing
 
-- [ ] T053 Run comprehensive end-to-end test with real production plans: `tf-plan-analyzer compare --html --output prod-comparison-v2.html /Users/danielhendrickson/workspace/promega/gsp-infrastructure-tf/2_deployApp/tfplan-test-2.json /Users/danielhendrickson/workspace/promega/tmp/tfplan-prod.json`
-- [ ] T054 Validate all 3 user stories work together: attribute headers, scrollable containers, env-specific grouping
-- [ ] T055 Test with --diff-only flag to ensure env-specific resources still grouped correctly: `tf-plan-analyzer compare --html --diff-only --output diff-only-test.html plan1.json plan2.json`
-- [ ] T056 Open generated HTML in multiple browsers: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+ (if available)
-- [ ] T057 Verify sticky headers work across browsers (position: sticky support)
-- [ ] T058 Verify scrollable containers work across browsers (overflow: auto behavior)
-- [ ] T059 Verify collapsible section works across browsers (HTML5 details support)
-- [ ] T060 Test keyboard accessibility: Tab navigation, Space/Enter for collapsible section
+- [X] T053 Run comprehensive end-to-end test with real production plans: `tf-plan-analyzer compare --html --output prod-comparison-v2.html /Users/danielhendrickson/workspace/promega/gsp-infrastructure-tf/2_deployApp/tfplan-test-2.json /Users/danielhendrickson/workspace/promega/tmp/tfplan-prod.json`
+- [X] T054 Validate all 3 user stories work together: attribute headers, scrollable containers, env-specific grouping
+- [X] T055 Test with --diff-only flag to ensure env-specific resources still grouped correctly: `tf-plan-analyzer compare --html --diff-only --output diff-only-test.html plan1.json plan2.json`
+- [X] T056 Open generated HTML in multiple browsers: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+ (if available)
+- [X] T057 Verify sticky headers work across browsers (position: sticky support)
+- [X] T058 Verify scrollable containers work across browsers (overflow: auto behavior)
+- [X] T059 Verify collapsible section works across browsers (HTML5 details support)
+- [X] T060 Test keyboard accessibility: Tab navigation, Space/Enter for collapsible section
 - [ ] T061 Update docs/style-guide.md to document new CSS classes: `.attribute-section`, `.value-container`, `.sticky-header`, `.env-specific-section`, `.env-specific-badge`
 - [ ] T062 Update docs/function-glossary.md to document modified functions: `_render_attribute_table()` (v2.0 structure), `_render_attribute_value()` (wrapped in container), `generate_full_styles()` (new CSS functions)
-- [ ] T063 [P] Create unit tests for new HTML structure in tests/test_multi_env_unit.py
-- [ ] T064 [P] Update existing assertions in tests/test_e2e_multi_env.py for new layout (replace `.attribute-table` with `.attribute-section`)
-- [ ] T065 Run complete test suite with coverage: `pytest tests/ -v --cov=src --cov-report=html`
-- [ ] T066 Validate test coverage for modified files: src/lib/html_generation.py, src/core/multi_env_comparator.py
-- [ ] T067 Review generated HTML file size to ensure <20% increase from baseline (performance constraint)
-- [ ] T068 Test report generation time with 200 resources to ensure <2 seconds (performance goal)
+- [X] T063 [P] Create unit tests for new HTML structure in tests/test_multi_env_unit.py
+- [X] T064 [P] Update existing assertions in tests/test_e2e_multi_env.py for new layout (replace `.attribute-table` with `.attribute-section`)
+- [X] T065 Run complete test suite with coverage: `pytest tests/ -v --cov=src --cov-report=html`
+- [X] T066 Validate test coverage for modified files: src/lib/html_generation.py, src/core/multi_env_comparator.py
+- [X] T067 Review generated HTML file size to ensure <20% increase from baseline (performance constraint)
+- [X] T068 Test report generation time with 200 resources to ensure <2 seconds (performance goal)
 - [ ] T069 Commit documentation updates: "Update docs for UI improvements (feature 006)"
-- [ ] T070 Create summary validation report comparing baseline-v1.html vs prod-comparison-v2.html
+- [X] T070 Create summary validation report comparing baseline-v1.html vs prod-comparison-v2.html
 
 **Phase 6 Completion Criteria**: All acceptance criteria validated, documentation updated, tests passing, performance goals met
 
