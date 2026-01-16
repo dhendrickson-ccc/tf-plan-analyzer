@@ -1,28 +1,29 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version: 1.3.0 → 1.4.0 (MINOR: Added Principle V - User-Facing Features Require End-to-End Testing)
+Version: 1.4.0 → 1.5.0 (MINOR: Added Principle VI - Python Development Must Use Virtual Environments)
 Modified Principles: N/A
 Added Sections:
-  - Principle V: User-Facing Features Require End-to-End Testing
+  - Principle VI: Python Development Must Use Virtual Environments
 Removed Sections: N/A
 Templates Status:
-  ✅ plan-template.md - Constitution Check will include Principle V gate
-  ✅ tasks-template.md - Already structured to support end-to-end test tasks per user story
-  ✅ spec-template.md - Independent Test scenarios already cover this pattern
+  ✅ plan-template.md - Constitution Check will include Principle VI gate
+  ✅ tasks-template.md - Setup phase already includes environment preparation tasks
+  ✅ spec-template.md - Technical constraints already cover dependency management
 Follow-up TODOs:
-  - Future features with CLI flags or config files must include end-to-end test tasks
-  - Test examples should demonstrate CLI invocation patterns with different flag combinations
-  - Config file testing should validate schema, defaults, and edge cases
+  - Agents must verify virtual environment activation before executing Python commands
+  - Task definitions for Python projects should include explicit venv setup/activation steps
+  - CI/CD pipelines should validate virtual environment usage in automated workflows
 Amendment Rationale:
-  - Unit tests alone don't validate user-facing contract points (CLI flags, config files, API parameters)
-  - Integration gaps between internal logic and user-facing interfaces cause production bugs
-  - End-to-end tests exercise the complete path from user input to system behavior
-  - Ensures CLI flags, config files, and other user interfaces work as documented
-  - Validates that internal changes don't break external contracts
-  - Particularly critical for tools like tf-plan-analyzer with multiple CLI flags (--html, --config, --tf-dir, -v)
+  - Virtual environments isolate project dependencies from system Python packages
+  - Prevents version conflicts between different projects on the same machine
+  - Ensures reproducible builds with locked dependency versions
+  - Avoids polluting system Python installation with project-specific packages
+  - Enables testing across different Python versions without system-level changes
+  - Critical for maintaining clean development environments and preventing "works on my machine" issues
 
 Previous Amendments:
+  v1.3.0 → 1.4.0 (2026-01-13): Added Principle V - User-Facing Features Require End-to-End Testing
   v1.2.0 → 1.3.0 (2026-01-07): Materially expanded Principle III - Agent Must Execute Live Tests
   v1.1.0 → 1.2.0 (2026-01-06): Added Principle IV - Commit After Every User Story
   v1.0.0 → 1.1.0 (2026-01-06): Added Principle III - Live Testing Is Mandatory
@@ -136,6 +137,22 @@ Features that provide user-facing interfaces (CLI flags, configuration files, AP
 
 **Rationale**: Internal unit tests validate logic but don't catch integration bugs between internal components and user-facing interfaces. End-to-end tests ensure the complete user journey works correctly. For example, a CLI tool might have perfect internal logic but fail if argument parsing, flag validation, or output formatting is broken. Configuration files might have schema errors or default value bugs that unit tests miss. This principle is particularly critical for tools like tf-plan-analyzer with multiple CLI flags (--html, --config, --tf-dir, -v) where combinations of flags must work correctly together. End-to-end tests serve as living documentation of how users interact with the system and prevent regressions in the user contract.
 
+### VI. Python Development Must Use Virtual Environments
+
+All Python development MUST occur within isolated virtual environments to ensure dependency isolation, reproducibility, and clean system state.
+
+**Rules**:
+- Agents MUST activate a Python virtual environment before executing any Python commands (pip, pytest, python scripts, etc.)
+- The virtual environment MUST be created using venv, virtualenv, or equivalent tools
+- Virtual environment activation MUST be verified before running tests, installing packages, or executing application code
+- System Python MUST NOT be used directly for project development
+- Virtual environment setup MUST be documented in project README or setup instructions
+- Agents MUST use commands like `source venv/bin/activate` (Unix) or `venv\Scripts\activate` (Windows) before Python operations
+- When running terminal commands that invoke Python, agents MUST ensure the virtual environment is activated first
+- Project dependencies MUST be installed within the virtual environment, not system-wide
+
+**Rationale**: Virtual environments prevent dependency conflicts between projects sharing the same machine, ensure reproducible builds by isolating package versions, and avoid polluting the system Python installation with project-specific dependencies. This is critical for maintaining clean development environments and preventing "works on my machine" issues caused by conflicting package versions or missing dependencies. Using virtual environments is a Python best practice that ensures consistency across development, testing, and production environments.
+
 
 ## Development Workflow
 
@@ -188,4 +205,4 @@ This constitution supersedes all other development practices and guidelines.
 - Regular reviews SHOULD be conducted as the project matures
 - Feedback from development experience SHOULD inform amendments
 
-**Version**: 1.4.0 | **Ratified**: 2026-01-05 | **Last Amended**: 2026-01-13
+**Version**: 1.5.0 | **Ratified**: 2026-01-05 | **Last Amended**: 2026-01-15

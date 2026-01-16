@@ -1,7 +1,7 @@
 # Canonical Data Model
 
 **Project**: Terraform Plan Analyzer  
-**Last Updated**: 2026-01-13
+**Last Updated**: 2026-01-15
 
 ## Overview
 
@@ -100,6 +100,85 @@ This document serves as the single source of truth for all data structures in th
 - `resources_with_differences`: int
 - `resources_consistent`: int
 - `resources_missing_from_some`: int
+
+---
+
+## Feature: Normalization-Based Difference Filtering (007)
+
+### NormalizationConfig
+
+**Purpose**: Store pre-compiled regex patterns for efficient normalization during comparison
+
+**Attributes**:
+- `name_patterns`: List[NormalizationPattern] - Patterns for normalizing attribute names and values (environment suffixes, region names)
+- `resource_id_patterns`: List[NormalizationPattern] - Patterns for normalizing Azure resource IDs, subscription IDs, tenant IDs
+- `source_file`: Path - Path to the normalization config file (for error messages)
+
+**Behavior**:
+- Loaded via `load_normalization_config(file_path: Path)` in `normalization_utils.py`
+- Patterns pre-compiled at load time for performance (use `re.compile()`)
+- Validation ensures all patterns are valid regex
+- Immutable after loading (patterns don't change during comparison)
+
+**Validation**:
+- At least one of `name_patterns` or `resource_id_patterns` must be non-empty
+- All pattern strings must compile as valid Python regex
+- Replacement strings can contain backreferences (\1, \2, etc.)
+
+---
+
+### NormalizationPattern
+
+**Purpose**: Encapsulate a compiled regex pattern with its replacement string for efficient application
+
+**Attributes**:
+- `pattern`: re.Pattern - Compiled regex pattern to match
+- `replacement`: str - String to replace matches with (can include backreferences like \1, \2)
+- `description`: str - Human-readable explanation of what the pattern does (optional)
+- `original_pattern`: str - Original pattern string (for error messages and verbose logging)
+
+**Behavior**:
+- Compiled at config load time via `re.compile()`
+- Applied via `pattern.sub(replacement, value)`
+- First-match-wins strategy: each pattern attempts one replacement, then proceeds to next pattern
+
+**Example**:
+```python
+pattern = NormalizationPattern(
+    pattern=re.compile(r'-(t|test|tst)-'),
+    replacement='-ENV-',
+    description='Normalize test environment markers',
+    original_pattern='-(t|test|tst)-'
+)
+```
+
+---
+
+### Extensions to Existing Entities (Feature 007)
+
+#### AttributeDiff (from Feature 004)
+**Extended with**:
+- `ignored_due_to_normalization`: bool - Whether this attribute was filtered because normalized values matched (default: False)
+- `normalized_values`: Dict[str, Any] - Environment label → normalized value mapping (optional, for verbose logging, default: {})
+
+**Modified Behavior**:
+- During `compute_attribute_diffs()`: After AttributeDiff created, apply normalization if config present
+- If `is_different=True` and normalized values all match: set `ignored_due_to_normalization=True`
+- Rendering: Skip attribute if `ignored_due_to_config OR ignored_due_to_normalization`
+
+#### ResourceComparison (from Feature 001)
+**Extended with**:
+- `normalization_config`: Optional[NormalizationConfig] - Normalization patterns to apply (default: None)
+
+**Modified Methods**:
+- `compute_attribute_diffs()`: After creating AttributeDiff objects, apply normalization if config present
+
+#### IgnoreConfig (JSON schema extension)
+**Extended with**:
+- `normalization_config_path`: Optional[str] - Path to normalizations.json file
+  - If provided: Load normalization config from this path
+  - If absent/empty: Skip normalization (backward compatible)
+  - Can be absolute or relative path (relative to ignore_config.json location)
 
 ---
 

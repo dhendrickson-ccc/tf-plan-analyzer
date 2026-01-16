@@ -5,6 +5,16 @@
 **Status**: Draft  
 **Input**: User description: "Add normalization-based difference filtering to ignore environment-specific formatting differences (like -t- vs -p-, subscription IDs) that are functionally equivalent after normalization"
 
+## Clarifications
+
+### Session 2025-01-15
+
+- Q: Performance baseline clarity - The spec states normalization should degrade performance by "no more than 10%", but the baseline comparison scenario isn't specified. What should the 10% be measured against? → A: 10% measured against same comparison run without normalization config
+- Q: Error message detail level - FR-010 requires "clear error messages" for invalid configs, but the expected detail level isn't specified. What information should error messages include? → A: Include problem type, location, and suggestion (e.g., "Invalid regex pattern at name_patterns[2]: unclosed group. Check pattern syntax.")
+- Q: Normalization pattern ordering strategy - FR-011 requires resource ID patterns to be applied "in the order specified in the config", but what happens when multiple patterns could match the same text? → A: First-match-wins (stop after first successful replacement per pattern)
+- Q: Normalization logging and observability - The spec doesn't specify whether normalization operations should be logged or made observable for debugging. What logging should be provided? → A: Log summary stats always (count of normalizations applied), plus verbose logging with before/after values available optionally for debugging
+- Q: Backward compatibility validation approach - The Constraints section states normalization must maintain backward compatibility (comparison works without normalization config), but the validation approach isn't specified. How should backward compatibility be validated? → A: Existing test suite passes with feature disabled (normalization config not provided)
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Environment Name Pattern Normalization (Priority: P1)
@@ -85,16 +95,18 @@ As a user reviewing the comparison report, I want to see a clear indication of h
 - **FR-007**: System MUST display combined ignore counts in the HTML report badge with breakdown by type
 - **FR-008**: System MUST provide examples/normalizations.json as a pseudo-copy reference config with path instructions
 - **FR-009**: System MUST validate normalization config structure on load (valid JSON, required fields, valid regex patterns)
-- **FR-010**: System MUST fail with clear error messages if normalization config is invalid or file not found
-- **FR-011**: System MUST apply resource ID transformation patterns in the order specified in the config
+- **FR-010**: System MUST fail with clear error messages if normalization config is invalid or file not found. Error messages MUST include problem type, location (e.g., field path or pattern index), and suggestion for resolution
+- **FR-011**: System MUST apply resource ID transformation patterns in the order specified in the config, using first-match-wins strategy (each pattern attempts replacement once; after first successful replacement for a pattern, proceed to next pattern)
 - **FR-012**: System MUST apply normalization to both environment values before comparing (not just one side)
 - **FR-013**: Config-ignored attributes MUST take precedence over normalization (if both would apply, count only as config-ignored)
+- **FR-014**: System MUST log summary statistics showing total count of normalization-ignored attributes after comparison completes
+- **FR-015**: System MUST support optional verbose logging mode that outputs each normalization operation with before/after values for debugging purposes
 
 ### Key Entities
 
 - **Normalization Config**: JSON file containing name_patterns and resource_id_patterns arrays
   - `name_patterns`: Array of {pattern: string, replacement: string} for attribute value normalization
-  - `resource_id_patterns`: Array of {pattern: string, replacement: string} for resource ID transformation
+  - `resource_id_patterns`: Array of {pattern: string, replacement: string} for resource ID transformation, applied in order with first-match-wins strategy (each pattern replaces once, then moves to next pattern)
   
 - **Attribute Difference**: Existing entity, extended with normalization tracking
   - `ignored_due_to_config`: Boolean (existing)
@@ -114,7 +126,10 @@ As a user reviewing the comparison report, I want to see a clear indication of h
 - **SC-004**: The HTML report badge accurately reflects both config-ignored and normalization-ignored counts (e.g., "5 ignored (3 config, 2 normalized)")
 - **SC-005**: Users can hover over the ignore badge to see separate lists of config-ignored and normalization-ignored attributes
 - **SC-006**: Invalid normalization configs fail immediately with clear error messages indicating the specific problem (missing field, invalid regex, etc.)
-- **SC-007**: Comparison performance degrades by no more than 10% when normalization is enabled (normalization should be efficient)
+- **SC-007**: Comparison performance degrades by no more than 10% when normalization is enabled, measured against the same comparison run without normalization config (baseline: same datasets, environments, and ignore config, only difference is presence/absence of normalization patterns)
+- **SC-008**: Summary statistics show total count of normalization-ignored attributes in console output after comparison completes
+- **SC-009**: When verbose logging is enabled, users can see individual normalization operations with original and normalized values for troubleshooting pattern effectiveness
+- **SC-010**: All existing tests pass when normalization config is not provided, confirming backward compatibility with pre-feature behavior
 
 ## Scope
 
@@ -128,6 +143,8 @@ As a user reviewing the comparison report, I want to see a clear indication of h
 - Validating normalization config structure and regex patterns
 - Providing examples/normalizations.json as reference implementation
 - Extending ignore_config.json schema with normalization_config_path
+- Summary statistics logging (count of normalized attributes)
+- Optional verbose logging mode for debugging normalization operations
 
 ### Out of Scope
 
@@ -157,7 +174,7 @@ As a user reviewing the comparison report, I want to see a clear indication of h
 
 ## Constraints
 
-- Must maintain backward compatibility: comparison works without normalization config (optional feature)
+- Must maintain backward compatibility: comparison works without normalization config (optional feature). Backward compatibility validated by running existing test suite with normalization config not provided - all tests must pass
 - Must not modify original attribute values (normalization only for comparison, not stored)
 - Must validate regex patterns before use to prevent runtime regex errors
 - Must preserve performance: normalization should not significantly slow down large comparisons
