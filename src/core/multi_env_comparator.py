@@ -644,20 +644,20 @@ class MultiEnvReport:
             '            const icons = document.querySelectorAll(".toggle-icon");'
         )
         html_parts.append(
-            '            const anyExpanded = Array.from(contents).some(c => c.classList.contains("expanded"));'
+            '            const anyHidden = Array.from(contents).some(c => c.classList.contains("hidden"));'
         )
         html_parts.append("            contents.forEach(content => {")
         html_parts.append(
-            '                if (anyExpanded) { content.classList.remove("expanded"); }'
+            '                if (anyHidden) { content.classList.remove("hidden"); }'
         )
-        html_parts.append('                else { content.classList.add("expanded"); }')
+        html_parts.append('                else { content.classList.add("hidden"); }')
         html_parts.append("            });")
         html_parts.append("            icons.forEach(icon => {")
         html_parts.append(
-            '                if (anyExpanded) { icon.classList.add("collapsed"); }'
+            '                if (anyHidden) { icon.classList.remove("collapsed"); }'
         )
         html_parts.append(
-            '                else { icon.classList.remove("collapsed"); }'
+            '                else { icon.classList.add("collapsed"); }'
         )
         html_parts.append("            });")
         html_parts.append("        }")
@@ -669,7 +669,7 @@ class MultiEnvReport:
         html_parts.append(
             '            const icon = header.querySelector(".toggle-icon");'
         )
-        html_parts.append('            content.classList.toggle("expanded");')
+        html_parts.append('            content.classList.toggle("hidden");')
         html_parts.append('            icon.classList.toggle("collapsed");')
         html_parts.append("        }")
         html_parts.append("        // Synchronized horizontal scrolling for value containers")
@@ -915,8 +915,8 @@ class MultiEnvReport:
                 )
                 html_parts.append("                            </div>")
                 
-                # Render attribute table with only present environments
-                attribute_table_html = self._render_attribute_table(rc, present_envs)
+                # Render attribute table with ALL environments (show empty for missing)
+                attribute_table_html = self._render_attribute_table(rc, env_labels)
                 html_parts.append(attribute_table_html)
                 
                 html_parts.append("                        </div>")
@@ -980,8 +980,10 @@ class MultiEnvReport:
         else:
             # Render attribute sections (v2.0 layout)
             for attr_diff in rc.attribute_diffs:
-                # Only show changed attributes by default, or all if resource is identical
-                if not attr_diff.is_different and rc.has_differences:
+                # For env-specific resources (not present in all environments), show ALL attributes
+                # For resources present in all environments, only show changed attributes
+                is_env_specific = len(rc.is_present_in) < len(env_labels)
+                if not is_env_specific and not attr_diff.is_different and rc.has_differences:
                     continue
 
                 # Start attribute section
