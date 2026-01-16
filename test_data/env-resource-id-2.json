@@ -1,0 +1,59 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.0.0",
+  "resource_changes": [
+    {
+      "address": "azurerm_app_service.webapp",
+      "mode": "managed",
+      "type": "azurerm_app_service",
+      "name": "webapp",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "name": "my-web-app",
+          "location": "eastus",
+          "app_service_plan_id": "/subscriptions/87654321-4321-4321-4321-cba987654321/resourceGroups/rg-shared/providers/Microsoft.Web/serverfarms/asp-shared-eastus",
+          "site_config": {
+            "always_on": true,
+            "dotnet_framework_version": "v4.0"
+          }
+        },
+        "after": null
+      }
+    },
+    {
+      "address": "azurerm_key_vault.vault",
+      "mode": "managed",
+      "type": "azurerm_key_vault",
+      "name": "vault",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "name": "kv-shared-eastus",
+          "location": "eastus",
+          "tenant_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+          "sku_name": "standard",
+          "enabled_for_disk_encryption": true
+        },
+        "after": null
+      }
+    },
+    {
+      "address": "azurerm_storage_account.storage",
+      "mode": "managed",
+      "type": "azurerm_storage_account",
+      "name": "storage",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "name": "stsharedeastus001",
+          "location": "eastus",
+          "resource_group_id": "/subscriptions/87654321-4321-4321-4321-cba987654321/resourceGroups/rg-shared-eastus",
+          "account_tier": "Standard",
+          "account_replication_type": "GRS"
+        },
+        "after": null
+      }
+    }
+  ]
+}

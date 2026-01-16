@@ -232,14 +232,16 @@ def normalize_attribute_value(
     config: NormalizationConfig
 ) -> Any:
     """
-    Normalize an attribute value using name patterns.
+    Normalize an attribute value using appropriate patterns based on attribute type.
     
     Only string values are normalized - other types (int, bool, dict, list, None) 
-    are returned unchanged. This function applies name_patterns only (US1).
-    Resource ID normalization (US2) will be added later.
+    are returned unchanged. 
+    
+    - For resource ID attributes (ending in '_id' or named 'id'), applies resource_id_patterns
+    - For other attributes, applies name_patterns
     
     Args:
-        attribute_name: Name of the attribute (for future use in classification)
+        attribute_name: Name of the attribute (used to determine normalization type)
         value: Attribute value to normalize
         config: NormalizationConfig with patterns to apply
         
@@ -249,11 +251,13 @@ def normalize_attribute_value(
     Example:
         >>> config = NormalizationConfig(
         ...     name_patterns=[NormalizationPattern(re.compile(r"-(dev)-"), "-ENV-", "", "-(dev)-")],
-        ...     resource_id_patterns=[],
+        ...     resource_id_patterns=[NormalizationPattern(re.compile(r"/subscriptions/[a-f0-9-]+"), "/subscriptions/SUB_ID", "", "/subscriptions/[a-f0-9-]+")],
         ...     source_file=Path("/fake.json")
         ... )
         >>> normalize_attribute_value("name", "storage-dev-eastus", config)
         'storage-ENV-eastus'
+        >>> normalize_attribute_value("subscription_id", "/subscriptions/abc-123/rg/test", config)
+        '/subscriptions/SUB_ID/rg/test'
         >>> normalize_attribute_value("count", 42, config)
         42
     """
@@ -261,9 +265,84 @@ def normalize_attribute_value(
     if not isinstance(value, str):
         return value
     
-    # If no name patterns, return original
-    if not config.name_patterns:
-        return value
+    # Classify the attribute to determine which patterns to apply
+    attr_type = classify_attribute(attribute_name)
     
-    # Apply name patterns
-    return apply_normalization_patterns(value, config.name_patterns)
+    if attr_type == "resource_id":
+        # Apply resource ID patterns for ID-like attributes
+        if not config.resource_id_patterns:
+            return value
+        return normalize_resource_id(value, config.resource_id_patterns)
+    else:
+        # Apply name patterns for regular attributes
+        if not config.name_patterns:
+            return value
+        return apply_normalization_patterns(value, config.name_patterns)
+
+
+# ==============================================================================
+# User Story 2: Resource ID Transformation Normalization
+# ==============================================================================
+
+
+def classify_attribute(attribute_name: str) -> str:
+    """
+    Classify an attribute as either 'resource_id' or 'name' based on its name.
+    
+    Attributes ending in '_id' or named 'id' are classified as resource_id.
+    This determines which normalization patterns to apply.
+    
+    Args:
+        attribute_name: Name of the attribute to classify
+        
+    Returns:
+        'resource_id' if the attribute contains resource identifiers,
+        'name' otherwise
+        
+    Example:
+        >>> classify_attribute("id")
+        'resource_id'
+        >>> classify_attribute("subscription_id")
+        'resource_id'
+        >>> classify_attribute("name")
+        'name'
+        >>> classify_attribute("location")
+        'name'
+    """
+    # Check if attribute name ends with _id or is exactly "id"
+    if attribute_name == "id" or attribute_name.endswith("_id"):
+        return "resource_id"
+    return "name"
+
+
+def normalize_resource_id(
+    value: str,
+    patterns: List[NormalizationPattern]
+) -> str:
+    """
+    Normalize a resource ID value by applying resource ID patterns.
+    
+    This function applies resource_id_patterns in order (first-match-wins
+    per pattern) to normalize subscription IDs, tenant IDs, and other
+    Azure-specific identifiers.
+    
+    Args:
+        value: Resource ID string to normalize
+        patterns: List of NormalizationPattern objects to apply
+        
+    Returns:
+        Normalized resource ID string
+        
+    Example:
+        >>> pattern = NormalizationPattern(
+        ...     pattern=re.compile(r'/subscriptions/[0-9a-f-]+'),
+        ...     replacement='/subscriptions/SUB_ID',
+        ...     description='Subscription ID',
+        ...     original_pattern='/subscriptions/[0-9a-f-]+'
+        ... )
+        >>> normalize_resource_id('/subscriptions/abc-123/rg/test', [pattern])
+        '/subscriptions/SUB_ID/rg/test'
+    """
+    # Use the same pattern application logic as name normalization
+    return apply_normalization_patterns(value, patterns)
+

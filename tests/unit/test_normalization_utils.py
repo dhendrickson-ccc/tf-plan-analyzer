@@ -398,3 +398,123 @@ class TestConfigPrecedence:
         """Test that config-ignored attributes not counted as normalization-ignored."""
         # This test should FAIL until precedence logic is implemented
         pytest.skip("Not yet implemented - T025a")
+
+
+# ==============================================================================
+# User Story 2 Tests: Resource ID Transformation Normalization
+# ==============================================================================
+
+
+class TestClassifyAttribute:
+    """Tests for classify_attribute function (T029)."""
+
+    def test_detect_id_attribute(self):
+        """Test detection of ID-like attribute names."""
+        from src.lib.normalization_utils import classify_attribute
+        
+        # Should detect common ID patterns
+        assert classify_attribute("id") == "resource_id"
+        assert classify_attribute("resource_id") == "resource_id"
+        assert classify_attribute("parent_id") == "resource_id"
+        assert classify_attribute("subscription_id") == "resource_id"
+        assert classify_attribute("tenant_id") == "resource_id"
+        assert classify_attribute("app_service_plan_id") == "resource_id"
+        assert classify_attribute("virtual_network_id") == "resource_id"
+
+    def test_detect_name_attribute(self):
+        """Test that non-ID attributes are classified as name."""
+        from src.lib.normalization_utils import classify_attribute
+        
+        # Should classify normal attributes as name
+        assert classify_attribute("name") == "name"
+        assert classify_attribute("location") == "name"
+        assert classify_attribute("resource_group_name") == "name"
+        assert classify_attribute("tags") == "name"
+        assert classify_attribute("identifier") == "name"  # Not ending in _id
+
+
+class TestNormalizeResourceId:
+    """Tests for normalize_resource_id function (T030-T032)."""
+
+    def test_normalize_subscription_id(self):
+        """Test normalization of Azure subscription GUID (T030)."""
+        from src.lib.normalization_utils import normalize_resource_id, NormalizationPattern
+        import re
+        
+        # Pattern to match Azure subscription GUIDs
+        pattern = NormalizationPattern(
+            pattern=re.compile(r'/subscriptions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'),
+            replacement='/subscriptions/SUBSCRIPTION_ID',
+            description='Normalize subscription ID',
+            original_pattern='/subscriptions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+        )
+        
+        resource_id = '/subscriptions/12345678-1234-1234-1234-123456789abc/resourceGroups/rg-test'
+        result = normalize_resource_id(resource_id, [pattern])
+        
+        assert result == '/subscriptions/SUBSCRIPTION_ID/resourceGroups/rg-test'
+
+    def test_normalize_tenant_id(self):
+        """Test normalization of Azure tenant GUID (T031)."""
+        from src.lib.normalization_utils import normalize_resource_id, NormalizationPattern
+        import re
+        
+        # Pattern to match Azure tenant GUIDs
+        pattern = NormalizationPattern(
+            pattern=re.compile(r'/tenants/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'),
+            replacement='/tenants/TENANT_ID',
+            description='Normalize tenant ID',
+            original_pattern='/tenants/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+        )
+        
+        resource_id = '/tenants/87654321-4321-4321-4321-cba987654321/users/john'
+        result = normalize_resource_id(resource_id, [pattern])
+        
+        assert result == '/tenants/TENANT_ID/users/john'
+
+    def test_normalize_multiple_patterns_in_order(self):
+        """Test that multiple patterns are applied in order (T032)."""
+        from src.lib.normalization_utils import normalize_resource_id, NormalizationPattern
+        import re
+        
+        # Multiple patterns - should apply in order
+        patterns = [
+            NormalizationPattern(
+                pattern=re.compile(r'/subscriptions/[0-9a-f-]+'),
+                replacement='/subscriptions/SUB_ID',
+                description='Subscription ID',
+                original_pattern='/subscriptions/[0-9a-f-]+'
+            ),
+            NormalizationPattern(
+                pattern=re.compile(r'/resourceGroups/rg-(test|prod|dev)'),
+                replacement='/resourceGroups/rg-ENV',
+                description='Environment resource group',
+                original_pattern='/resourceGroups/rg-(test|prod|dev)'
+            )
+        ]
+        
+        resource_id = '/subscriptions/abc-123/resourceGroups/rg-test/providers/Microsoft.Storage/storageAccounts/storage1'
+        result = normalize_resource_id(resource_id, patterns)
+        
+        # Both patterns should be applied
+        assert '/subscriptions/SUB_ID' in result
+        assert '/resourceGroups/rg-ENV' in result
+        assert result == '/subscriptions/SUB_ID/resourceGroups/rg-ENV/providers/Microsoft.Storage/storageAccounts/storage1'
+
+    def test_no_match_returns_original(self):
+        """Test that unmatched IDs are returned unchanged."""
+        from src.lib.normalization_utils import normalize_resource_id, NormalizationPattern
+        import re
+        
+        pattern = NormalizationPattern(
+            pattern=re.compile(r'/subscriptions/[0-9a-f-]+'),
+            replacement='/subscriptions/SUB_ID',
+            description='Subscription ID',
+            original_pattern='/subscriptions/[0-9a-f-]+'
+        )
+        
+        # This ID doesn't match the pattern
+        resource_id = '/custom/path/without/subscription'
+        result = normalize_resource_id(resource_id, [pattern])
+        
+        assert result == resource_id

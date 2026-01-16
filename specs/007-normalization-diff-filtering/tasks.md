@@ -117,15 +117,15 @@ description: "Implementation tasks for normalization-based difference filtering"
 
 ### End-to-End Tests for User Story 2
 
-- [ ] T037 [P] [US2] E2E test for subscription ID normalization in tests/e2e/test_e2e_normalization.py (verify subscription GUIDs replaced with placeholder)
-- [ ] T038 [P] [US2] E2E test for tenant ID normalization in tests/e2e/test_e2e_normalization.py (verify tenant GUIDs replaced with placeholder)
-- [ ] T039 [P] [US2] E2E test for complex resource ID with multiple patterns in tests/e2e/test_e2e_normalization.py (verify all patterns applied in correct order)
+- [X] T037 [P] [US2] E2E test for subscription ID normalization in tests/e2e/test_e2e_normalization.py (verify subscription GUIDs replaced with placeholder)
+- [X] T038 [P] [US2] E2E test for tenant ID normalization in tests/e2e/test_e2e_normalization.py (verify tenant GUIDs replaced with placeholder)
+- [X] T039 [P] [US2] E2E test for complex resource ID with multiple patterns in tests/e2e/test_e2e_normalization.py (verify all patterns applied in correct order)
 
 ### Live Testing for User Story 2 (Constitution Principle III)
 
-- [ ] T040 [US2] Create test_data/env-resource-id-1.json and env-resource-id-2.json with realistic Azure resource IDs containing different subscription/tenant IDs
-- [ ] T041 [US2] Run live comparison with resource ID normalization patterns and verify subscription/tenant differences ignored
-- [ ] T042 [US2] Verify console output shows increased normalization-ignored count with resource ID normalization enabled
+- [X] T040 [US2] Create test_data/env-resource-id-1.json and env-resource-id-2.json with realistic Azure resource IDs containing different subscription/tenant IDs
+- [X] T041 [US2] Run live comparison with resource ID normalization patterns and verify subscription/tenant differences ignored
+- [X] T042 [US2] Verify console output shows increased normalization-ignored count with resource ID normalization enabled
 
 **Checkpoint**: At this point, User Story 2 should be fully functional and testable independently. Commit all changes (Constitution Principle IV).
 
