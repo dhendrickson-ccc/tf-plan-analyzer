@@ -91,6 +91,46 @@ def get_base_css() -> str:
                 grid-template-columns: 1fr;
             }
         }
+        
+        /* Tooltip styling for ignored attributes badge */
+        .resource-change-header {
+            overflow: visible !important;
+        }
+        
+        .badge[title] {
+            position: relative;
+            cursor: help;
+        }
+        
+        .badge[title]:hover::after {
+            content: attr(title);
+            position: absolute;
+            bottom: calc(100% + 10px);
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 12px;
+            background: #1f2937;
+            color: white;
+            font-size: 0.85em;
+            font-weight: normal;
+            border-radius: 6px;
+            white-space: nowrap;
+            z-index: 99999;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            pointer-events: none;
+        }
+        
+        .badge[title]:hover::before {
+            content: '';
+            position: absolute;
+            bottom: calc(100% + 4px);
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: #1f2937;
+            z-index: 99999;
+            pointer-events: none;
+        }
 """
 
 
@@ -213,13 +253,13 @@ def get_diff_highlight_css() -> str:
         .baseline-removed {
             background-color: #bbdefb;
             color: #0d47a1;
-            display: block;
+            display: inline;
         }
         
         .baseline-added {
             background-color: #c8e6c9;
             color: #1b5e20;
-            display: block;
+            display: inline;
         }
         
         .baseline-char-removed {
@@ -285,7 +325,7 @@ def get_resource_card_css() -> str:
             margin-bottom: 20px;
             border-radius: 8px;
             border: 1px solid #e9ecef;
-            overflow: hidden;
+            overflow: visible;
         }
         
         .resource-change-header {
@@ -549,6 +589,300 @@ def get_resource_card_css() -> str:
 """
 
 
+def get_attribute_section_css() -> str:
+    """
+    Get CSS for attribute header-based layout (v2.0).
+
+    Replaces table-based attribute layout with flexbox sections.
+    Each attribute becomes a header with horizontally aligned environment values.
+
+    Returns:
+        str: CSS stylesheet for attribute sections including:
+            - .attribute-section: Container with spacing and shadow
+            - .attribute-header: H3-styled attribute name
+            - .attribute-values: Flexbox container for environment columns
+            - .env-value-column: Individual environment value wrapper
+            - .env-label: Environment name label
+
+    Example:
+        >>> css = get_attribute_section_css()
+        >>> ".attribute-section" in css
+        True
+    """
+    return """
+        .attribute-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .attribute-header {
+            font-size: 1.2em;
+            margin: 0 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e9ecef;
+            color: #495057;
+        }
+        
+        .attribute-header code {
+            font-family: Monaco, Menlo, Consolas, 'Courier New', monospace;
+            color: #667eea;
+        }
+        
+        .attribute-values {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .env-value-column {
+            flex: 1 1 0;
+            min-width: 0;
+        }
+        
+        .env-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-size: 0.95em;
+        }
+        
+        .sensitive-badge {
+            background: #dc3545;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.75em;
+            margin-left: 10px;
+            display: inline-block;
+        }
+"""
+
+
+def get_scrollable_container_css() -> str:
+    """
+    Get CSS for scrollable value containers.
+
+    Prevents layout breakage from large JSON objects or long strings
+    by adding scrollbars when content exceeds thresholds.
+
+    Returns:
+        str: CSS stylesheet for scrollable containers including:
+            - .value-container: Scrollable wrapper with max dimensions
+            - Webkit scrollbar styling for better UX
+
+    Example:
+        >>> css = get_scrollable_container_css()
+        >>> "max-height: 400px" in css
+        True
+    """
+    return """
+        .value-container {
+            max-width: 600px;
+            overflow-x: auto;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .value-container pre,
+        .value-container pre pre {
+            white-space: pre;
+            overflow-wrap: normal;
+            word-wrap: normal;
+            word-break: normal;
+            margin: 0;
+            overflow: visible;
+            max-width: none;
+        }
+        
+        .value-container code {
+            white-space: pre;
+            overflow-wrap: normal;
+            word-wrap: normal;
+            word-break: normal;
+            margin: 0;
+            display: block;
+            overflow: visible;
+            max-width: none;
+        }
+        
+        /* Webkit scrollbar styling for better UX */
+        .value-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        .value-container::-webkit-scrollbar-track {
+            background: #e9ecef;
+            border-radius: 4px;
+        }
+        
+        .value-container::-webkit-scrollbar-thumb {
+            background: #adb5bd;
+            border-radius: 4px;
+        }
+        
+        .value-container::-webkit-scrollbar-thumb:hover {
+            background: #868e96;
+        }
+"""
+
+
+def get_sticky_header_css() -> str:
+    """
+    Get CSS for sticky environment headers.
+
+    Keeps environment column headers visible when scrolling vertically
+    through attribute sections.
+
+    Returns:
+        str: CSS stylesheet for sticky headers including:
+            - .env-headers: Container for environment header row
+            - .env-header: Individual environment label
+            - .sticky-header: Position sticky styling
+
+    Example:
+        >>> css = get_sticky_header_css()
+        >>> "position: sticky" in css
+        True
+    """
+    return """
+        .env-headers {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .env-header {
+            flex: 1;
+            min-width: 250px;
+            font-weight: 700;
+            font-size: 1.1em;
+            color: #667eea;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: white;
+        }
+"""
+
+
+def get_env_specific_section_css() -> str:
+    """
+    Get CSS for environment-specific resource grouping section.
+
+    Provides styling for collapsible <details> section that groups resources
+    existing in only some environments (not all).
+
+    Returns:
+        str: CSS stylesheet for environment-specific sections including:
+            - .env-specific-section: Details element container
+            - .env-specific-header: Summary element with warning styling
+            - .env-specific-badge: Amber warning badge showing affected envs
+            - .resource-count: Badge showing number of env-specific resources
+            - .presence-info: Shows "Present in" and "Missing from" lists
+
+    Example:
+        >>> css = get_env_specific_section_css()
+        >>> ".env-specific-section" in css
+        True
+    """
+    return """
+        .env-specific-section {
+            margin-top: 30px;
+            border: 2px solid #ffa94d;
+            border-radius: 8px;
+            background: #fff4e6;
+        }
+        
+        .env-specific-header {
+            padding: 15px 20px;
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #e67700;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .env-specific-header:hover {
+            background: #ffe8cc;
+        }
+        
+        .env-specific-header::marker {
+            content: "▼ ";
+            font-size: 0.8em;
+        }
+        
+        details.env-specific-section:not([open]) .env-specific-header::marker {
+            content: "▶ ";
+        }
+        
+        .env-specific-badge {
+            background: #ffa94d;
+            color: #7d4400;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: 600;
+            display: inline-block;
+        }
+        
+        .resource-count {
+            background: #e67700;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+            margin-left: auto;
+        }
+        
+        .presence-info {
+            padding: 10px 15px;
+            background: #fff;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 3px solid #ffa94d;
+        }
+        
+        .presence-info strong {
+            color: #495057;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .presence-info ul {
+            margin: 5px 0 5px 20px;
+            color: #666;
+        }
+        
+        .env-specific-content {
+            padding: 0 20px 20px 20px;
+        }
+"""
+
+
 def generate_full_styles() -> str:
     """
     Generate complete <style> block combining all CSS functions.
@@ -558,6 +892,9 @@ def generate_full_styles() -> str:
     - Summary cards with semantic colors (get_summary_card_css)
     - Diff highlighting for before/after comparison (get_diff_highlight_css)
     - Resource cards with expandable sections (get_resource_card_css)
+    - Attribute sections with header-based layout (get_attribute_section_css)
+    - Scrollable value containers (get_scrollable_container_css)
+    - Sticky environment headers (get_sticky_header_css)
 
     Returns:
         str: Complete HTML <style> block ready for insertion in <head>
@@ -586,4 +923,8 @@ def generate_full_styles() -> str:
 {get_summary_card_css()}
 {get_diff_highlight_css()}
 {get_resource_card_css()}
+{get_attribute_section_css()}
+{get_scrollable_container_css()}
+{get_sticky_header_css()}
+{get_env_specific_section_css()}
 </style>"""

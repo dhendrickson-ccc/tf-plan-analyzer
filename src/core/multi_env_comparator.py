@@ -644,20 +644,20 @@ class MultiEnvReport:
             '            const icons = document.querySelectorAll(".toggle-icon");'
         )
         html_parts.append(
-            '            const anyExpanded = Array.from(contents).some(c => c.classList.contains("expanded"));'
+            '            const anyHidden = Array.from(contents).some(c => c.classList.contains("hidden"));'
         )
         html_parts.append("            contents.forEach(content => {")
         html_parts.append(
-            '                if (anyExpanded) { content.classList.remove("expanded"); }'
+            '                if (anyHidden) { content.classList.remove("hidden"); }'
         )
-        html_parts.append('                else { content.classList.add("expanded"); }')
+        html_parts.append('                else { content.classList.add("hidden"); }')
         html_parts.append("            });")
         html_parts.append("            icons.forEach(icon => {")
         html_parts.append(
-            '                if (anyExpanded) { icon.classList.add("collapsed"); }'
+            '                if (anyHidden) { icon.classList.remove("collapsed"); }'
         )
         html_parts.append(
-            '                else { icon.classList.remove("collapsed"); }'
+            '                else { icon.classList.add("collapsed"); }'
         )
         html_parts.append("            });")
         html_parts.append("        }")
@@ -669,9 +669,30 @@ class MultiEnvReport:
         html_parts.append(
             '            const icon = header.querySelector(".toggle-icon");'
         )
-        html_parts.append('            content.classList.toggle("expanded");')
+        html_parts.append('            content.classList.toggle("hidden");')
         html_parts.append('            icon.classList.toggle("collapsed");')
         html_parts.append("        }")
+        html_parts.append("        // Synchronized horizontal scrolling for value containers")
+        html_parts.append("        document.addEventListener('DOMContentLoaded', function() {")
+        html_parts.append("            document.querySelectorAll('.attribute-section').forEach(section => {")
+        html_parts.append("                const containers = section.querySelectorAll('.value-container');")
+        html_parts.append("                if (containers.length < 2) return;")
+        html_parts.append("                let isScrolling = false;")
+        html_parts.append("                containers.forEach(container => {")
+        html_parts.append("                    container.addEventListener('scroll', function() {")
+        html_parts.append("                        if (isScrolling) return;")
+        html_parts.append("                        isScrolling = true;")
+        html_parts.append("                        const scrollLeft = this.scrollLeft;")
+        html_parts.append("                        containers.forEach(otherContainer => {")
+        html_parts.append("                            if (otherContainer !== this) {")
+        html_parts.append("                                otherContainer.scrollLeft = scrollLeft;")
+        html_parts.append("                            }")
+        html_parts.append("                        });")
+        html_parts.append("                        setTimeout(() => { isScrolling = false; }, 10);")
+        html_parts.append("                    });")
+        html_parts.append("                });")
+        html_parts.append("            });")
+        html_parts.append("        });")
         html_parts.append("    </script>")
         html_parts.append("</head>")
         html_parts.append("<body>")
@@ -754,7 +775,20 @@ class MultiEnvReport:
                 rc for rc in self.resource_comparisons if rc.has_differences
             ]
 
+        # Separate regular resources from environment-specific resources (v2.0 feature)
+        regular_resources = []
+        env_specific_resources = []
+        
         for rc in comparisons_to_show:
+            # Resources present in all environments are "regular"
+            if len(rc.is_present_in) == len(env_labels):
+                regular_resources.append(rc)
+            else:
+                # Resources missing from one or more environments are "env-specific"
+                env_specific_resources.append(rc)
+
+        # Render regular resources first
+        for rc in regular_resources:
             is_identical = not rc.has_differences
             status_class = "identical" if is_identical else "different"
             status_text = "✓ Identical" if is_identical else "⚠ Different"
@@ -799,6 +833,98 @@ class MultiEnvReport:
             html_parts.append("                </div>")
             html_parts.append("            </div>")
 
+        # Render environment-specific resources in collapsible section (v2.0 feature)
+        if env_specific_resources:
+            env_count = len(env_specific_resources)
+            html_parts.append(
+                '            <details open class="env-specific-section">'
+            )
+            html_parts.append(
+                '                <summary class="env-specific-header">'
+            )
+            html_parts.append(
+                f'                    <span>⚠️ Environment-Specific Resources</span>'
+            )
+            html_parts.append(
+                f'                    <span class="resource-count">{env_count}</span>'
+            )
+            html_parts.append("                </summary>")
+            html_parts.append('                <div class="env-specific-content">')
+            
+            for rc in env_specific_resources:
+                is_identical = not rc.has_differences
+                status_class = "identical" if is_identical else "different"
+                status_text = "✓ Identical" if is_identical else "⚠ Different"
+                has_sensitive_diff = rc.has_sensitive_differences()
+                
+                # Determine which environments have this resource
+                present_envs = sorted(rc.is_present_in)
+                missing_envs = sorted(set(env_labels) - rc.is_present_in)
+                
+                html_parts.append('                    <div class="resource-change">')
+                html_parts.append(
+                    '                        <div class="resource-change-header" onclick="toggleResource(this)">'
+                )
+                html_parts.append(
+                    '                            <span class="toggle-icon collapsed">▼</span>'
+                )
+                html_parts.append(
+                    f'                            <span class="resource-name">{rc.resource_address}</span>'
+                )
+                
+                # Add environment-specific badge
+                if len(present_envs) == 1:
+                    html_parts.append(
+                        f'                            <span class="env-specific-badge">{present_envs[0]} only</span>'
+                    )
+                else:
+                    env_list = ", ".join(present_envs)
+                    html_parts.append(
+                        f'                            <span class="env-specific-badge">Present in: {env_list}</span>'
+                    )
+                
+                html_parts.append(
+                    f'                            <span class="resource-status {status_class}">{status_text}</span>'
+                )
+                
+                if rc.ignored_attributes:
+                    ignored_count = len(rc.ignored_attributes)
+                    ignored_list = ", ".join(sorted(rc.ignored_attributes))
+                    html_parts.append(
+                        f'                            <span class="badge" style="background: #fbbf24; color: #78350f;" title="Ignored: {ignored_list}">{ignored_count} attributes ignored</span>'
+                    )
+                
+                if has_sensitive_diff:
+                    html_parts.append(
+                        '                            <span class="sensitive-indicator">⚠️ SENSITIVE DIFF</span>'
+                    )
+                
+                html_parts.append("                        </div>")
+                html_parts.append(
+                    '                        <div class="resource-change-content">'
+                )
+                
+                # Add presence info box
+                html_parts.append('                            <div class="presence-info">')
+                html_parts.append(
+                    f'                                <strong>Present in:</strong> {", ".join(present_envs)}'
+                )
+                html_parts.append("<br>")
+                html_parts.append(
+                    f'                                <strong>Missing from:</strong> {", ".join(missing_envs)}'
+                )
+                html_parts.append("                            </div>")
+                
+                # Render attribute table with ALL environments (show empty for missing)
+                attribute_table_html = self._render_attribute_table(rc, env_labels)
+                html_parts.append(attribute_table_html)
+                
+                html_parts.append("                        </div>")
+                html_parts.append("                    </div>")
+            
+            html_parts.append("                </div>")
+            html_parts.append("            </details>")
+
         html_parts.append("        </div>")
         html_parts.append("    </div>")
         html_parts.append("</body>")
@@ -812,14 +938,17 @@ class MultiEnvReport:
         self, rc: "ResourceComparison", env_labels: List[str]
     ) -> str:
         """
-        Render attribute-level diff table for a resource.
+        Render attribute-level diff sections for a resource (v2.0).
+
+        Uses header-based flexbox layout instead of tables for better readability.
+        Each attribute becomes a section with H3 header and horizontally aligned values.
 
         Args:
             rc: ResourceComparison object with attribute_diffs
             env_labels: List of environment labels
 
         Returns:
-            HTML string for the attribute table
+            HTML string for the attribute sections
         """
         parts = []
         parts.append('                    <div class="attribute-table-container">')
@@ -849,47 +978,31 @@ class MultiEnvReport:
             parts.append("                            ✓ No differences detected")
             parts.append("                        </div>")
         else:
-            # Render attribute table
-            parts.append(
-                '                        <table class="attribute-table" style="width: 100%; border-collapse: collapse; background: white;">'
-            )
-            parts.append("                            <thead>")
-            parts.append(
-                '                                <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">'
-            )
-            parts.append(
-                '                                    <th style="padding: 12px; text-align: left; font-weight: 600; width: 200px;">Attribute</th>'
-            )
-
-            # Column headers for each environment
-            for env_label in env_labels:
-                parts.append(
-                    f'                                    <th style="padding: 12px; text-align: left; font-weight: 600;">{env_label}</th>'
-                )
-
-            parts.append("                                </tr>")
-            parts.append("                            </thead>")
-            parts.append("                            <tbody>")
-
-            # Render each attribute
+            # Render attribute sections (v2.0 layout)
             for attr_diff in rc.attribute_diffs:
-                # Only show changed attributes by default, or all if resource is identical
-                if not attr_diff.is_different and rc.has_differences:
+                # For env-specific resources (not present in all environments), show ALL attributes
+                # For resources present in all environments, only show changed attributes
+                is_env_specific = len(rc.is_present_in) < len(env_labels)
+                if not is_env_specific and not attr_diff.is_different and rc.has_differences:
                     continue
 
-                row_class = "changed" if attr_diff.is_different else "unchanged"
-                row_style = "background: #fff3cd;" if attr_diff.is_different else ""
+                # Start attribute section
+                section_class = "attribute-section"
+                if attr_diff.is_different:
+                    parts.append(
+                        f'                        <div class="{section_class}" style="background: #fff3cd;">'
+                    )
+                else:
+                    parts.append(
+                        f'                        <div class="{section_class}">'
+                    )
 
+                # Attribute header (H3 with attribute name)
                 parts.append(
-                    f'                                <tr style="border-bottom: 1px solid #dee2e6; {row_style}">'
-                )
-
-                # Attribute name column with type indicator
-                parts.append(
-                    f'                                    <td style="padding: 12px; vertical-align: top; font-weight: 500;">'
+                    '                            <h3 class="attribute-header">'
                 )
                 parts.append(
-                    f"                                        <code>{html.escape(attr_diff.attribute_name)}</code>"
+                    f"                                <code>{html.escape(attr_diff.attribute_name)}</code>"
                 )
 
                 # Add badge for sensitive attributes
@@ -898,10 +1011,15 @@ class MultiEnvReport:
                     for val in attr_diff.env_values.values()
                 ):
                     parts.append(
-                        '                                        <br><span style="background: #dc3545; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; margin-top: 4px; display: inline-block;">🔒 SENSITIVE</span>'
+                        '                                <span class="sensitive-badge">🔒 SENSITIVE</span>'
                     )
 
-                parts.append("                                    </td>")
+                parts.append("                            </h3>")
+
+                # Attribute values container (flexbox)
+                parts.append(
+                    '                            <div class="attribute-values">'
+                )
 
                 # Value columns for each environment
                 for env_label in env_labels:
@@ -909,14 +1027,29 @@ class MultiEnvReport:
                     value_html = self._render_attribute_value(
                         value, attr_diff, env_labels, env_label
                     )
+                    
                     parts.append(
-                        f'                                    <td style="padding: 12px; vertical-align: top;">{value_html}</td>'
+                        '                                <div class="env-value-column">'
+                    )
+                    parts.append(
+                        f'                                    <div class="env-label">{env_label}</div>'
+                    )
+                    # Wrap value in scrollable container (v2.0 feature)
+                    parts.append(
+                        '                                    <div class="value-container">'
+                    )
+                    parts.append(
+                        f'                                        {value_html}'
+                    )
+                    parts.append(
+                        "                                    </div>"
+                    )
+                    parts.append(
+                        "                                </div>"
                     )
 
-                parts.append("                                </tr>")
-
-            parts.append("                            </tbody>")
-            parts.append("                        </table>")
+                parts.append("                            </div>")  # Close attribute-values
+                parts.append("                        </div>")  # Close attribute-section
 
         parts.append("                    </div>")
         return "\n".join(parts)
@@ -1012,19 +1145,19 @@ class MultiEnvReport:
                     
                     if other_val is not None:
                         baseline_highlighted, _ = _highlight_json_diff(value, other_val)
-                        return f'<pre class="json-content baseline-removed" style="margin: 0; background: #f8f9fa; padding: 8px; border-radius: 4px; font-size: 0.85em; max-height: 200px; overflow-y: auto;">{baseline_highlighted}</pre>'
+                        return f'<pre class="json-content" style="margin: 0; font-size: 0.85em;">{baseline_highlighted}</pre>'
                 
                 # For non-baseline environments, compare against baseline
                 elif baseline_val is not None and json.dumps(value, sort_keys=True) != json.dumps(baseline_val, sort_keys=True):
                     _, value_highlighted = _highlight_json_diff(baseline_val, value)
-                    return f'<pre class="json-content baseline-added" style="margin: 0; background: #f8f9fa; padding: 8px; border-radius: 4px; font-size: 0.85em; max-height: 200px; overflow-y: auto;">{value_highlighted}</pre>'
+                    return f'<pre class="json-content" style="margin: 0; font-size: 0.85em;">{value_highlighted}</pre>'
             
             # No differences - show plain JSON
             value_json = json.dumps(value, indent=2, sort_keys=True)
             # Truncate if too long
             if len(value_json) > 500:
                 value_json = value_json[:500] + "\n  ...(truncated)...\n}"
-            return f'<pre style="margin: 0; background: #f8f9fa; padding: 8px; border-radius: 4px; font-size: 0.85em; max-height: 200px; overflow-y: auto;">{html.escape(value_json)}</pre>'
+            return f'<pre style="margin: 0; font-size: 0.85em;">{html.escape(value_json)}</pre>'
 
         # Fallback
         return f"<code>{html.escape(str(value))}</code>"

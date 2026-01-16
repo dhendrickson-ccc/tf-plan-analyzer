@@ -562,8 +562,8 @@ class TestUS3CombinedFunctionality:
             with open(output_file, "r") as f:
                 html_content = f.read()
 
-            # Should have both attribute table AND ignore statistics
-            assert "<table" in html_content
+            # Should have attribute sections (v2.0) AND ignore statistics
+            assert "attribute-section" in html_content or "attribute-header" in html_content
             assert (
                 "Attributes Ignored" in html_content
                 or "ignored" in html_content.lower()
