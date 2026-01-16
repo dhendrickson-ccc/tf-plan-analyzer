@@ -18,7 +18,7 @@ As a DevOps engineer comparing Terraform configurations across environments, I w
 **Acceptance Scenarios**:
 
 1. **Given** a multi-environment comparison report with resources having multiple attributes, **When** I view the HTML report, **Then** each attribute name appears as a prominent header (e.g., H3 or similar styling) rather than a table cell
-2. **Given** multiple attributes for a single resource, **When** viewing the comparison, **Then** there is clear horizontal spacing (minimum 20px margin/padding) between consecutive attribute sections
+2. **Given** multiple attributes for a single resource, **When** viewing the comparison, **Then** there is clear vertical spacing (minimum 30px margin-bottom) between consecutive attribute sections
 3. **Given** long attribute names (e.g., "security_rule_collection"), **When** displayed as headers, **Then** the full name is visible without truncation and does not cause layout issues
 
 ---
@@ -60,7 +60,7 @@ As a DevOps engineer identifying configuration drift, I want to see resources th
 
 ### Edge Cases
 
-- What happens when an attribute value is exactly at the scroll threshold (e.g., 400px height)? Should scrollbars appear or not?
+- What happens when an attribute value is exactly at the scroll threshold (e.g., 400px height)? **Answer**: With `overflow: auto`, scrollbars appear only when content strictly exceeds the threshold (>400px), not at exactly 400px. Content at exactly 400px fits without scrollbars.
 - How does the system handle attribute names that are very long (50+ characters) when used as headers? Should they wrap or truncate with ellipsis?
 - What happens when all resources in a comparison are environment-specific (none exist in multiple environments)? Should the report show a special message?
 - How should the system handle attributes that exist in only one environment (not just resources)? Should they be marked similarly?
@@ -72,7 +72,7 @@ As a DevOps engineer identifying configuration drift, I want to see resources th
 ### Functional Requirements
 
 - **FR-001**: System MUST display each attribute name as a prominent header (H3 or equivalent styling) in the multi-environment comparison HTML report
-- **FR-002**: System MUST provide minimum 20px vertical spacing between consecutive attribute header sections for improved readability
+- **FR-002**: System MUST provide minimum 30px vertical spacing between consecutive attribute header sections for improved readability
 - **FR-003**: System MUST wrap each attribute value in a container with `overflow: auto` CSS property to enable scrollbars when content exceeds container dimensions
 - **FR-004**: Value containers MUST have a maximum height of 400px with vertical scrollbar appearing when content exceeds this height
 - **FR-005**: Value containers MUST have a maximum width of 600px (or responsive width based on viewport) with horizontal scrollbar appearing when content exceeds this width

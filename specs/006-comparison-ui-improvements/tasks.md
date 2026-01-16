@@ -13,7 +13,7 @@ This feature improves multi-environment comparison HTML reports with:
 
 **Implementation Strategy**: MVP-first approach - implement P1 stories first (attribute headers, scrollable containers), then P2 (environment-specific grouping). Each story is independently testable and deliverable.
 
-**Total Tasks**: 35 tasks across 5 phases  
+**Total Tasks**: 70 tasks across 6 phases  
 **Estimated Time**: 10 hours total
 
 ---
