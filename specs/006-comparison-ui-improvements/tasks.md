@@ -44,10 +44,10 @@ This feature improves multi-environment comparison HTML reports with:
 
 **Purpose**: Core CSS infrastructure needed by all user stories
 
-- [ ] T006 Review docs/style-guide.md for existing color palette and spacing values
-- [ ] T007 Review docs/function-glossary.md for `generate_full_styles()` function signature
-- [ ] T008 Review src/core/multi_env_comparator.py to understand current `_render_attribute_table()` implementation (lines ~811-920)
-- [ ] T009 Review src/lib/html_generation.py to understand current CSS generation pattern
+- [X] T006 Review docs/style-guide.md for existing color palette and spacing values
+- [X] T007 Review docs/function-glossary.md for `generate_full_styles()` function signature
+- [X] T008 Review src/core/multi_env_comparator.py to understand current `_render_attribute_table()` implementation (lines ~811-920)
+- [X] T009 Review src/lib/html_generation.py to understand current CSS generation pattern
 
 **Completion Criteria**: Development team understands existing codebase structure and CSS patterns
 
@@ -68,17 +68,17 @@ This feature improves multi-environment comparison HTML reports with:
 
 ### Tasks
 
-- [ ] T010 [US1] Add `get_attribute_section_css()` function to src/lib/html_generation.py with styles for `.attribute-section`, `.attribute-header`, `.attribute-values`, `.env-value-column`, `.env-label`
-- [ ] T011 [US1] Update `generate_full_styles()` in src/lib/html_generation.py to include `get_attribute_section_css()` in returned stylesheet
-- [ ] T012 [US1] Modify `_render_attribute_table()` in src/core/multi_env_comparator.py to replace `<table>` structure with `<div class="attribute-section">` wrappers
-- [ ] T013 [US1] Update attribute name rendering from `<td>` to `<h3 class="attribute-header"><code>{attr_name}</code></h3>` in src/core/multi_env_comparator.py
-- [ ] T014 [US1] Replace table row structure with `<div class="attribute-values">` flexbox container in src/core/multi_env_comparator.py
-- [ ] T015 [US1] Update environment value rendering to use `<div class="env-value-column">` with `<div class="env-label">` and value div in src/core/multi_env_comparator.py
-- [ ] T016 [US1] Preserve sensitive badge rendering (`🔒 SENSITIVE`) within new attribute header structure
-- [ ] T017 [US1] Generate test comparison report: `tf-plan-analyzer compare --html --output test-story1.html /Users/danielhendrickson/workspace/promega/gsp-infrastructure-tf/2_deployApp/tfplan-test-2.json /Users/danielhendrickson/workspace/promega/tmp/tfplan-prod.json`
-- [ ] T018 [US1] Validate Story 1 acceptance criteria in browser: attribute headers visible, 30px spacing, no truncation, flexbox layout working
-- [ ] T019 [US1] Run existing test suite to ensure no regressions: `pytest tests/test_multi_env_unit.py -v`
-- [ ] T020 [US1] Commit Story 1 changes with message: "Implement attribute headers with improved spacing (Story 1)"
+- [X] T010 [US1] Add `get_attribute_section_css()` function to src/lib/html_generation.py with styles for `.attribute-section`, `.attribute-header`, `.attribute-values`, `.env-value-column`, `.env-label`
+- [X] T011 [US1] Update `generate_full_styles()` in src/lib/html_generation.py to include `get_attribute_section_css()` in returned stylesheet
+- [X] T012 [US1] Modify `_render_attribute_table()` in src/core/multi_env_comparator.py to replace `<table>` structure with `<div class="attribute-section">` wrappers
+- [X] T013 [US1] Update attribute name rendering from `<td>` to `<h3 class="attribute-header"><code>{attr_name}</code></h3>` in src/core/multi_env_comparator.py
+- [X] T014 [US1] Replace table row structure with `<div class="attribute-values">` flexbox container in src/core/multi_env_comparator.py
+- [X] T015 [US1] Update environment value rendering to use `<div class="env-value-column">` with `<div class="env-label">` and value div in src/core/multi_env_comparator.py
+- [X] T016 [US1] Preserve sensitive badge rendering (`🔒 SENSITIVE`) within new attribute header structure
+- [X] T017 [US1] Generate test comparison report: `tf-plan-analyzer compare --html --output test-story1.html /Users/danielhendrickson/workspace/promega/gsp-infrastructure-tf/2_deployApp/tfplan-test-2.json /Users/danielhendrickson/workspace/promega/tmp/tfplan-prod.json`
+- [X] T018 [US1] Validate Story 1 acceptance criteria in browser: attribute headers visible, 30px spacing, no truncation, flexbox layout working
+- [X] T019 [US1] Run existing test suite to ensure no regressions: `pytest tests/test_multi_env_unit.py -v`
+- [X] T020 [US1] Commit Story 1 changes with message: "Implement attribute headers with improved spacing (Story 1)"
 
 **Story 1 Completion Criteria**: All T010-T020 complete, attribute headers working, tests passing, committed to git
 

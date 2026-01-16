@@ -812,14 +812,17 @@ class MultiEnvReport:
         self, rc: "ResourceComparison", env_labels: List[str]
     ) -> str:
         """
-        Render attribute-level diff table for a resource.
+        Render attribute-level diff sections for a resource (v2.0).
+
+        Uses header-based flexbox layout instead of tables for better readability.
+        Each attribute becomes a section with H3 header and horizontally aligned values.
 
         Args:
             rc: ResourceComparison object with attribute_diffs
             env_labels: List of environment labels
 
         Returns:
-            HTML string for the attribute table
+            HTML string for the attribute sections
         """
         parts = []
         parts.append('                    <div class="attribute-table-container">')
@@ -849,47 +852,29 @@ class MultiEnvReport:
             parts.append("                            ✓ No differences detected")
             parts.append("                        </div>")
         else:
-            # Render attribute table
-            parts.append(
-                '                        <table class="attribute-table" style="width: 100%; border-collapse: collapse; background: white;">'
-            )
-            parts.append("                            <thead>")
-            parts.append(
-                '                                <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">'
-            )
-            parts.append(
-                '                                    <th style="padding: 12px; text-align: left; font-weight: 600; width: 200px;">Attribute</th>'
-            )
-
-            # Column headers for each environment
-            for env_label in env_labels:
-                parts.append(
-                    f'                                    <th style="padding: 12px; text-align: left; font-weight: 600;">{env_label}</th>'
-                )
-
-            parts.append("                                </tr>")
-            parts.append("                            </thead>")
-            parts.append("                            <tbody>")
-
-            # Render each attribute
+            # Render attribute sections (v2.0 layout)
             for attr_diff in rc.attribute_diffs:
                 # Only show changed attributes by default, or all if resource is identical
                 if not attr_diff.is_different and rc.has_differences:
                     continue
 
-                row_class = "changed" if attr_diff.is_different else "unchanged"
-                row_style = "background: #fff3cd;" if attr_diff.is_different else ""
+                # Start attribute section
+                section_class = "attribute-section"
+                if attr_diff.is_different:
+                    parts.append(
+                        f'                        <div class="{section_class}" style="background: #fff3cd;">'
+                    )
+                else:
+                    parts.append(
+                        f'                        <div class="{section_class}">'
+                    )
 
+                # Attribute header (H3 with attribute name)
                 parts.append(
-                    f'                                <tr style="border-bottom: 1px solid #dee2e6; {row_style}">'
-                )
-
-                # Attribute name column with type indicator
-                parts.append(
-                    f'                                    <td style="padding: 12px; vertical-align: top; font-weight: 500;">'
+                    '                            <h3 class="attribute-header">'
                 )
                 parts.append(
-                    f"                                        <code>{html.escape(attr_diff.attribute_name)}</code>"
+                    f"                                <code>{html.escape(attr_diff.attribute_name)}</code>"
                 )
 
                 # Add badge for sensitive attributes
@@ -898,10 +883,15 @@ class MultiEnvReport:
                     for val in attr_diff.env_values.values()
                 ):
                     parts.append(
-                        '                                        <br><span style="background: #dc3545; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; margin-top: 4px; display: inline-block;">🔒 SENSITIVE</span>'
+                        '                                <span class="sensitive-badge">🔒 SENSITIVE</span>'
                     )
 
-                parts.append("                                    </td>")
+                parts.append("                            </h3>")
+
+                # Attribute values container (flexbox)
+                parts.append(
+                    '                            <div class="attribute-values">'
+                )
 
                 # Value columns for each environment
                 for env_label in env_labels:
@@ -909,14 +899,22 @@ class MultiEnvReport:
                     value_html = self._render_attribute_value(
                         value, attr_diff, env_labels, env_label
                     )
+                    
                     parts.append(
-                        f'                                    <td style="padding: 12px; vertical-align: top;">{value_html}</td>'
+                        '                                <div class="env-value-column">'
+                    )
+                    parts.append(
+                        f'                                    <div class="env-label">{env_label}</div>'
+                    )
+                    parts.append(
+                        f'                                    <div>{value_html}</div>'
+                    )
+                    parts.append(
+                        "                                </div>"
                     )
 
-                parts.append("                                </tr>")
-
-            parts.append("                            </tbody>")
-            parts.append("                        </table>")
+                parts.append("                            </div>")  # Close attribute-values
+                parts.append("                        </div>")  # Close attribute-section
 
         parts.append("                    </div>")
         return "\n".join(parts)

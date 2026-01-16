@@ -549,6 +549,81 @@ def get_resource_card_css() -> str:
 """
 
 
+def get_attribute_section_css() -> str:
+    """
+    Get CSS for attribute header-based layout (v2.0).
+
+    Replaces table-based attribute layout with flexbox sections.
+    Each attribute becomes a header with horizontally aligned environment values.
+
+    Returns:
+        str: CSS stylesheet for attribute sections including:
+            - .attribute-section: Container with spacing and shadow
+            - .attribute-header: H3-styled attribute name
+            - .attribute-values: Flexbox container for environment columns
+            - .env-value-column: Individual environment value wrapper
+            - .env-label: Environment name label
+
+    Example:
+        >>> css = get_attribute_section_css()
+        >>> ".attribute-section" in css
+        True
+    """
+    return """
+        .attribute-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .attribute-header {
+            font-size: 1.2em;
+            margin: 0 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e9ecef;
+            color: #495057;
+        }
+        
+        .attribute-header code {
+            font-family: Monaco, Menlo, Consolas, 'Courier New', monospace;
+            color: #667eea;
+        }
+        
+        .attribute-values {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .env-value-column {
+            flex: 1;
+            min-width: 250px;
+        }
+        
+        .env-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-size: 0.95em;
+        }
+        
+        .sensitive-badge {
+            background: #dc3545;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.75em;
+            margin-left: 10px;
+            display: inline-block;
+        }
+"""
+
+
 def generate_full_styles() -> str:
     """
     Generate complete <style> block combining all CSS functions.
@@ -558,6 +633,7 @@ def generate_full_styles() -> str:
     - Summary cards with semantic colors (get_summary_card_css)
     - Diff highlighting for before/after comparison (get_diff_highlight_css)
     - Resource cards with expandable sections (get_resource_card_css)
+    - Attribute sections with header-based layout (get_attribute_section_css)
 
     Returns:
         str: Complete HTML <style> block ready for insertion in <head>
@@ -586,4 +662,5 @@ def generate_full_styles() -> str:
 {get_summary_card_css()}
 {get_diff_highlight_css()}
 {get_resource_card_css()}
+{get_attribute_section_css()}
 </style>"""
