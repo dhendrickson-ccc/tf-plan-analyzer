@@ -213,13 +213,13 @@ def get_diff_highlight_css() -> str:
         .baseline-removed {
             background-color: #bbdefb;
             color: #0d47a1;
-            display: block;
+            display: inline;
         }
         
         .baseline-added {
             background-color: #c8e6c9;
             color: #1b5e20;
-            display: block;
+            display: inline;
         }
         
         .baseline-char-removed {
@@ -643,14 +643,11 @@ def get_scrollable_container_css() -> str:
     """
     return """
         .value-container {
-            max-height: 400px;
             max-width: 600px;
-            overflow: auto;
+            overflow-x: auto;
             padding: 8px;
             background: #f8f9fa;
             border-radius: 4px;
-            overflow-x: auto;
-            overflow-y: auto;
         }
         
         .value-container pre,

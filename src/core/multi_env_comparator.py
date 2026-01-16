@@ -1143,12 +1143,12 @@ class MultiEnvReport:
                     
                     if other_val is not None:
                         baseline_highlighted, _ = _highlight_json_diff(value, other_val)
-                        return f'<pre class="json-content baseline-removed" style="margin: 0; font-size: 0.85em;">{baseline_highlighted}</pre>'
+                        return f'<pre class="json-content" style="margin: 0; font-size: 0.85em;">{baseline_highlighted}</pre>'
                 
                 # For non-baseline environments, compare against baseline
                 elif baseline_val is not None and json.dumps(value, sort_keys=True) != json.dumps(baseline_val, sort_keys=True):
                     _, value_highlighted = _highlight_json_diff(baseline_val, value)
-                    return f'<pre class="json-content baseline-added" style="margin: 0; font-size: 0.85em;">{value_highlighted}</pre>'
+                    return f'<pre class="json-content" style="margin: 0; font-size: 0.85em;">{value_highlighted}</pre>'
             
             # No differences - show plain JSON
             value_json = json.dumps(value, indent=2, sort_keys=True)
