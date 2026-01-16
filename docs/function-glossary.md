@@ -11,16 +11,12 @@ Most commonly used functions:
 | `generate_full_styles()` | html_generation | Get complete CSS for HTML reports |
 | `highlight_json_diff()` | diff_utils | Generate character-level diff highlighting |
 | `load_ignore_config()` | ignore_utils | Load and validate ignore configuration |
-| `safe_read_file()` | file_utils | Safely read files with error handling |
-| `load_json_file()` | json_utils | Load and parse JSON files |
-| `SensitiveObfuscator.obfuscate_plan()` | sensitive_obfuscator | Obfuscate sensitive data in plans |
-| `ResourceComparison.compare_resources()` | multi_env_comparator | Compare resources across environments |
-
+| `load_normalization_config()` | normalization_utils | Load and validate normalization patterns |
 ## Module Organization
 
 The `src/` directory is organized by functional responsibility:
 
-- **lib/**: Shared utilities and helper functions (HTML, diff, JSON, file I/O, ignore config)
+- **lib/**: Shared utilities and helper functions (HTML, diff, JSON, file I/O, ignore config, normalization)
 - **core/**: Core analysis logic (multi-environment comparison, HCL resolution)
 - **security/**: Sensitive data handling (obfuscation, salt management)
 - **cli/**: Command-line interface (argument parsing, report generation)
@@ -35,6 +31,7 @@ The `src/` directory is organized by functional responsibility:
   - [json_utils.py](#jsonutilspy)
   - [file_utils.py](#fileutilspy)
   - [ignore_utils.py](#ignoreutilspy)
+  - [normalization_utils.py](#normalizationutilspy)
 - [Core Module](#core-module)
   - [multi_env_comparator.py](#multi_env_comparatorpy)
   - [hcl_value_resolver.py](#hcl_value_resolverpy)
@@ -610,6 +607,163 @@ filtered = filter_ignored_fields(resource_values, config)
 # }
 # Note: LastUpdated and timeouts removed
 ```
+
+---
+
+### normalization_utils.py
+
+Normalization configuration management for filtering environment-specific differences (Feature 007).
+
+#### `load_normalization_config()`
+
+**Location**: [src/lib/normalization_utils.py](../src/lib/normalization_utils.py#L53)
+
+**Parameters**:
+- `file_path` (Path): Path to normalization config JSON file
+
+**Returns**: `NormalizationConfig` - Config object with pre-compiled regex patterns
+
+**Raises**:
+- `FileNotFoundError`: Config file not found
+- `json.JSONDecodeError`: Malformed JSON
+- `ValueError`: Invalid structure or regex patterns
+
+**Description**:
+Loads and validates normalization configuration from JSON file. Pre-compiles all regex patterns for efficient runtime application. Configuration structure:
+```json
+{
+  "name_patterns": [
+    {
+      "pattern": "-(dev|test|prod)-",
+      "replacement": "-ENV-",
+      "description": "Environment suffix normalization"
+    }
+  ],
+  "resource_id_patterns": [
+    {
+      "pattern": "/subscriptions/[0-9a-f-]+",
+      "replacement": "/subscriptions/SUB_ID",
+      "description": "Azure subscription ID normalization"
+    }
+  ]
+}
+```
+
+**Usage Example**:
+```python
+from pathlib import Path
+from src.lib.normalization_utils import load_normalization_config
+
+# Load config from file
+config = load_normalization_config(Path("examples/normalizations.json"))
+
+# Access compiled patterns
+for pattern in config.name_patterns:
+    print(f"Pattern: {pattern.original_pattern}")
+    print(f"Replacement: {pattern.replacement}")
+    print(f"Description: {pattern.description}")
+```
+
+**Related**: See [examples/normalizations.json](../examples/normalizations.json) for example configuration
+
+---
+
+#### `apply_normalization_patterns()`
+
+**Location**: [src/lib/normalization_utils.py](../src/lib/normalization_utils.py#L191)
+
+**Parameters**:
+- `value` (str): String value to normalize
+- `patterns` (List[NormalizationPattern]): Patterns to apply in order
+- `verbose` (bool): If True, log before/after values for debugging (default: False)
+
+**Returns**: `str` - Normalized string with all patterns applied
+
+**Description**:
+Applies a sequence of regex patterns to normalize a string value. Each pattern is applied once using `regex.sub()` (first-match-wins strategy). Patterns are applied sequentially - each pattern operates on the result of the previous pattern. When `verbose=True`, logs each transformation for debugging.
+
+**Usage Example**:
+```python
+from src.lib.normalization_utils import apply_normalization_patterns, NormalizationPattern
+import re
+
+# Create patterns
+patterns = [
+    NormalizationPattern(
+        pattern=re.compile(r"-(dev|test|prod)-"),
+        replacement="-ENV-",
+        description="Environment suffix",
+        original_pattern="-(dev|test|prod)-"
+    ),
+    NormalizationPattern(
+        pattern=re.compile(r"eastus|westus"),
+        replacement="REGION",
+        description="Azure region",
+        original_pattern="eastus|westus"
+    )
+]
+
+# Apply normalization
+original = "storage-dev-eastus"
+normalized = apply_normalization_patterns(original, patterns)
+# Result: "storage-ENV-REGION"
+
+# With verbose logging
+normalized = apply_normalization_patterns(original, patterns, verbose=True)
+# Output:
+#   [NORM] Pattern '-(dev|test|prod)-' → '-ENV-'
+#          Before: storage-dev-eastus
+#          After:  storage-ENV-eastus
+#   [NORM] Pattern 'eastus|westus' → 'REGION'
+#          Before: storage-ENV-eastus
+#          After:  storage-ENV-REGION
+```
+
+**Related**: Used by `normalize_attribute_value()` for environment-agnostic comparisons
+
+---
+
+#### `normalize_attribute_value()`
+
+**Location**: [src/lib/normalization_utils.py](../src/lib/normalization_utils.py#L233)
+
+**Parameters**:
+- `attribute_name` (str): Name of the attribute (used to determine normalization type)
+- `value` (Any): Attribute value to normalize
+- `config` (NormalizationConfig): Config with patterns to apply
+- `verbose` (bool): If True, log normalization transformations (default: False)
+
+**Returns**: `Any` - Normalized value (or original if non-string or no patterns)
+
+**Description**:
+Normalizes an attribute value using appropriate patterns based on attribute type. Only string values are normalized - other types (int, bool, dict, list, None) are returned unchanged.
+- For resource ID attributes (ending in `_id` or named `id`), applies `resource_id_patterns`
+- For other attributes, applies `name_patterns`
+
+**Usage Example**:
+```python
+from pathlib import Path
+from src.lib.normalization_utils import load_normalization_config, normalize_attribute_value
+
+# Load config with both name and resource ID patterns
+config = load_normalization_config(Path("normalizations.json"))
+
+# Normalize a name attribute (uses name_patterns)
+name = "storage-account-dev-eastus"
+normalized_name = normalize_attribute_value("name", name, config)
+# Result: "storage-account-ENV-eastus" (env suffix normalized)
+
+# Normalize a resource ID attribute (uses resource_id_patterns)
+resource_id = "/subscriptions/abc-123-def/resourceGroups/my-rg"
+normalized_id = normalize_attribute_value("subscription_id", resource_id, config)
+# Result: "/subscriptions/SUB_ID/resourceGroups/my-rg"
+
+# Non-string values returned unchanged
+count = normalize_attribute_value("count", 42, config)
+# Result: 42
+```
+
+**Related**: Core function used by `ResourceComparison.compute_attribute_diffs()` in multi-environment comparison
 
 ---
 

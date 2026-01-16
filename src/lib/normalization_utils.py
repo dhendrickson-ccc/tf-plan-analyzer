@@ -193,7 +193,11 @@ def load_normalization_config(file_path: Path) -> NormalizationConfig:
     )
 
 
-def apply_normalization_patterns(value: str, patterns: List[NormalizationPattern]) -> str:
+def apply_normalization_patterns(
+    value: str,
+    patterns: List[NormalizationPattern],
+    verbose: bool = False
+) -> str:
     """
     Apply normalization patterns to a string value in order.
     
@@ -203,6 +207,7 @@ def apply_normalization_patterns(value: str, patterns: List[NormalizationPattern
     Args:
         value: String value to normalize
         patterns: List of NormalizationPattern objects to apply in order
+        verbose: If True, log before/after values for debugging (FR-015)
         
     Returns:
         Normalized string with all patterns applied in sequence
@@ -220,8 +225,15 @@ def apply_normalization_patterns(value: str, patterns: List[NormalizationPattern
     
     result = value
     for pattern in patterns:
+        before = result
         # Each pattern runs regex.sub() once (first-match-wins per pattern)
         result = pattern.pattern.sub(pattern.replacement, result)
+        
+        # Log transformation if verbose enabled and value changed (FR-015)
+        if verbose and result != before:
+            print(f"  [NORM] Pattern '{pattern.original_pattern}' → '{pattern.replacement}'")
+            print(f"         Before: {before}")
+            print(f"         After:  {result}")
     
     return result
 
@@ -229,24 +241,29 @@ def apply_normalization_patterns(value: str, patterns: List[NormalizationPattern
 def normalize_attribute_value(
     attribute_name: str,
     value: Any,
-    config: NormalizationConfig
+    config: NormalizationConfig,
+    verbose: bool = False
 ) -> Any:
     """
     Normalize an attribute value using appropriate patterns based on attribute type.
     
-    Only string values are normalized - other types (int, bool, dict, list, None) 
+    Recursively normalizes nested structures (lists and dicts). Only string values  
+    within the structure are normalized - other primitive types (int, bool, None)  
     are returned unchanged. 
     
     - For resource ID attributes (ending in '_id' or named 'id'), applies resource_id_patterns
     - For other attributes, applies name_patterns
+    - For lists: recursively normalizes each element
+    - For dicts: recursively normalizes each value
     
     Args:
         attribute_name: Name of the attribute (used to determine normalization type)
         value: Attribute value to normalize
         config: NormalizationConfig with patterns to apply
+        verbose: If True, log normalization transformations (FR-015)
         
     Returns:
-        Normalized value (or original if non-string or no patterns)
+        Normalized value (or original if non-string primitive or no patterns)
         
     Example:
         >>> config = NormalizationConfig(
@@ -260,24 +277,41 @@ def normalize_attribute_value(
         '/subscriptions/SUB_ID/rg/test'
         >>> normalize_attribute_value("count", 42, config)
         42
+        >>> normalize_attribute_value("fqdns", ["app-dev.example.com"], config)
+        ['app-ENV.example.com']
     """
-    # Only normalize string values
+    # Handle None
+    if value is None:
+        return value
+    
+    # Recursively normalize lists
+    if isinstance(value, list):
+        return [normalize_attribute_value(attribute_name, item, config, verbose) for item in value]
+    
+    # Recursively normalize dicts
+    if isinstance(value, dict):
+        return {k: normalize_attribute_value(k, v, config, verbose) for k, v in value.items()}
+    
+    # Only normalize string values (primitives like int, bool, None pass through)
     if not isinstance(value, str):
         return value
     
     # Classify the attribute to determine which patterns to apply
     attr_type = classify_attribute(attribute_name)
     
+    if verbose:
+        print(f"  [NORM] Normalizing attribute '{attribute_name}' (type: {attr_type})")
+    
     if attr_type == "resource_id":
         # Apply resource ID patterns for ID-like attributes
         if not config.resource_id_patterns:
             return value
-        return normalize_resource_id(value, config.resource_id_patterns)
+        return normalize_resource_id(value, config.resource_id_patterns, verbose)
     else:
         # Apply name patterns for regular attributes
         if not config.name_patterns:
             return value
-        return apply_normalization_patterns(value, config.name_patterns)
+        return apply_normalization_patterns(value, config.name_patterns, verbose)
 
 
 # ==============================================================================
@@ -317,7 +351,8 @@ def classify_attribute(attribute_name: str) -> str:
 
 def normalize_resource_id(
     value: str,
-    patterns: List[NormalizationPattern]
+    patterns: List[NormalizationPattern],
+    verbose: bool = False
 ) -> str:
     """
     Normalize a resource ID value by applying resource ID patterns.
@@ -329,6 +364,7 @@ def normalize_resource_id(
     Args:
         value: Resource ID string to normalize
         patterns: List of NormalizationPattern objects to apply
+        verbose: If True, log normalization transformations (FR-015)
         
     Returns:
         Normalized resource ID string
@@ -344,5 +380,5 @@ def normalize_resource_id(
         '/subscriptions/SUB_ID/rg/test'
     """
     # Use the same pattern application logic as name normalization
-    return apply_normalization_patterns(value, patterns)
+    return apply_normalization_patterns(value, patterns, verbose)
 

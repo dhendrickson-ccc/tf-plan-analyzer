@@ -102,18 +102,18 @@ def _render_ignore_badge(
     if total_count == 0:
         return ""
     
-    # Build tooltip content with sections
+    # Build tooltip content with sections (using newlines for better readability)
     tooltip_parts = []
     
     if config_count > 0:
-        config_list = ", ".join(sorted(config_ignored))
-        tooltip_parts.append(f"Config: {config_list}")
+        config_items = "\n• ".join(sorted(config_ignored))
+        tooltip_parts.append(f"Config:\n• {config_items}")
     
     if norm_count > 0:
-        norm_list = ", ".join(sorted(normalized_attrs))
-        tooltip_parts.append(f"Normalized: {norm_list}")
+        norm_items = "\n• ".join(sorted(normalized_attrs))
+        tooltip_parts.append(f"Normalized:\n• {norm_items}")
     
-    tooltip_text = " | ".join(tooltip_parts)
+    tooltip_text = "\n\n".join(tooltip_parts)
     
     # Build badge text
     if config_count > 0 and norm_count > 0:
@@ -123,7 +123,7 @@ def _render_ignore_badge(
     else:
         badge_text = f"{config_count} attributes ignored (config)"
     
-    return f'<span class="badge" style="background: #fbbf24; color: #78350f;" title="{html.escape(tooltip_text)}">{badge_text}</span>'
+    return f'<span class="badge" style="background: #fbbf24; color: #78350f;" data-tooltip="{html.escape(tooltip_text)}">{badge_text}</span>'
 
 
 class EnvironmentPlan:
@@ -310,6 +310,7 @@ class ResourceComparison:
         )  # Attribute-level diffs for HTML rendering
         # Normalization config (feature 007)
         self.normalization_config = None
+        self.verbose_normalization = False  # For verbose logging (T058)
 
     def add_environment_config(
         self, env_label: str, config: Optional[Dict], config_raw: Optional[Dict] = None
@@ -362,7 +363,14 @@ class ResourceComparison:
         Skips attributes that are in the ignored_attributes set.
         
         Applies normalization if normalization_config is set (feature 007).
+        Performance measurement included to ensure ≤10% overhead (SC-007).
         """
+        import time  # For performance measurement (T060)
+        
+        start_time = time.perf_counter()
+        normalization_start_time = 0.0
+        normalization_total_time = 0.0
+        
         self.attribute_diffs = []
 
         # Get all non-None configs
@@ -421,6 +429,8 @@ class ResourceComparison:
             
             # Apply normalization if config exists and attribute differs (US1)
             if is_different and self.normalization_config is not None:
+                norm_start = time.perf_counter()
+                
                 from src.lib.normalization_utils import normalize_attribute_value
                 
                 # Normalize all environment values
@@ -428,10 +438,13 @@ class ResourceComparison:
                 for env_label, value in env_values.items():
                     if value is not None:
                         normalized_values[env_label] = normalize_attribute_value(
-                            attr_name, value, self.normalization_config
+                            attr_name, value, self.normalization_config, self.verbose_normalization
                         )
                     else:
                         normalized_values[env_label] = None
+                
+                # Always store normalized values for rendering
+                attr_diff.normalized_values = normalized_values
                 
                 # Check if normalized values are all equal
                 # Get first non-None normalized value as baseline
@@ -450,12 +463,20 @@ class ResourceComparison:
                                 all_normalized_equal = False
                                 break
                 
-                # If all normalized values match, mark as ignored
+                # If all normalized values match, mark as ignored (hide from display)
                 if all_normalized_equal and normalized_baseline is not None:
                     attr_diff.ignored_due_to_normalization = True
-                    attr_diff.normalized_values = normalized_values
+                
+                normalization_total_time += time.perf_counter() - norm_start
             
             self.attribute_diffs.append(attr_diff)
+        
+        # Performance measurement logging (T060 - SC-007)
+        total_time = time.perf_counter() - start_time
+        if self.normalization_config is not None and total_time > 0:
+            overhead_pct = (normalization_total_time / total_time) * 100
+            if self.verbose_normalization:
+                print(f"  [PERF] Normalization overhead: {normalization_total_time:.4f}s / {total_time:.4f}s ({overhead_pct:.1f}%)")
         
         # Update has_differences based on remaining non-normalized differences
         # After normalization filtering, check if any attribute diffs remain
@@ -613,6 +634,7 @@ class MultiEnvReport:
         show_sensitive: bool = False,
         diff_only: bool = False,
         ignore_config: Optional[Dict] = None,
+        verbose_normalization: bool = False,
     ):
         """
         Initialize the multi-environment report.
@@ -622,11 +644,13 @@ class MultiEnvReport:
             show_sensitive: Whether to reveal sensitive values
             diff_only: Whether to filter out identical resources
             ignore_config: Optional ignore configuration dict
+            verbose_normalization: Whether to log normalization transformations (FR-015)
         """
         self.environments = environments
         self.show_sensitive = show_sensitive
         self.diff_only = diff_only
         self.ignore_config = ignore_config
+        self.verbose_normalization = verbose_normalization
         self.resource_comparisons: List[ResourceComparison] = []
         self.summary_stats: Dict[str, int] = {}
         self.ignore_statistics: Dict[str, Any] = {
@@ -659,6 +683,7 @@ class MultiEnvReport:
             # Pass normalization config if available (feature 007)
             if self.ignore_config and "normalization_config" in self.ignore_config:
                 comparison.normalization_config = self.ignore_config["normalization_config"]
+                comparison.verbose_normalization = self.verbose_normalization
 
             # Track which attributes were actually ignored for this resource
             ignored_for_resource: Set[str] = set()
@@ -1156,7 +1181,7 @@ class MultiEnvReport:
         else:
             # Render attribute sections (v2.0 layout)
             for attr_diff in rc.attribute_diffs:
-                # Skip attributes ignored due to normalization (feature 007)
+                # Skip attributes that were normalized and became identical (hide them)
                 if attr_diff.ignored_due_to_normalization:
                     continue
                 
@@ -1203,7 +1228,12 @@ class MultiEnvReport:
 
                 # Value columns for each environment
                 for env_label in env_labels:
-                    value = attr_diff.env_values.get(env_label)
+                    # Use normalized value if normalization was applied, otherwise use original
+                    if attr_diff.normalized_values and env_label in attr_diff.normalized_values:
+                        value = attr_diff.normalized_values.get(env_label)
+                    else:
+                        value = attr_diff.env_values.get(env_label)
+                    
                     value_html = self._render_attribute_value(
                         value, attr_diff, env_labels, env_label
                     )
@@ -1264,12 +1294,15 @@ class MultiEnvReport:
 
             # For different values, apply character-level diff highlighting
             if attr_diff.is_different and attr_diff.attribute_type == "primitive":
+                # Use normalized values for comparison if available, otherwise use original values
+                values_for_comparison = attr_diff.normalized_values if attr_diff.normalized_values else attr_diff.env_values
+                
                 # Get baseline value (first non-None value)
                 baseline_val = None
                 baseline_env = None
                 for env in env_labels:
-                    if attr_diff.env_values.get(env) is not None:
-                        baseline_val = attr_diff.env_values[env]
+                    if values_for_comparison.get(env) is not None:
+                        baseline_val = values_for_comparison[env]
                         baseline_env = env
                         break
 
@@ -1279,7 +1312,7 @@ class MultiEnvReport:
                     other_val = None
                     for env in env_labels:
                         if env != baseline_env:
-                            other_val = attr_diff.env_values.get(env)
+                            other_val = values_for_comparison.get(env)
                             if other_val is not None and other_val != baseline_val:
                                 break
                     
@@ -1304,12 +1337,15 @@ class MultiEnvReport:
         if isinstance(value, (dict, list)):
             # For objects/arrays with differences, apply JSON diff highlighting
             if attr_diff.is_different:
+                # Use normalized values for comparison if available, otherwise use original values
+                values_for_comparison = attr_diff.normalized_values if attr_diff.normalized_values else attr_diff.env_values
+                
                 # Get baseline value
                 baseline_val = None
                 baseline_env = None
                 for env in env_labels:
-                    if attr_diff.env_values.get(env) is not None:
-                        baseline_val = attr_diff.env_values[env]
+                    if values_for_comparison.get(env) is not None:
+                        baseline_val = values_for_comparison[env]
                         baseline_env = env
                         break
                 
@@ -1319,7 +1355,7 @@ class MultiEnvReport:
                     other_val = None
                     for env in env_labels:
                         if env != baseline_env:
-                            other_val = attr_diff.env_values.get(env)
+                            other_val = values_for_comparison.get(env)
                             if other_val is not None and json.dumps(other_val, sort_keys=True) != json.dumps(baseline_val, sort_keys=True):
                                 break
                     
@@ -1406,6 +1442,16 @@ class MultiEnvReport:
             if self.ignore_statistics["normalization_ignored_attributes"] > 0:
                 lines.append(
                     f"Normalized Attributes: {self.ignore_statistics['normalization_ignored_attributes']}"
+                )
+            
+            # Verbose normalization logging indicator (T059)
+            if self.verbose_normalization:
+                lines.append("  (Verbose normalization logging enabled)")
+            
+            # Verbose normalization notice (T059 - FR-015)
+            if self.verbose_normalization:
+                lines.append(
+                    "⚙️  Verbose normalization logging enabled (see transformations above)"
                 )
             
             lines.append(

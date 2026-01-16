@@ -177,18 +177,18 @@ description: "Implementation tasks for normalization-based difference filtering"
 
 **Purpose**: Verbose logging, documentation, and final integration
 
-- [ ] T057 [P] Add --verbose-normalization CLI flag to src/cli/analyze_plan.py (optional flag for debugging)
-- [ ] T058 [P] Implement verbose logging in apply_normalization_patterns() in src/lib/normalization_utils.py (log before/after values when verbose=True, FR-015)
-- [ ] T059 [P] Update generate_text() in src/core/multi_env_comparator.py to output verbose normalization details when flag enabled
-- [ ] T060 [P] Add performance measurement logging to compute_attribute_diffs() in src/core/multi_env_comparator.py (track time spent in normalization, ensure ≤10% overhead, SC-007)
-- [ ] T061 [P] Document load_normalization_config() in docs/function-glossary.md (Constitution Principle I: check glossary before implementation)
-- [ ] T062 [P] Document apply_normalization_patterns() in docs/function-glossary.md
-- [ ] T063 [P] Document normalize_attribute_value() in docs/function-glossary.md
-- [ ] T064 [P] Document badge tooltip CSS in docs/style-guide.md (Constitution Principle I: check style guide before UI changes)
-- [ ] T065 Test verbose logging with --verbose-normalization flag on live data
-- [ ] T066 Run performance benchmarks comparing with/without normalization (must be ≤10% overhead, SC-007)
+- [X] T057 [P] Add --verbose-normalization CLI flag to src/cli/analyze_plan.py (optional flag for debugging)
+- [X] T058 [P] Implement verbose logging in apply_normalization_patterns() in src/lib/normalization_utils.py (log before/after values when verbose=True, FR-015)
+- [X] T059 [P] Update generate_text() in src/core/multi_env_comparator.py to output verbose normalization details when flag enabled
+- [X] T060 [P] Add performance measurement logging to compute_attribute_diffs() in src/core/multi_env_comparator.py (track time spent in normalization, ensure ≤10% overhead, SC-007)
+- [X] T061 [P] Document load_normalization_config() in docs/function-glossary.md (Constitution Principle I: check glossary before implementation)
+- [X] T062 [P] Document apply_normalization_patterns() in docs/function-glossary.md
+- [X] T063 [P] Document normalize_attribute_value() in docs/function-glossary.md
+- [X] T064 [P] Document badge tooltip CSS in docs/style-guide.md (Constitution Principle I: check style guide before UI changes)
+- [X] T065 Test verbose logging with --verbose-normalization flag on live data
+- [X] T066 Run performance benchmarks comparing with/without normalization (must be ≤10% overhead, SC-007)
 - [X] T067 Update README.md with normalization feature section (link to quickstart.md)
-- [ ] T068 Update CHANGELOG.md with feature 007 entry
+- [X] T068 Update CHANGELOG.md with feature 007 entry
 
 **Final Checkpoint**: All user stories complete, documentation updated, performance validated
 

@@ -407,7 +407,82 @@ function toggleSection(header) {
 </span>
 ```
 
-### Pattern 5: Button Styles
+### Pattern 5: Badge with Tooltip (Feature 007)
+
+Badges can display detailed information on hover using HTML `title` attribute and CSS pseudo-elements.
+
+```html
+<!-- Badge with tooltip showing breakdown -->
+<span class="badge" title="Config Ignored: 3&#10;Normalized: 2" 
+      style="background: #e67700; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75em;">
+  5 attributes ignored
+</span>
+```
+
+**CSS Implementation** (from `src/lib/html_generation.py`):
+```css
+/* Make container allow tooltip overflow */
+.resource-change-header {
+  overflow: visible !important;
+}
+
+/* Tooltip trigger */
+.badge[title] {
+  position: relative;
+  cursor: help;  /* Show help cursor on hover */
+}
+
+/* Tooltip content bubble */
+.badge[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: calc(100% + 10px);  /* Position above badge */
+  left: 50%;
+  transform: translateX(-50%);  /* Center horizontally */
+  padding: 8px 12px;
+  background: #1f2937;  /* Dark gray */
+  color: white;
+  font-size: 0.85em;
+  font-weight: normal;
+  border-radius: 6px;
+  white-space: nowrap;  /* Prevent wrapping */
+  z-index: 99999;  /* Always on top */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  pointer-events: none;  /* Don't block clicks */
+}
+
+/* Tooltip arrow pointing down to badge */
+.badge[title]:hover::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #1f2937;  /* Match tooltip background */
+  z-index: 99999;
+  pointer-events: none;
+}
+```
+
+**Usage Guidelines**:
+- Use `&#10;` for line breaks in `title` attribute (renders as newline in tooltip)
+- Keep tooltip text concise (max 3-4 lines)
+- Use for detailed breakdowns (e.g., "Config Ignored: 3" + "Normalized: 2")
+- Default badge cursor changes to `help` to indicate interactivity
+- Tooltip appears 10px above badge with arrow pointing down
+- Dark background (#1f2937) ensures readability against any page color
+
+**Example with Multi-Line Breakdown**:
+```html
+<span class="badge" 
+      title="Ignored Attributes:&#10;  Config: 3 (tags, description, timeouts)&#10;  Normalized: 2 (name, location)"
+      style="background: #e67700; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75em;">
+  5 ignored
+</span>
+```
+
+### Pattern 6: Button Styles
 
 ```html
 <button class="toggle-all" onclick="toggleAllSections()">

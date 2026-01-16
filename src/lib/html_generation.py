@@ -97,13 +97,13 @@ def get_base_css() -> str:
             overflow: visible !important;
         }
         
-        .badge[title] {
+        .badge[data-tooltip] {
             position: relative;
             cursor: help;
         }
         
-        .badge[title]:hover::after {
-            content: attr(title);
+        .badge[data-tooltip]:hover::after {
+            content: attr(data-tooltip);
             position: absolute;
             bottom: calc(100% + 10px);
             left: 50%;
@@ -114,13 +114,14 @@ def get_base_css() -> str:
             font-size: 0.85em;
             font-weight: normal;
             border-radius: 6px;
-            white-space: nowrap;
+            white-space: pre;
+            text-align: left;
             z-index: 99999;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             pointer-events: none;
         }
         
-        .badge[title]:hover::before {
+        .badge[data-tooltip]:hover::before {
             content: '';
             position: absolute;
             bottom: calc(100% + 4px);
