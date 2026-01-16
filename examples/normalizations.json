@@ -1,0 +1,46 @@
+{
+  "name_patterns": [
+    {
+      "pattern": "-(t|test|tst|testing)-",
+      "replacement": "-ENV-",
+      "description": "Normalize test environment markers"
+    },
+    {
+      "pattern": "-(p|prod|prd|production)-",
+      "replacement": "-ENV-",
+      "description": "Normalize production environment markers"
+    },
+    {
+      "pattern": "-(d|dev|development)-",
+      "replacement": "-ENV-",
+      "description": "Normalize dev environment markers"
+    },
+    {
+      "pattern": "-(s|stage|stg|staging)-",
+      "replacement": "-ENV-",
+      "description": "Normalize staging environment markers"
+    },
+    {
+      "pattern": "eastus|centralus|westus|westus2|northeurope|westeurope",
+      "replacement": "REGION",
+      "description": "Normalize Azure region names"
+    }
+  ],
+  "resource_id_patterns": [
+    {
+      "pattern": "/subscriptions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+      "replacement": "/subscriptions/SUBSCRIPTION_ID",
+      "description": "Normalize Azure subscription GUIDs"
+    },
+    {
+      "pattern": "/tenants/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+      "replacement": "/tenants/TENANT_ID",
+      "description": "Normalize Azure tenant GUIDs"
+    },
+    {
+      "pattern": "/resourceGroups/rg-(t|test|tst|p|prod|prd|d|dev|s|stage|stg)-",
+      "replacement": "/resourceGroups/rg-ENV-",
+      "description": "Normalize resource group environment prefixes"
+    }
+  ]
+}
