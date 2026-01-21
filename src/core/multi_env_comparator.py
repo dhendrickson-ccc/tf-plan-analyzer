@@ -44,6 +44,8 @@ class AttributeDiff:
         # Normalization tracking (feature 007)
         self.ignored_due_to_normalization = False
         self.normalized_values: Dict[str, Any] = {}
+        # Raw unmasked values for applying merged sensitive metadata
+        self.env_values_raw: Dict[str, Any] = {}
 
 
 # The diff highlighting functions now use shared utilities from src.lib.diff_utils
@@ -157,6 +159,7 @@ class EnvironmentPlan:
         self.before_values_raw: Dict[str, Dict] = (
             {}
         )  # Store unmasked versions for comparison
+        self.before_sensitive_metadata: Dict[str, Any] = {}  # Store sensitive metadata for cross-env merging
         self.hcl_resolver = None
 
     def load(self) -> None:
@@ -193,6 +196,11 @@ class EnvironmentPlan:
 
                 before_raw = copy.deepcopy(before)
                 self.before_values_raw[address] = before_raw
+
+                # Store sensitive metadata for cross-environment merging
+                change = rc.get("change", {})
+                before_sensitive = change.get("before_sensitive", {})
+                self.before_sensitive_metadata[address] = before_sensitive
 
                 # Handle sensitive values (masks them)
                 before = self._process_sensitive_values(before, rc)
@@ -311,9 +319,11 @@ class ResourceComparison:
         # Normalization config (feature 007)
         self.normalization_config = None
         self.verbose_normalization = False  # For verbose logging (T058)
+        # Merged sensitive metadata from all environments
+        self.merged_sensitive_metadata: Dict[str, Any] = {}
 
     def add_environment_config(
-        self, env_label: str, config: Optional[Dict], config_raw: Optional[Dict] = None
+        self, env_label: str, config: Optional[Dict], config_raw: Optional[Dict] = None, sensitive_metadata: Optional[Dict] = None
     ) -> None:
         """
         Add configuration for an environment.
@@ -322,6 +332,7 @@ class ResourceComparison:
             env_label: Environment label
             config: Configuration dict (possibly with masked sensitive values) or None if resource doesn't exist
             config_raw: Unmasked configuration for comparison purposes
+            sensitive_metadata: Sensitive field metadata from this environment's plan
         """
         self.env_configs[env_label] = config
         self.env_configs_raw[env_label] = (
@@ -329,6 +340,81 @@ class ResourceComparison:
         )
         if config is not None:
             self.is_present_in.add(env_label)
+        
+        # Merge sensitive metadata from this environment
+        if sensitive_metadata:
+            self.merged_sensitive_metadata = self._merge_sensitive_metadata(
+                self.merged_sensitive_metadata, sensitive_metadata
+            )
+
+    def _merge_sensitive_metadata(self, base: Dict[str, Any], new: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Recursively merge sensitive metadata from multiple environments.
+        If ANY environment marks a field as sensitive, the merged result marks it sensitive.
+        
+        Args:
+            base: Base sensitive metadata dict
+            new: New sensitive metadata to merge in
+            
+        Returns:
+            Merged metadata dict with OR logic for sensitive markers
+        """
+        if not new:
+            return base
+        if not base:
+            return new
+            
+        result = {}
+        all_keys = set(base.keys()) | set(new.keys())
+        
+        for key in all_keys:
+            base_val = base.get(key)
+            new_val = new.get(key)
+            
+            # If either is True (sensitive), mark as sensitive
+            if base_val is True or new_val is True:
+                result[key] = True
+            # If both are dicts, recurse
+            elif isinstance(base_val, dict) and isinstance(new_val, dict):
+                result[key] = self._merge_sensitive_metadata(base_val, new_val)
+            # If one is a dict, keep it
+            elif isinstance(base_val, dict):
+                result[key] = base_val
+            elif isinstance(new_val, dict):
+                result[key] = new_val
+            # Otherwise take the new value
+            else:
+                result[key] = new_val or base_val
+                
+        return result
+
+    def _mask_sensitive_value(self, value: Any, sensitive: Any) -> Any:
+        """
+        Recursively mask sensitive values based on merged metadata.
+        
+        Args:
+            value: The value to potentially mask
+            sensitive: Sensitive metadata (True, dict, or False)
+            
+        Returns:
+            Masked value or original value
+        """
+        if sensitive is True:
+            return "[SENSITIVE]"
+        elif isinstance(sensitive, dict) and isinstance(value, dict):
+            # Recursively mask nested values
+            result = {}
+            for key, val in value.items():
+                if key in sensitive:
+                    result[key] = self._mask_sensitive_value(val, sensitive[key])
+                else:
+                    result[key] = val
+            return result
+        elif isinstance(sensitive, list) and isinstance(value, list):
+            # For lists, apply to all elements if sensitive is True, or per-element
+            return [self._mask_sensitive_value(v, sensitive[0] if sensitive else False) for v in value]
+        else:
+            return value
 
     def detect_differences(self) -> None:
         """Detect if configurations differ across environments using RAW unmasked values."""
@@ -394,12 +480,15 @@ class ResourceComparison:
         # Build AttributeDiff for each attribute
         for attr_name in sorted(all_attributes):
             env_values: Dict[str, Any] = {}
+            env_values_raw: Dict[str, Any] = {}
             baseline_value = None
             is_different = False
 
-            # Collect values from each environment
+            # Collect values from each environment (both masked and raw)
             for env_label in env_labels:
                 config = self.env_configs.get(env_label)
+                config_raw = self.env_configs_raw.get(env_label)
+                
                 if config is not None and isinstance(config, dict):
                     value = config.get(attr_name, None)
                     env_values[env_label] = value
@@ -415,6 +504,13 @@ class ResourceComparison:
                             is_different = True
                 else:
                     env_values[env_label] = None
+                
+                # Also collect raw unmasked values
+                if config_raw is not None and isinstance(config_raw, dict):
+                    value_raw = config_raw.get(attr_name, None)
+                    env_values_raw[env_label] = value_raw
+                else:
+                    env_values_raw[env_label] = None
 
             # Determine attribute type
             attr_type = "primitive"
@@ -426,6 +522,8 @@ class ResourceComparison:
 
             # Create AttributeDiff
             attr_diff = AttributeDiff(attr_name, env_values, is_different, attr_type)
+            # Store raw unmasked values for applying merged sensitive metadata
+            attr_diff.env_values_raw = env_values_raw
             
             # Apply normalization if config exists and attribute differs (US1)
             if is_different and self.normalization_config is not None:
@@ -692,6 +790,7 @@ class MultiEnvReport:
             for env in self.environments:
                 config = env.before_values.get(address)
                 config_raw = env.before_values_raw.get(address)
+                sensitive_metadata = env.before_sensitive_metadata.get(address)
 
                 # Apply ignore filtering if config exists
                 if config is not None and self.ignore_config:
@@ -711,7 +810,7 @@ class MultiEnvReport:
                         config_raw, self.ignore_config, resource_type
                     )
 
-                comparison.add_environment_config(env.label, config, config_raw)
+                comparison.add_environment_config(env.label, config, config_raw, sensitive_metadata)
 
             # Store ignored attributes for this resource
             comparison.ignored_attributes = ignored_for_resource
@@ -1228,11 +1327,19 @@ class MultiEnvReport:
 
                 # Value columns for each environment
                 for env_label in env_labels:
-                    # Use normalized value if normalization was applied, otherwise use original
+                    # Start with raw unmasked value, then apply normalization if available, then merged masking
                     if attr_diff.normalized_values and env_label in attr_diff.normalized_values:
+                        # Use normalized value
                         value = attr_diff.normalized_values.get(env_label)
                     else:
-                        value = attr_diff.env_values.get(env_label)
+                        # Use raw unmasked value
+                        value = attr_diff.env_values_raw.get(env_label)
+                    
+                    # Apply merged sensitive masking to ensure consistency across environments
+                    if value is not None and rc.merged_sensitive_metadata:
+                        attr_sensitive = rc.merged_sensitive_metadata.get(attr_diff.attribute_name)
+                        if attr_sensitive:
+                            value = rc._mask_sensitive_value(value, attr_sensitive)
                     
                     value_html = self._render_attribute_value(
                         value, attr_diff, env_labels, env_label
@@ -1370,9 +1477,6 @@ class MultiEnvReport:
             
             # No differences - show plain JSON
             value_json = json.dumps(value, indent=2, sort_keys=True)
-            # Truncate if too long
-            if len(value_json) > 500:
-                value_json = value_json[:500] + "\n  ...(truncated)...\n}"
             return f'<pre style="margin: 0; font-size: 0.85em;">{html.escape(value_json)}</pre>'
 
         # Fallback
