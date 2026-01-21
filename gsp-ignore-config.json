@@ -1,0 +1,18 @@
+{
+  "normalization_config_path": "examples/normalizations.json",
+  "global_ignores": [
+    "tags",
+    "timeouts"
+  ],
+  "resource_ignores": {
+    "azurerm_storage_account": [
+      "primary_access_key",
+      "secondary_access_key",
+      "primary_connection_string",
+      "secondary_connection_string"
+    ],
+    "azurerm_key_vault": [
+      "access_policy"
+    ]
+  }
+}

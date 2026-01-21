@@ -1,0 +1,176 @@
+{
+  "name_patterns": [
+    {
+      "pattern": "/subscriptions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+      "replacement": "/subscriptions/SUBSCRIPTION_ID",
+      "description": "Normalize Azure subscription GUIDs in any attribute"
+    },
+    {
+      "pattern": "gspiot-adx(cl)?-",
+      "replacement": "gspiot-adx-",
+      "description": "ADX cluster name variations (adx vs adxcl)"
+    },
+    {
+      "pattern": "(gsp\\w+?)(dev|stage|test|prod)(\\.promega\\.com)$",
+      "replacement": "\\1ENV\\3",
+      "description": "Hostname bindings with environment prefix (e.g., gspadminstage, gspadmintest, gspadmindev)"
+    },
+    {
+      "pattern": "\\(gspiot-[^)]*-[dstpb]-use2-[a-z]?\\d{2}\\)",
+      "replacement": "(WORKSPACE)",
+      "description": "Operations Management solutions (SecurityCenterFree, SecurityInsights, etc.) - standard naming"
+    },
+    {
+      "pattern": "\\(gspiot-opewor-[a-z0-9]{4}\\)",
+      "replacement": "(WORKSPACE)",
+      "description": "Operations Management solutions with opewor workspace pattern (e.g., gspiot-opewor-shqd)"
+    },
+    {
+      "pattern": "^gspiot-opewor-[a-z0-9]{4}$",
+      "replacement": "gspiot-WORKSPACE",
+      "description": "Log Analytics workspace with random suffix (gspiot-opewor-XXXX)"
+    },
+    {
+      "pattern": "(\\.windows\\.net)/[a-z0-9]{10,}$",
+      "replacement": "\\1/LINK_ID",
+      "description": "Private DNS zone virtual network link random suffix"
+    },
+    {
+      "pattern": "^[a-z0-9-]+-promega-com$",
+      "replacement": "ENV-promega-com",
+      "description": "Certificate domains with any environment prefix (e.g., gspdev-promega-com, prnect-promega-com)"
+    },
+    {
+      "pattern": "/staging$",
+      "replacement": "/SLOT",
+      "description": "Web app slot names (e.g., /staging)"
+    },
+    {
+      "pattern": "(gspiot-[\\w-]+)-([dstpb])(-use2-[a-z]?\\d{2})\\.azurewebsites\\.net",
+      "replacement": "\\1-ENV\\3.azurewebsites.net",
+      "description": "Normalize Azure App Service FQDNs with environment codes"
+    },
+    {
+      "pattern": "-([dstpb])-use2",
+      "replacement": "-ENV-use2",
+      "description": "Environment code in resource names (e.g., -d-, -s-, -t-, -p-)"
+    },
+    {
+      "pattern": "sa[dstpb]use2\\d{2}",
+      "replacement": "saENVuse2NUM",
+      "description": "Storage account env patterns"
+    },
+    {
+      "pattern": "(gspiot\\w+?)(bn[a-z]{2}|va[a-z]{2}|lr[a-z]{2}|sh[a-z]{2})($|-)",
+      "replacement": "\\1SUFFIX\\3",
+      "description": "Storage suffixes (bnst, vapr, lrXX, shXX) - includes prod vapr pattern"
+    },
+    {
+      "pattern": "(gspiot\\w+)lr([dstpb])e$",
+      "replacement": "\\1lrENVe",
+      "description": "Storage accounts with embedded env code (e.g., gspiotgenerallrde, gspiotgenerallrse)"
+    },
+    {
+      "pattern": "-Autoscale-\\d+$",
+      "replacement": "-AUTOSCALE",
+      "description": "Autoscale suffix pattern (e.g., -Autoscale-729)"
+    },
+    {
+      "pattern": "-insaut-",
+      "replacement": "-AUTOSCALE-",
+      "description": "Autoscale infix pattern (e.g., -insaut-)"
+    },
+    {
+      "pattern": "-[a-z]?\\d{2}($|/)",
+      "replacement": "-NUM\\1",
+      "description": "Numeric suffix at end or before slash"
+    },
+    {
+      "pattern": "(-ENV-use2)($|/)",
+      "replacement": "\\1-NUM\\2",
+      "description": "Missing numeric suffix after env-region"
+    },
+    {
+      "pattern": "-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}($|/)",
+      "replacement": "-GUID\\1",
+      "description": "GUID suffix"
+    },
+    {
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "replacement": "GUID",
+      "description": "Pure GUID names"
+    },
+    {
+      "pattern": "^gsp(dev|stage|test|prod)",
+      "replacement": "gspENV",
+      "description": "Certificate names starting with gsp prefix"
+    },
+    {
+      "pattern": "gspiot-(int|inst)iotappstrfc",
+      "replacement": "gspiot-PREFIXiotappstrfc",
+      "description": "Traffic manager profiles"
+    },
+    {
+      "pattern": "-instrfcweb-",
+      "replacement": "-insweb-",
+      "description": "Insights web test naming variations (instrfcweb -> insweb)"
+    },
+    {
+      "pattern": "-instftcmet-",
+      "replacement": "-insmet-",
+      "description": "Insights metric alert naming variation (instftcmet -> insmet)"
+    },
+    {
+      "pattern": "-instrfcmet-",
+      "replacement": "-insmet-",
+      "description": "Insights metric alert naming variations (instrfcmet -> insmet)"
+    },
+    {
+      "pattern": "-insactpr-",
+      "replacement": "-insact-",
+      "description": "Insights activity provider variations"
+    },
+    {
+      "pattern": "-insactys-",
+      "replacement": "-insact-",
+      "description": "Insights activity system variations"
+    }
+  ],
+  "resource_id_patterns": [
+    {
+      "pattern": "/subscriptions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+      "replacement": "/subscriptions/SUBSCRIPTION_ID",
+      "description": "Normalize Azure subscription GUIDs"
+    },
+    {
+      "pattern": "/resourceGroups/([^/]+)-([dstpb])-",
+      "replacement": "/resourceGroups/\\1-ENV-",
+      "description": "Normalize environment code in resource group names"
+    },
+    {
+      "pattern": "-([dstpb])-use2-[a-z]?\\d{2}($|/)",
+      "replacement": "-ENV-use2-NUM\\2",
+      "description": "Normalize environment code and numeric suffix in resource IDs"
+    },
+    {
+      "pattern": "(gspiot\\w+)(bn[a-z]{2}|va[a-z]{2}|lr[a-z]{2}|sh[a-z]{2})",
+      "replacement": "\\1SUFFIX",
+      "description": "Normalize storage suffixes in resource IDs"
+    },
+    {
+      "pattern": "https://([^/]+)(bn[a-z]{2}|va[a-z]{2}|lr[a-z]{2}|sh[a-z]{2})\\.([a-z]+)\\.core\\.windows\\.net",
+      "replacement": "https://\\1SUFFIX.\\3.core.windows.net",
+      "description": "Normalize storage URLs with environment-specific suffixes"
+    },
+    {
+      "pattern": "https://(gspiot-[\\w-]+)-([dstpb])(-[\\w-]+)\\.vault\\.azure\\.net",
+      "replacement": "https://\\1-ENV\\3.vault.azure.net",
+      "description": "Normalize Key Vault URLs with environment codes"
+    },
+    {
+      "pattern": "([a-z0-9-]+)(dev|stage|test|prod)\\.promega\\.com",
+      "replacement": "\\1ENV.promega.com",
+      "description": "Normalize hostname domains with environment names"
+    }
+  ]
+}

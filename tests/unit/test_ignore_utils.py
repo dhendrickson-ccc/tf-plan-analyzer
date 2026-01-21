@@ -38,9 +38,10 @@ class TestLoadIgnoreConfig:
 
         result = load_ignore_config(config_file)
 
-        assert result == config_data
         assert "global_ignores" in result
         assert "resource_ignores" in result
+        assert "normalization_config" in result
+        assert result["normalization_config"] is None  # No normalization path specified
 
     def test_valid_json_list_format(self, tmp_path):
         """Test loading config with list format for ignores."""
@@ -53,8 +54,8 @@ class TestLoadIgnoreConfig:
 
         result = load_ignore_config(config_file)
 
-        assert result == config_data
         assert isinstance(result["global_ignores"], list)
+        assert result["normalization_config"] is None  # No normalization path specified
 
     def test_empty_config(self, tmp_path):
         """Test loading empty but valid JSON config."""
@@ -63,7 +64,8 @@ class TestLoadIgnoreConfig:
 
         result = load_ignore_config(config_file)
 
-        assert result == {}
+        assert "normalization_config" in result
+        assert result["normalization_config"] is None
 
     def test_file_not_found(self):
         """Test that FileNotFoundError is raised for missing file."""
@@ -124,6 +126,120 @@ class TestLoadIgnoreConfig:
             load_ignore_config(config_file)
 
         assert "must be a dict or list" in str(exc_info.value)
+
+    def test_load_with_normalization_config_path_absolute(self, tmp_path):
+        """Test loading ignore config with absolute path to normalization config."""
+        # Create normalization config
+        norm_config_file = tmp_path / "normalizations.json"
+        norm_config_data = {
+            "name_patterns": [
+                {"pattern": "-(dev|test)-", "replacement": "-ENV-"}
+            ],
+            "resource_id_patterns": []
+        }
+        norm_config_file.write_text(json.dumps(norm_config_data))
+
+        # Create ignore config with absolute path
+        ignore_config_file = tmp_path / "ignore_config.json"
+        ignore_config_data = {
+            "global_ignores": ["tags"],
+            "normalization_config_path": str(norm_config_file)
+        }
+        ignore_config_file.write_text(json.dumps(ignore_config_data))
+
+        result = load_ignore_config(ignore_config_file)
+
+        assert "normalization_config" in result
+        assert result["normalization_config"] is not None
+        assert len(result["normalization_config"].name_patterns) == 1
+        assert result["normalization_config"].name_patterns[0].replacement == "-ENV-"
+
+    def test_load_with_normalization_config_path_relative(self, tmp_path):
+        """Test loading ignore config with relative path to normalization config."""
+        # Create normalization config in same directory
+        norm_config_file = tmp_path / "normalizations.json"
+        norm_config_data = {
+            "name_patterns": [
+                {"pattern": "-(prod|p)-", "replacement": "-ENV-"}
+            ],
+            "resource_id_patterns": []
+        }
+        norm_config_file.write_text(json.dumps(norm_config_data))
+
+        # Create ignore config with relative path
+        ignore_config_file = tmp_path / "ignore_config.json"
+        ignore_config_data = {
+            "global_ignores": [],
+            "normalization_config_path": "normalizations.json"  # relative path
+        }
+        ignore_config_file.write_text(json.dumps(ignore_config_data))
+
+        result = load_ignore_config(ignore_config_file)
+
+        assert "normalization_config" in result
+        assert result["normalization_config"] is not None
+        assert len(result["normalization_config"].name_patterns) == 1
+
+    def test_load_without_normalization_config_path(self, tmp_path):
+        """Test loading ignore config without normalization_config_path field."""
+        ignore_config_file = tmp_path / "ignore_config.json"
+        ignore_config_data = {"global_ignores": ["tags"]}
+        ignore_config_file.write_text(json.dumps(ignore_config_data))
+
+        result = load_ignore_config(ignore_config_file)
+
+        assert "normalization_config" in result
+        assert result["normalization_config"] is None
+
+    def test_load_with_empty_normalization_config_path(self, tmp_path):
+        """Test loading ignore config with empty normalization_config_path."""
+        ignore_config_file = tmp_path / "ignore_config.json"
+        ignore_config_data = {
+            "global_ignores": [],
+            "normalization_config_path": ""  # empty string
+        }
+        ignore_config_file.write_text(json.dumps(ignore_config_data))
+
+        result = load_ignore_config(ignore_config_file)
+
+        assert "normalization_config" in result
+        assert result["normalization_config"] is None
+
+    def test_load_with_invalid_normalization_config_path(self, tmp_path):
+        """Test that error is raised when normalization config file doesn't exist."""
+        ignore_config_file = tmp_path / "ignore_config.json"
+        ignore_config_data = {
+            "global_ignores": [],
+            "normalization_config_path": "nonexistent.json"
+        }
+        ignore_config_file.write_text(json.dumps(ignore_config_data))
+
+        with pytest.raises(Exception) as exc_info:
+            load_ignore_config(ignore_config_file)
+
+        # Should include context about where the path came from
+        assert "Normalization path:" in str(exc_info.value) or "not found" in str(exc_info.value).lower()
+
+    def test_load_with_malformed_normalization_config(self, tmp_path):
+        """Test that error is raised when normalization config is invalid."""
+        # Create malformed normalization config
+        norm_config_file = tmp_path / "normalizations.json"
+        norm_config_file.write_text("{invalid json")
+
+        # Create ignore config pointing to malformed file
+        ignore_config_file = tmp_path / "ignore_config.json"
+        ignore_config_data = {
+            "global_ignores": [],
+            "normalization_config_path": str(norm_config_file)
+        }
+        ignore_config_file.write_text(json.dumps(ignore_config_data))
+
+        with pytest.raises(json.JSONDecodeError) as exc_info:
+            load_ignore_config(ignore_config_file)
+
+        # Should include context about the error
+        error_msg = str(exc_info.value)
+        assert "normalization" in error_msg.lower()
 
 
 class TestApplyIgnoreConfig:

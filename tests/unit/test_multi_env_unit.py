@@ -226,3 +226,80 @@ class TestMultiEnvReport:
         assert "Multi-Environment Terraform Comparison Report" in html_content
         assert "dev" in html_content
         assert "staging" in html_content
+
+
+class TestIgnoreCounts:
+    """Unit tests for US3 - Combined Normalization Ignore Tracking."""
+
+    def test_calculate_ignore_counts_both_types(self):
+        """Test calculating separate counts for config and normalization ignores."""
+        from src.core.multi_env_comparator import _calculate_ignore_counts, AttributeDiff
+        
+        # Create attribute diffs with mixed ignore types
+        attr_diffs = [
+            AttributeDiff("name", {"env1": "value1"}, True, "string"),  # Different, not ignored
+            AttributeDiff("tags", {"env1": "value1"}, False, "object"),  # Not different
+        ]
+        
+        # Manually set up ignored attributes
+        # Simulating 2 config-ignored, 3 normalization-ignored
+        config_ignored = {"timeout", "user_data"}
+        
+        # Add normalization-ignored attributes
+        norm_diff1 = AttributeDiff("subscription_id", {"env1": "abc", "env2": "xyz"}, True, "string")
+        norm_diff1.ignored_due_to_normalization = True
+        norm_diff2 = AttributeDiff("tenant_id", {"env1": "123", "env2": "456"}, True, "string")
+        norm_diff2.ignored_due_to_normalization = True
+        norm_diff3 = AttributeDiff("resource_group_id", {"env1": "rg1", "env2": "rg2"}, True, "string")
+        norm_diff3.ignored_due_to_normalization = True
+        
+        attr_diffs.extend([norm_diff1, norm_diff2, norm_diff3])
+        
+        config_count, norm_count = _calculate_ignore_counts(config_ignored, attr_diffs)
+        
+        assert config_count == 2, "Should count 2 config-ignored attributes"
+        assert norm_count == 3, "Should count 3 normalization-ignored attributes"
+
+    def test_calculate_ignore_counts_only_normalization(self):
+        """Test calculating counts with only normalization ignores."""
+        from src.core.multi_env_comparator import _calculate_ignore_counts, AttributeDiff
+        
+        attr_diffs = []
+        norm_diff1 = AttributeDiff("subscription_id", {"env1": "abc"}, True, "string")
+        norm_diff1.ignored_due_to_normalization = True
+        attr_diffs.append(norm_diff1)
+        
+        config_ignored = set()  # No config ignores
+        
+        config_count, norm_count = _calculate_ignore_counts(config_ignored, attr_diffs)
+        
+        assert config_count == 0, "Should have no config ignores"
+        assert norm_count == 1, "Should count 1 normalization ignore"
+
+    def test_render_ignore_badge_both_types(self):
+        """Test badge rendering with both ignore types."""
+        from src.core.multi_env_comparator import _render_ignore_badge
+        
+        config_ignored = {"tags", "timeout"}
+        normalized_attrs = ["subscription_id", "tenant_id"]
+        
+        badge_html = _render_ignore_badge(2, 2, config_ignored, normalized_attrs)
+        
+        assert "4 attributes ignored" in badge_html, "Should show total count"
+        assert "2 config" in badge_html, "Should show config count"
+        assert "2 normalized" in badge_html, "Should show normalized count"
+        assert "tags" in badge_html, "Should list config-ignored attributes in tooltip"
+        assert "subscription_id" in badge_html, "Should list normalized attributes in tooltip"
+
+    def test_render_ignore_badge_only_normalization(self):
+        """Test badge rendering with only normalization ignores."""
+        from src.core.multi_env_comparator import _render_ignore_badge
+        
+        config_ignored = set()
+        normalized_attrs = ["subscription_id", "tenant_id"]
+        
+        badge_html = _render_ignore_badge(0, 2, config_ignored, normalized_attrs)
+        
+        assert "2 attributes ignored" in badge_html or "2 normalized" in badge_html, "Should show normalized count"
+        assert "subscription_id" in badge_html, "Should list normalized attributes"
+        assert "tenant_id" in badge_html, "Should list normalized attributes"

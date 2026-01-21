@@ -41,6 +41,11 @@ class AttributeDiff:
         self.env_values = env_values
         self.is_different = is_different
         self.attribute_type = attribute_type
+        # Normalization tracking (feature 007)
+        self.ignored_due_to_normalization = False
+        self.normalized_values: Dict[str, Any] = {}
+        # Raw unmasked values for applying merged sensitive metadata
+        self.env_values_raw: Dict[str, Any] = {}
 
 
 # The diff highlighting functions now use shared utilities from src.lib.diff_utils
@@ -53,6 +58,74 @@ def _highlight_char_diff(before_str: str, after_str: str, is_baseline: bool = Tr
 def _highlight_json_diff(before: Any, after: Any, is_baseline: bool = True) -> Tuple[str, str]:
     """Wrapper for shared highlight_json_diff utility with baseline comparison styling."""
     return highlight_json_diff(before, after, is_known_after_apply=False, is_baseline_comparison=is_baseline)
+
+
+def _calculate_ignore_counts(
+    config_ignored: Set[str], attr_diffs: List[AttributeDiff]
+) -> Tuple[int, int]:
+    """
+    Calculate separate counts for config-ignored and normalization-ignored attributes.
+    
+    Args:
+        config_ignored: Set of attribute names ignored via config
+        attr_diffs: List of attribute diffs
+        
+    Returns:
+        Tuple of (config_count, normalization_count)
+    """
+    config_count = len(config_ignored)
+    
+    # Count attributes ignored due to normalization
+    norm_count = sum(1 for diff in attr_diffs if diff.ignored_due_to_normalization)
+    
+    return config_count, norm_count
+
+
+def _render_ignore_badge(
+    config_count: int,
+    norm_count: int,
+    config_ignored: Set[str],
+    normalized_attrs: List[str]
+) -> str:
+    """
+    Render the ignore badge with separate counts and tooltip breakdown.
+    
+    Args:
+        config_count: Number of config-ignored attributes
+        norm_count: Number of normalization-ignored attributes
+        config_ignored: Set of config-ignored attribute names
+        normalized_attrs: List of normalization-ignored attribute names
+        
+    Returns:
+        HTML string for the badge
+    """
+    total_count = config_count + norm_count
+    
+    if total_count == 0:
+        return ""
+    
+    # Build tooltip content with sections (using newlines for better readability)
+    tooltip_parts = []
+    
+    if config_count > 0:
+        config_items = "\n• ".join(sorted(config_ignored))
+        tooltip_parts.append(f"Config:\n• {config_items}")
+    
+    if norm_count > 0:
+        norm_items = "\n• ".join(sorted(normalized_attrs))
+        tooltip_parts.append(f"Normalized:\n• {norm_items}")
+    
+    tooltip_text = "\n\n".join(tooltip_parts)
+    
+    # Build badge text
+    if config_count > 0 and norm_count > 0:
+        badge_text = f"{total_count} attributes ignored ({config_count} config, {norm_count} normalized)"
+    elif norm_count > 0:
+        badge_text = f"{norm_count} attributes ignored (normalized)"
+    else:
+        badge_text = f"{config_count} attributes ignored (config)"
+    
+    return f'<span class="badge" style="background: #fbbf24; color: #78350f;" data-tooltip="{html.escape(tooltip_text)}">{badge_text}</span>'
 
 
 class EnvironmentPlan:
@@ -86,6 +159,7 @@ class EnvironmentPlan:
         self.before_values_raw: Dict[str, Dict] = (
             {}
         )  # Store unmasked versions for comparison
+        self.before_sensitive_metadata: Dict[str, Any] = {}  # Store sensitive metadata for cross-env merging
         self.hcl_resolver = None
 
     def load(self) -> None:
@@ -122,6 +196,11 @@ class EnvironmentPlan:
 
                 before_raw = copy.deepcopy(before)
                 self.before_values_raw[address] = before_raw
+
+                # Store sensitive metadata for cross-environment merging
+                change = rc.get("change", {})
+                before_sensitive = change.get("before_sensitive", {})
+                self.before_sensitive_metadata[address] = before_sensitive
 
                 # Handle sensitive values (masks them)
                 before = self._process_sensitive_values(before, rc)
@@ -237,9 +316,14 @@ class ResourceComparison:
         self.attribute_diffs: List[AttributeDiff] = (
             []
         )  # Attribute-level diffs for HTML rendering
+        # Normalization config (feature 007)
+        self.normalization_config = None
+        self.verbose_normalization = False  # For verbose logging (T058)
+        # Merged sensitive metadata from all environments
+        self.merged_sensitive_metadata: Dict[str, Any] = {}
 
     def add_environment_config(
-        self, env_label: str, config: Optional[Dict], config_raw: Optional[Dict] = None
+        self, env_label: str, config: Optional[Dict], config_raw: Optional[Dict] = None, sensitive_metadata: Optional[Dict] = None
     ) -> None:
         """
         Add configuration for an environment.
@@ -248,6 +332,7 @@ class ResourceComparison:
             env_label: Environment label
             config: Configuration dict (possibly with masked sensitive values) or None if resource doesn't exist
             config_raw: Unmasked configuration for comparison purposes
+            sensitive_metadata: Sensitive field metadata from this environment's plan
         """
         self.env_configs[env_label] = config
         self.env_configs_raw[env_label] = (
@@ -255,6 +340,81 @@ class ResourceComparison:
         )
         if config is not None:
             self.is_present_in.add(env_label)
+        
+        # Merge sensitive metadata from this environment
+        if sensitive_metadata:
+            self.merged_sensitive_metadata = self._merge_sensitive_metadata(
+                self.merged_sensitive_metadata, sensitive_metadata
+            )
+
+    def _merge_sensitive_metadata(self, base: Dict[str, Any], new: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Recursively merge sensitive metadata from multiple environments.
+        If ANY environment marks a field as sensitive, the merged result marks it sensitive.
+        
+        Args:
+            base: Base sensitive metadata dict
+            new: New sensitive metadata to merge in
+            
+        Returns:
+            Merged metadata dict with OR logic for sensitive markers
+        """
+        if not new:
+            return base
+        if not base:
+            return new
+            
+        result = {}
+        all_keys = set(base.keys()) | set(new.keys())
+        
+        for key in all_keys:
+            base_val = base.get(key)
+            new_val = new.get(key)
+            
+            # If either is True (sensitive), mark as sensitive
+            if base_val is True or new_val is True:
+                result[key] = True
+            # If both are dicts, recurse
+            elif isinstance(base_val, dict) and isinstance(new_val, dict):
+                result[key] = self._merge_sensitive_metadata(base_val, new_val)
+            # If one is a dict, keep it
+            elif isinstance(base_val, dict):
+                result[key] = base_val
+            elif isinstance(new_val, dict):
+                result[key] = new_val
+            # Otherwise take the new value
+            else:
+                result[key] = new_val or base_val
+                
+        return result
+
+    def _mask_sensitive_value(self, value: Any, sensitive: Any) -> Any:
+        """
+        Recursively mask sensitive values based on merged metadata.
+        
+        Args:
+            value: The value to potentially mask
+            sensitive: Sensitive metadata (True, dict, or False)
+            
+        Returns:
+            Masked value or original value
+        """
+        if sensitive is True:
+            return "[SENSITIVE]"
+        elif isinstance(sensitive, dict) and isinstance(value, dict):
+            # Recursively mask nested values
+            result = {}
+            for key, val in value.items():
+                if key in sensitive:
+                    result[key] = self._mask_sensitive_value(val, sensitive[key])
+                else:
+                    result[key] = val
+            return result
+        elif isinstance(sensitive, list) and isinstance(value, list):
+            # For lists, apply to all elements if sensitive is True, or per-element
+            return [self._mask_sensitive_value(v, sensitive[0] if sensitive else False) for v in value]
+        else:
+            return value
 
     def detect_differences(self) -> None:
         """Detect if configurations differ across environments using RAW unmasked values."""
@@ -287,7 +447,16 @@ class ResourceComparison:
         Extracts top-level attributes from each environment's config and
         creates AttributeDiff objects that can be rendered as table rows.
         Skips attributes that are in the ignored_attributes set.
+        
+        Applies normalization if normalization_config is set (feature 007).
+        Performance measurement included to ensure ≤10% overhead (SC-007).
         """
+        import time  # For performance measurement (T060)
+        
+        start_time = time.perf_counter()
+        normalization_start_time = 0.0
+        normalization_total_time = 0.0
+        
         self.attribute_diffs = []
 
         # Get all non-None configs
@@ -311,12 +480,15 @@ class ResourceComparison:
         # Build AttributeDiff for each attribute
         for attr_name in sorted(all_attributes):
             env_values: Dict[str, Any] = {}
+            env_values_raw: Dict[str, Any] = {}
             baseline_value = None
             is_different = False
 
-            # Collect values from each environment
+            # Collect values from each environment (both masked and raw)
             for env_label in env_labels:
                 config = self.env_configs.get(env_label)
+                config_raw = self.env_configs_raw.get(env_label)
+                
                 if config is not None and isinstance(config, dict):
                     value = config.get(attr_name, None)
                     env_values[env_label] = value
@@ -332,6 +504,13 @@ class ResourceComparison:
                             is_different = True
                 else:
                     env_values[env_label] = None
+                
+                # Also collect raw unmasked values
+                if config_raw is not None and isinstance(config_raw, dict):
+                    value_raw = config_raw.get(attr_name, None)
+                    env_values_raw[env_label] = value_raw
+                else:
+                    env_values_raw[env_label] = None
 
             # Determine attribute type
             attr_type = "primitive"
@@ -343,7 +522,72 @@ class ResourceComparison:
 
             # Create AttributeDiff
             attr_diff = AttributeDiff(attr_name, env_values, is_different, attr_type)
+            # Store raw unmasked values for applying merged sensitive metadata
+            attr_diff.env_values_raw = env_values_raw
+            
+            # Apply normalization if config exists and attribute differs (US1)
+            if is_different and self.normalization_config is not None:
+                norm_start = time.perf_counter()
+                
+                from src.lib.normalization_utils import normalize_attribute_value
+                
+                # Normalize all environment values
+                normalized_values = {}
+                for env_label, value in env_values.items():
+                    if value is not None:
+                        normalized_values[env_label] = normalize_attribute_value(
+                            attr_name, value, self.normalization_config, self.verbose_normalization
+                        )
+                    else:
+                        normalized_values[env_label] = None
+                
+                # Always store normalized values for rendering
+                attr_diff.normalized_values = normalized_values
+                
+                # Check if normalized values are all equal
+                # Get first non-None normalized value as baseline
+                normalized_baseline = None
+                all_normalized_equal = True
+                
+                for norm_value in normalized_values.values():
+                    if norm_value is not None:
+                        if normalized_baseline is None:
+                            normalized_baseline = norm_value
+                        else:
+                            # Compare normalized values
+                            if json.dumps(norm_value, sort_keys=True) != json.dumps(
+                                normalized_baseline, sort_keys=True
+                            ):
+                                all_normalized_equal = False
+                                break
+                
+                # If all normalized values match, mark as ignored (hide from display)
+                if all_normalized_equal and normalized_baseline is not None:
+                    attr_diff.ignored_due_to_normalization = True
+                
+                normalization_total_time += time.perf_counter() - norm_start
+            
             self.attribute_diffs.append(attr_diff)
+        
+        # Performance measurement logging (T060 - SC-007)
+        total_time = time.perf_counter() - start_time
+        if self.normalization_config is not None and total_time > 0:
+            overhead_pct = (normalization_total_time / total_time) * 100
+            if self.verbose_normalization:
+                print(f"  [PERF] Normalization overhead: {normalization_total_time:.4f}s / {total_time:.4f}s ({overhead_pct:.1f}%)")
+        
+        # Update has_differences based on remaining non-normalized differences
+        # After normalization filtering, check if any attribute diffs remain
+        has_any_unignored_diff = any(
+            diff.is_different and not diff.ignored_due_to_normalization
+            for diff in self.attribute_diffs
+        )
+        
+        # If all differences were normalized away, update has_differences
+        if not has_any_unignored_diff and self.has_differences:
+            # Only update if we actually had normalization applied
+            if any(diff.ignored_due_to_normalization for diff in self.attribute_diffs):
+                self.has_differences = False
 
     def mark_changed_sensitive_values(self) -> None:
         """
@@ -488,6 +732,7 @@ class MultiEnvReport:
         show_sensitive: bool = False,
         diff_only: bool = False,
         ignore_config: Optional[Dict] = None,
+        verbose_normalization: bool = False,
     ):
         """
         Initialize the multi-environment report.
@@ -497,15 +742,18 @@ class MultiEnvReport:
             show_sensitive: Whether to reveal sensitive values
             diff_only: Whether to filter out identical resources
             ignore_config: Optional ignore configuration dict
+            verbose_normalization: Whether to log normalization transformations (FR-015)
         """
         self.environments = environments
         self.show_sensitive = show_sensitive
         self.diff_only = diff_only
         self.ignore_config = ignore_config
+        self.verbose_normalization = verbose_normalization
         self.resource_comparisons: List[ResourceComparison] = []
         self.summary_stats: Dict[str, int] = {}
         self.ignore_statistics: Dict[str, Any] = {
             "total_ignored_attributes": 0,
+            "normalization_ignored_attributes": 0,  # Feature 007 US3
             "resources_with_ignores": 0,
             "all_changes_ignored": 0,
             "ignore_breakdown": {},  # Map attribute name -> count
@@ -529,6 +777,11 @@ class MultiEnvReport:
             resource_type = address.split(".")[0] if "." in address else address
 
             comparison = ResourceComparison(address, resource_type)
+            
+            # Pass normalization config if available (feature 007)
+            if self.ignore_config and "normalization_config" in self.ignore_config:
+                comparison.normalization_config = self.ignore_config["normalization_config"]
+                comparison.verbose_normalization = self.verbose_normalization
 
             # Track which attributes were actually ignored for this resource
             ignored_for_resource: Set[str] = set()
@@ -537,6 +790,7 @@ class MultiEnvReport:
             for env in self.environments:
                 config = env.before_values.get(address)
                 config_raw = env.before_values_raw.get(address)
+                sensitive_metadata = env.before_sensitive_metadata.get(address)
 
                 # Apply ignore filtering if config exists
                 if config is not None and self.ignore_config:
@@ -556,7 +810,7 @@ class MultiEnvReport:
                         config_raw, self.ignore_config, resource_type
                     )
 
-                comparison.add_environment_config(env.label, config, config_raw)
+                comparison.add_environment_config(env.label, config, config_raw, sensitive_metadata)
 
             # Store ignored attributes for this resource
             comparison.ignored_attributes = ignored_for_resource
@@ -569,6 +823,14 @@ class MultiEnvReport:
 
             # Mark changed sensitive values with (changed) indicator
             comparison.mark_changed_sensitive_values()
+            
+            # Track normalization ignores (feature 007 US3)
+            norm_ignored_count = sum(
+                1 for diff in comparison.attribute_diffs 
+                if diff.ignored_due_to_normalization
+            )
+            if norm_ignored_count > 0:
+                self.ignore_statistics["normalization_ignored_attributes"] += norm_ignored_count
 
             # Update ignore statistics
             if ignored_for_resource:
@@ -736,18 +998,35 @@ class MultiEnvReport:
         # Show ignore statistics if any ignoring was applied
         if (
             self.ignore_config
-            and self.ignore_statistics["total_ignored_attributes"] > 0
+            and (self.ignore_statistics["total_ignored_attributes"] > 0 
+                 or self.ignore_statistics["normalization_ignored_attributes"] > 0)
         ):
-            html_parts.append(
-                '            <div class="summary-card total" style="background: #fff4e6; border-left: 4px solid #f59e0b;">'
-            )
-            html_parts.append(
-                f'                <div class="number">{self.ignore_statistics["total_ignored_attributes"]}</div>'
-            )
-            html_parts.append(
-                '                <div class="label">Attributes Ignored</div>'
-            )
-            html_parts.append("            </div>")
+            # Config-ignored attributes
+            if self.ignore_statistics["total_ignored_attributes"] > 0:
+                html_parts.append(
+                    '            <div class="summary-card total" style="background: #fff4e6; border-left: 4px solid #f59e0b;">'
+                )
+                html_parts.append(
+                    f'                <div class="number">{self.ignore_statistics["total_ignored_attributes"]}</div>'
+                )
+                html_parts.append(
+                    '                <div class="label">Config Ignored</div>'
+                )
+                html_parts.append("            </div>")
+            
+            # Normalization-ignored attributes (US3 - feature 007)
+            if self.ignore_statistics["normalization_ignored_attributes"] > 0:
+                html_parts.append(
+                    '            <div class="summary-card total" style="background: #e0f2fe; border-left: 4px solid #0284c7;">'
+                )
+                html_parts.append(
+                    f'                <div class="number">{self.ignore_statistics["normalization_ignored_attributes"]}</div>'
+                )
+                html_parts.append(
+                    '                <div class="label">Normalized</div>'
+                )
+                html_parts.append("            </div>")
+            
             html_parts.append(
                 '            <div class="summary-card created" style="background: #ecfdf5; border-left: 4px solid #10b981;">'
             )
@@ -810,13 +1089,23 @@ class MultiEnvReport:
                 f'                    <span class="resource-status {status_class}">{status_text}</span>'
             )
 
-            # Show ignored attributes indicator
-            if rc.ignored_attributes:
-                ignored_count = len(rc.ignored_attributes)
-                ignored_list = ", ".join(sorted(rc.ignored_attributes))
-                html_parts.append(
-                    f'                    <span class="badge" style="background: #fbbf24; color: #78350f;" title="Ignored: {ignored_list}">{ignored_count} attributes ignored</span>'
-                )
+            # Show combined ignore badge (US3 - feature 007)
+            if rc.ignored_attributes or any(diff.ignored_due_to_normalization for diff in rc.attribute_diffs):
+                # Collect normalized attribute names
+                normalized_attrs = [
+                    diff.attribute_name 
+                    for diff in rc.attribute_diffs 
+                    if diff.ignored_due_to_normalization
+                ]
+                
+                # Calculate separate counts
+                config_count, norm_count = _calculate_ignore_counts(rc.ignored_attributes, rc.attribute_diffs)
+                
+                # Render badge with breakdown
+                badge_html = _render_ignore_badge(config_count, norm_count, rc.ignored_attributes, normalized_attrs)
+                if badge_html:
+                    html_parts.append(f'                    {badge_html}')
+            
 
             if has_sensitive_diff:
                 html_parts.append(
@@ -887,12 +1176,23 @@ class MultiEnvReport:
                     f'                            <span class="resource-status {status_class}">{status_text}</span>'
                 )
                 
-                if rc.ignored_attributes:
-                    ignored_count = len(rc.ignored_attributes)
-                    ignored_list = ", ".join(sorted(rc.ignored_attributes))
-                    html_parts.append(
-                        f'                            <span class="badge" style="background: #fbbf24; color: #78350f;" title="Ignored: {ignored_list}">{ignored_count} attributes ignored</span>'
-                    )
+                # Render combined ignore badge (US3 - feature 007)
+                if rc.ignored_attributes or any(diff.ignored_due_to_normalization for diff in rc.attribute_diffs):
+                    # Collect normalized attribute names
+                    normalized_attrs = [
+                        diff.attribute_name 
+                        for diff in rc.attribute_diffs 
+                        if diff.ignored_due_to_normalization
+                    ]
+                    
+                    # Calculate separate counts
+                    config_count, norm_count = _calculate_ignore_counts(rc.ignored_attributes, rc.attribute_diffs)
+                    
+                    # Render badge with breakdown
+                    badge_html = _render_ignore_badge(config_count, norm_count, rc.ignored_attributes, normalized_attrs)
+                    if badge_html:
+                        html_parts.append(f'                            {badge_html}')
+                
                 
                 if has_sensitive_diff:
                     html_parts.append(
@@ -980,6 +1280,10 @@ class MultiEnvReport:
         else:
             # Render attribute sections (v2.0 layout)
             for attr_diff in rc.attribute_diffs:
+                # Skip attributes that were normalized and became identical (hide them)
+                if attr_diff.ignored_due_to_normalization:
+                    continue
+                
                 # For env-specific resources (not present in all environments), show ALL attributes
                 # For resources present in all environments, only show changed attributes
                 is_env_specific = len(rc.is_present_in) < len(env_labels)
@@ -1023,7 +1327,20 @@ class MultiEnvReport:
 
                 # Value columns for each environment
                 for env_label in env_labels:
-                    value = attr_diff.env_values.get(env_label)
+                    # Start with raw unmasked value, then apply normalization if available, then merged masking
+                    if attr_diff.normalized_values and env_label in attr_diff.normalized_values:
+                        # Use normalized value
+                        value = attr_diff.normalized_values.get(env_label)
+                    else:
+                        # Use raw unmasked value
+                        value = attr_diff.env_values_raw.get(env_label)
+                    
+                    # Apply merged sensitive masking to ensure consistency across environments
+                    if value is not None and rc.merged_sensitive_metadata:
+                        attr_sensitive = rc.merged_sensitive_metadata.get(attr_diff.attribute_name)
+                        if attr_sensitive:
+                            value = rc._mask_sensitive_value(value, attr_sensitive)
+                    
                     value_html = self._render_attribute_value(
                         value, attr_diff, env_labels, env_label
                     )
@@ -1084,12 +1401,15 @@ class MultiEnvReport:
 
             # For different values, apply character-level diff highlighting
             if attr_diff.is_different and attr_diff.attribute_type == "primitive":
+                # Use normalized values for comparison if available, otherwise use original values
+                values_for_comparison = attr_diff.normalized_values if attr_diff.normalized_values else attr_diff.env_values
+                
                 # Get baseline value (first non-None value)
                 baseline_val = None
                 baseline_env = None
                 for env in env_labels:
-                    if attr_diff.env_values.get(env) is not None:
-                        baseline_val = attr_diff.env_values[env]
+                    if values_for_comparison.get(env) is not None:
+                        baseline_val = values_for_comparison[env]
                         baseline_env = env
                         break
 
@@ -1099,7 +1419,7 @@ class MultiEnvReport:
                     other_val = None
                     for env in env_labels:
                         if env != baseline_env:
-                            other_val = attr_diff.env_values.get(env)
+                            other_val = values_for_comparison.get(env)
                             if other_val is not None and other_val != baseline_val:
                                 break
                     
@@ -1124,12 +1444,15 @@ class MultiEnvReport:
         if isinstance(value, (dict, list)):
             # For objects/arrays with differences, apply JSON diff highlighting
             if attr_diff.is_different:
+                # Use normalized values for comparison if available, otherwise use original values
+                values_for_comparison = attr_diff.normalized_values if attr_diff.normalized_values else attr_diff.env_values
+                
                 # Get baseline value
                 baseline_val = None
                 baseline_env = None
                 for env in env_labels:
-                    if attr_diff.env_values.get(env) is not None:
-                        baseline_val = attr_diff.env_values[env]
+                    if values_for_comparison.get(env) is not None:
+                        baseline_val = values_for_comparison[env]
                         baseline_env = env
                         break
                 
@@ -1139,7 +1462,7 @@ class MultiEnvReport:
                     other_val = None
                     for env in env_labels:
                         if env != baseline_env:
-                            other_val = attr_diff.env_values.get(env)
+                            other_val = values_for_comparison.get(env)
                             if other_val is not None and json.dumps(other_val, sort_keys=True) != json.dumps(baseline_val, sort_keys=True):
                                 break
                     
@@ -1154,9 +1477,6 @@ class MultiEnvReport:
             
             # No differences - show plain JSON
             value_json = json.dumps(value, indent=2, sort_keys=True)
-            # Truncate if too long
-            if len(value_json) > 500:
-                value_json = value_json[:500] + "\n  ...(truncated)...\n}"
             return f'<pre style="margin: 0; font-size: 0.85em;">{html.escape(value_json)}</pre>'
 
         # Fallback
@@ -1210,13 +1530,34 @@ class MultiEnvReport:
         # Show ignore statistics if any ignoring was applied
         if (
             self.ignore_config
-            and self.ignore_statistics["total_ignored_attributes"] > 0
+            and (self.ignore_statistics["total_ignored_attributes"] > 0 
+                 or self.ignore_statistics["normalization_ignored_attributes"] > 0)
         ):
             lines.append("")
             lines.append("IGNORE STATISTICS")
-            lines.append(
-                f"Total Ignored Attributes: {self.ignore_statistics['total_ignored_attributes']}"
-            )
+            
+            # Config-ignored attributes
+            if self.ignore_statistics["total_ignored_attributes"] > 0:
+                lines.append(
+                    f"Config Ignored Attributes: {self.ignore_statistics['total_ignored_attributes']}"
+                )
+            
+            # Normalization-ignored attributes (US3 - feature 007)
+            if self.ignore_statistics["normalization_ignored_attributes"] > 0:
+                lines.append(
+                    f"Normalized Attributes: {self.ignore_statistics['normalization_ignored_attributes']}"
+                )
+            
+            # Verbose normalization logging indicator (T059)
+            if self.verbose_normalization:
+                lines.append("  (Verbose normalization logging enabled)")
+            
+            # Verbose normalization notice (T059 - FR-015)
+            if self.verbose_normalization:
+                lines.append(
+                    "⚙️  Verbose normalization logging enabled (see transformations above)"
+                )
+            
             lines.append(
                 f"Resources with Ignores: {self.ignore_statistics['resources_with_ignores']}"
             )

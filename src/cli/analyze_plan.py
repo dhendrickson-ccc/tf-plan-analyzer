@@ -1700,8 +1700,12 @@ def handle_compare_subcommand(args):
 
     # Create MultiEnvReport and perform comparison
     diff_only = getattr(args, "diff_only", False)
+    verbose_normalization = getattr(args, "verbose_normalization", False)
     report = MultiEnvReport(
-        environments=environments, diff_only=diff_only, ignore_config=ignore_config
+        environments=environments, 
+        diff_only=diff_only, 
+        ignore_config=ignore_config,
+        verbose_normalization=verbose_normalization
     )
 
     # Load environments with error handling
@@ -2174,6 +2178,11 @@ Examples:
         "--verbose",
         action="store_true",
         help="Show detailed configuration for each resource in text output",
+    )
+    compare_parser.add_argument(
+        "--verbose-normalization",
+        action="store_true",
+        help="Log normalization transformations (before/after values) for debugging",
     )
 
     # ========== OBFUSCATE SUBCOMMAND (sensitive data obfuscation) ==========

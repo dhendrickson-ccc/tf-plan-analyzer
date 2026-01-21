@@ -1,0 +1,15 @@
+{
+  "name_patterns": [],
+  "resource_id_patterns": [
+    {
+      "pattern": "/subscriptions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+      "replacement": "/subscriptions/SUBSCRIPTION_ID",
+      "description": "Normalize Azure subscription GUIDs to generic placeholder"
+    },
+    {
+      "pattern": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+      "replacement": "TENANT_ID",
+      "description": "Normalize Azure tenant GUIDs to generic placeholder"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "name_patterns": [
+    {
+      "pattern": "-(test|t)-",
+      "replacement": "-ENV-"
+    },
+    {
+      "pattern": "-(prod|p)-",
+      "replacement": "-ENV-"
+    }
+  ],
+  "resource_id_patterns": [
+    {
+      "pattern": "/subscriptions/[0-9a-f-]+/",
+      "replacement": "/subscriptions/SUB_ID/"
+    }
+  ]
+}

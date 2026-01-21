@@ -1,0 +1,68 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.5.0",
+  "resource_changes": [
+    {
+      "address": "azurerm_storage_account.example",
+      "mode": "managed",
+      "type": "azurerm_storage_account",
+      "name": "example",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "name": "storage-account-t-eastus",
+          "resource_group_name": "rg-test-eastus",
+          "location": "eastus",
+          "account_tier": "Standard",
+          "account_replication_type": "LRS",
+          "tags": {
+            "project": "demo",
+            "managed_by": "terraform"
+          }
+        },
+        "after": null
+      }
+    },
+    {
+      "address": "azurerm_app_service.webapp",
+      "mode": "managed",
+      "type": "azurerm_app_service",
+      "name": "webapp",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "name": "app-service-test-westus",
+          "resource_group_name": "rg-t-app",
+          "location": "westus",
+          "app_service_plan_id": "/subscriptions/abc123/resourceGroups/rg-test-westus/providers/Microsoft.Web/serverfarms/plan-test",
+          "tags": {
+            "project": "demo",
+            "cost_center": "engineering"
+          }
+        },
+        "after": null
+      }
+    },
+    {
+      "address": "azurerm_key_vault.secrets",
+      "mode": "managed",
+      "type": "azurerm_key_vault",
+      "name": "secrets",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "name": "kv-secrets-tst-centralus",
+          "resource_group_name": "rg-tst-security",
+          "location": "centralus",
+          "sku_name": "standard",
+          "tenant_id": "00000000-0000-0000-0000-000000000001",
+          "tags": {
+            "project": "demo",
+            "security_level": "high"
+          }
+        },
+        "after": null
+      }
+    }
+  ]
+}

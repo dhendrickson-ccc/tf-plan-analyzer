@@ -12,6 +12,7 @@ A Python tool to analyze Terraform plan JSON files and identify resource changes
 - [Key Features](#key-features)
 - [Output Formats](#output-formats)
 - [Ignore Configuration](#ignore-configuration)
+- [Normalization-Based Difference Filtering](#normalization-based-difference-filtering)
 
 ## Installation
 
@@ -365,3 +366,98 @@ tf-plan-analyzer report plan.json --config ignore_config.json --html
 # Multi-environment comparison
 tf-plan-analyzer compare dev.json staging.json --config ignore_config.json --html
 ```
+
+## Normalization-Based Difference Filtering
+
+Normalization allows you to ignore environment-specific formatting differences that are functionally equivalent. This is useful for:
+- Environment naming patterns (e.g., `-dev-` vs `-prod-`, `-t-` vs `-p-`)
+- Cloud provider identifiers (subscription IDs, tenant IDs)
+- Resource IDs with environment-specific components
+
+### Configuration
+
+Create a normalization configuration file (`normalizations.json`):
+
+```json
+{
+  "name_patterns": [
+    {
+      "pattern": "-(dev|test|prod)-",
+      "replacement": "-ENV-",
+      "description": "Normalize environment suffixes in names"
+    },
+    {
+      "pattern": "(eastus|westus|centralus)",
+      "replacement": "REGION",
+      "description": "Normalize Azure regions"
+    }
+  ],
+  "resource_id_patterns": [
+    {
+      "pattern": "/subscriptions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+      "replacement": "/subscriptions/SUBSCRIPTION_ID",
+      "description": "Normalize Azure subscription GUIDs"
+    },
+    {
+      "pattern": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+      "replacement": "TENANT_ID",
+      "description": "Normalize Azure tenant GUIDs"
+    }
+  ]
+}
+```
+
+### Pattern Types
+
+- **name_patterns**: Applied to regular resource attributes (names, locations, etc.)
+- **resource_id_patterns**: Applied to ID-like attributes (ending in `_id` or named `id`)
+- Patterns are applied in order (first match wins per pattern)
+- Multiple patterns can be applied sequentially
+
+### Integration with Ignore Config
+
+Reference the normalization config from your ignore configuration:
+
+```json
+{
+  "ignore_fields": {
+    "*": ["tags", "timeouts"]
+  },
+  "normalization_config_path": "normalizations.json"
+}
+```
+
+Or use an absolute path:
+
+```json
+{
+  "normalization_config_path": "/path/to/normalizations.json"
+}
+```
+
+### Usage Example
+
+```bash
+# Compare environments with normalization
+tf-plan-analyzer compare dev.json prod.json \
+  --config ignore_config.json \
+  --html comparison.html \
+  --env-names "dev,prod"
+```
+
+**Result**: Resources like `storage-account-dev-eastus` and `storage-account-prod-westus` will be normalized to `storage-account-ENV-REGION` before comparison, eliminating noise from environment-specific naming.
+
+### How It Works
+
+1. **Load**: Normalization patterns are loaded from the config file
+2. **Classify**: Attributes are classified as 'name' or 'resource_id' based on their name
+3. **Transform**: Appropriate patterns are applied (name_patterns for regular attributes, resource_id_patterns for IDs)
+4. **Compare**: Normalized values are compared instead of original values
+5. **Report**: Differences that only exist in unnormalized values are filtered out
+
+### See Also
+
+- Example configurations in `examples/normalizations.json`
+- Test data patterns in `test_data/normalization_config_*.json`
+- Quickstart guide in `specs/007-normalization-diff-filtering/quickstart.md`
+
