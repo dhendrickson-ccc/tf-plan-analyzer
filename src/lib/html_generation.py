@@ -884,6 +884,192 @@ def get_env_specific_section_css() -> str:
 """
 
 
+def get_notes_css() -> str:
+    """
+    Get CSS for attribute notes (question/answer fields).
+
+    Returns:
+        str: CSS stylesheet for notes functionality including:
+            - Notes container styling with subtle background
+            - Label typography for question/answer fields
+            - Textarea styling with consistent sizing
+            - Focus states and accessibility
+
+    Example:
+        >>> css = get_notes_css()
+        >>> ".notes-container" in css
+        True
+        >>> ".note-field" in css
+        True
+    """
+    return """
+        .notes-container {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border-left: 3px solid #6c757d;
+        }
+        
+        .note-label {
+            display: block;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+        
+        .note-field {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-size: 0.95em;
+            line-height: 1.5;
+            resize: vertical;
+            background: white;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+        
+        .note-field:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .note-field::placeholder {
+            color: #adb5bd;
+            font-style: italic;
+        }
+        
+        .note-answer {
+            margin-top: 12px;
+        }
+"""
+
+
+def get_notes_javascript() -> str:
+    """
+    Get JavaScript for client-side notes functionality.
+
+    Returns:
+        str: Complete JavaScript code including:
+            - getReportId(): Extract report filename from URL
+            - debounce(func, delay): Debouncing utility for auto-save
+            - saveNote(resource, attribute, field, value): Save note to LocalStorage
+            - debouncedSaveNote: Debounced version of saveNote (500ms delay)
+            - loadNotes(): Load all notes from LocalStorage on page load
+
+    Example:
+        >>> js = get_notes_javascript()
+        >>> "function getReportId()" in js
+        True
+        >>> "localStorage.setItem" in js
+        True
+    """
+    return """
+        function getReportId() {
+            const path = window.location.pathname;
+            const filename = path.substring(path.lastIndexOf('/') + 1);
+            return filename || 'unknown-report';
+        }
+        
+        function debounce(func, delay) {
+            let timeoutId;
+            return function(...args) {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => func.apply(this, args), delay);
+            };
+        }
+        
+        function saveNote(resourceAddress, attributeName, field, value) {
+            const reportId = getReportId();
+            const key = `tf-notes-${reportId}#${resourceAddress}#${attributeName}`;
+            
+            // Load existing note or create new one
+            let note = {};
+            try {
+                const existing = localStorage.getItem(key);
+                if (existing) {
+                    note = JSON.parse(existing);
+                }
+            } catch (e) {
+                console.error('Error loading note:', e);
+            }
+            
+            // Update field
+            note[field] = value;
+            note.lastModified = Date.now();
+            
+            // Save to LocalStorage
+            try {
+                localStorage.setItem(key, JSON.stringify(note));
+            } catch (e) {
+                if (e.name === 'QuotaExceededError') {
+                    console.error('LocalStorage quota exceeded. Cannot save note.');
+                } else {
+                    console.error('Error saving note:', e);
+                }
+            }
+        }
+        
+        const debouncedSaveNote = debounce(saveNote, 500);
+        
+        function loadNotes() {
+            const reportId = getReportId();
+            const prefix = `tf-notes-${reportId}#`;
+            
+            // Iterate over all LocalStorage keys
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (!key || !key.startsWith(prefix)) continue;
+                
+                // Parse resource and attribute from key
+                const keyParts = key.substring(prefix.length).split('#');
+                if (keyParts.length !== 2) continue;
+                
+                const resourceAddress = keyParts[0];
+                const attributeName = keyParts[1];
+                
+                // Sanitize for HTML ID (same as Python _sanitize_for_html_id)
+                const sanitizedResource = resourceAddress.replace(/[.\\[\\]:]/g, '-');
+                const sanitizedAttribute = attributeName.replace(/[.\\[\\]:]/g, '-');
+                
+                // Load note data
+                try {
+                    const noteData = JSON.parse(localStorage.getItem(key));
+                    
+                    // Populate question field
+                    if (noteData.question) {
+                        const questionField = document.getElementById(`note-q-${sanitizedResource}-${sanitizedAttribute}`);
+                        if (questionField) {
+                            questionField.value = noteData.question;
+                        }
+                    }
+                    
+                    // Populate answer field
+                    if (noteData.answer) {
+                        const answerField = document.getElementById(`note-a-${sanitizedResource}-${sanitizedAttribute}`);
+                        if (answerField) {
+                            answerField.value = noteData.answer;
+                        }
+                    }
+                } catch (e) {
+                    console.error(`Error loading note for ${key}:`, e);
+                }
+            }
+        }
+        
+        // Load notes when page loads
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadNotes);
+        } else {
+            loadNotes();
+        }
+"""
+
+
 def generate_full_styles() -> str:
     """
     Generate complete <style> block combining all CSS functions.
@@ -928,4 +1114,5 @@ def generate_full_styles() -> str:
 {get_scrollable_container_css()}
 {get_sticky_header_css()}
 {get_env_specific_section_css()}
+{get_notes_css()}
 </style>"""
