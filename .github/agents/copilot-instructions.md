@@ -11,6 +11,8 @@ Auto-generated from all feature plans. Last updated: 2026-01-13
 - HTML file output (static reports) (006-comparison-ui-improvements)
 - Python 3.9+ (requires-python = ">=3.9" in pyproject.toml) + Python standard library only (json, re, pathlib) - no external packages needed for normalization (007-normalization-diff-filtering)
 - JSON files (ignore_config.json, normalizations.json) - file-based configuration (007-normalization-diff-filtering)
+- Python 3.11 (existing project constraint) + None (client-side JavaScript for LocalStorage interaction, no new Python dependencies) (008-attribute-notes)
+- Browser LocalStorage (client-side only, no server-side persistence) (008-attribute-notes)
 
 - Python 3.8+ (matching existing codebase) (001-multi-env-comparison)
 
@@ -30,9 +32,9 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.8+ (matching existing codebase): Follow standard conventions
 
 ## Recent Changes
+- 008-attribute-notes: Added Python 3.11 (existing project constraint) + None (client-side JavaScript for LocalStorage interaction, no new Python dependencies)
 - 007-normalization-diff-filtering: Added Python 3.9+ (requires-python = ">=3.9" in pyproject.toml) + Python standard library only (json, re, pathlib) - no external packages needed for normalization
 - 006-comparison-ui-improvements: Added Python 3.9.6 + No new dependencies - pure HTML+CSS modifications
-- 004-compare-enhancements: Added Python 3.9.6 + Python stdlib (json, pathlib, difflib, html), pytest 8.4.2 (testing)
 
 
 <!-- MANUAL ADDITIONS START -->
