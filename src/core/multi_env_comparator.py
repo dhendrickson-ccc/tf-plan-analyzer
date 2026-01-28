@@ -869,6 +869,30 @@ class MultiEnvReport:
             ),
         }
 
+    @staticmethod
+    def _sanitize_for_html_id(text: str) -> str:
+        """
+        Sanitize text for use as HTML ID by replacing special characters.
+
+        Replaces characters that are invalid or problematic in HTML IDs:
+        . [ ] : / with hyphens (-)
+
+        Args:
+            text: Text to sanitize (e.g., resource address or attribute name)
+
+        Returns:
+            Sanitized text safe for use in HTML id attributes
+
+        Examples:
+            >>> MultiEnvReport._sanitize_for_html_id("aws_instance.web")
+            'aws_instance-web'
+            >>> MultiEnvReport._sanitize_for_html_id("sku.0.tier")
+            'sku-0-tier'
+            >>> MultiEnvReport._sanitize_for_html_id("tags[\"Environment\"]")
+            'tags--Environment--'
+        """
+        return text.replace(".", "-").replace("[", "-").replace("]", "-").replace(":", "-").replace("/", "-")
+
     def generate_html(self, output_path: str) -> None:
         """Generate HTML comparison report.
 
@@ -955,6 +979,9 @@ class MultiEnvReport:
         html_parts.append("                });")
         html_parts.append("            });")
         html_parts.append("        });")
+        html_parts.append("    </script>")
+        html_parts.append("    <script>")
+        html_parts.append(f"    {src.lib.html_generation.get_notes_javascript()}")
         html_parts.append("    </script>")
         html_parts.append("</head>")
         html_parts.append("<body>")
@@ -1366,6 +1393,22 @@ class MultiEnvReport:
                     )
 
                 parts.append("                            </div>")  # Close attribute-values
+                
+                # Add notes container (T015-T020: User Story 1 - Question field)
+                sanitized_resource = self._sanitize_for_html_id(rc.resource_address)
+                sanitized_attribute = self._sanitize_for_html_id(attr_diff.attribute_name)
+                
+                parts.append('                            <div class="notes-container">')
+                parts.append('                                <div>')
+                parts.append(f'                                    <label class="note-label" for="note-q-{sanitized_resource}-{sanitized_attribute}">Question:</label>')
+                parts.append(f'                                    <textarea class="note-field" id="note-q-{sanitized_resource}-{sanitized_attribute}" placeholder="Add a question..." oninput="debouncedSaveNote(\'{rc.resource_address}\', \'{attr_diff.attribute_name}\', \'question\', this.value)" rows="4"></textarea>')
+                parts.append('                                </div>')
+                parts.append('                                <div class="note-answer">')
+                parts.append(f'                                    <label class="note-label" for="note-a-{sanitized_resource}-{sanitized_attribute}">Answer:</label>')
+                parts.append(f'                                    <textarea class="note-field" id="note-a-{sanitized_resource}-{sanitized_attribute}" placeholder="Add an answer..." oninput="debouncedSaveNote(\'{rc.resource_address}\', \'{attr_diff.attribute_name}\', \'answer\', this.value)" rows="4"></textarea>')
+                parts.append('                                </div>')
+                parts.append('                            </div>')
+                
                 parts.append("                        </div>")  # Close attribute-section
 
         parts.append("                    </div>")

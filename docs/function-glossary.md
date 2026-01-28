@@ -9,6 +9,8 @@ Most commonly used functions:
 | Function | Module | Purpose |
 |----------|--------|---------|
 | `generate_full_styles()` | html_generation | Get complete CSS for HTML reports |
+| `get_notes_css()` | html_generation | Get CSS for attribute notes fields |
+| `get_notes_javascript()` | html_generation | Get JavaScript for notes persistence |
 | `highlight_json_diff()` | diff_utils | Generate character-level diff highlighting |
 | `load_ignore_config()` | ignore_utils | Load and validate ignore configuration |
 | `load_normalization_config()` | normalization_utils | Load and validate normalization patterns |
@@ -200,6 +202,87 @@ html = f"""
 </div>
 """
 ```
+
+---
+
+#### `get_notes_css()`
+
+**Location**: [src/lib/html_generation.py](../src/lib/html_generation.py#L890)
+
+**Parameters**: None
+
+**Returns**: `str` - CSS stylesheet for attribute notes functionality
+
+**Description**:
+Returns CSS for question/answer note fields added to each attribute change in comparison reports. Includes:
+- `.notes-container` - Wrapper styling (margin-top: 15px, padding: 15px, background: #f8f9fa, border-left: 3px solid #6c757d)
+- `.note-label` - Label typography (font-weight: 600, color: #495057, font-size: 0.9em)
+- `.note-field` - Textarea styling (width: 100%, padding: 10px, border-radius: 4px, resize: vertical)
+- `.note-field:focus` - Focus state (border-color: #667eea, box-shadow with purple glow)
+- `.note-field::placeholder` - Placeholder text (color: #adb5bd, font-style: italic)
+- `.note-answer` - Answer field wrapper (margin-top: 12px)
+
+**Usage Example**:
+```python
+from src.lib.html_generation import get_notes_css
+
+# Get notes CSS for custom styling
+notes_styles = get_notes_css()
+# Typically called automatically via generate_full_styles()
+```
+
+**Related**: See [get_notes_javascript()](#get_notes_javascript) for client-side persistence logic, [docs/style-guide.md](style-guide.md#notes-components) for design specifications
+
+---
+
+#### `get_notes_javascript()`
+
+**Location**: [src/lib/html_generation.py](../src/lib/html_generation.py#L935)
+
+**Parameters**: None
+
+**Returns**: `str` - Complete JavaScript code for notes functionality
+
+**Description**:
+Returns client-side JavaScript for attribute notes with browser LocalStorage persistence. Includes 5 functions:
+
+1. **`getReportId()`** - Extracts HTML filename from URL for LocalStorage key (e.g., "comparison.html")
+2. **`debounce(func, delay)`** - Utility function that delays execution until `delay` milliseconds after last call
+3. **`saveNote(resourceAddress, attributeName, field, value)`** - Saves note to LocalStorage with key pattern `tf-notes-{reportId}#{resource}#{attribute}`
+4. **`debouncedSaveNote`** - Debounced wrapper of `saveNote()` with 500ms delay to prevent excessive writes
+5. **`loadNotes()`** - Loads all notes from LocalStorage on page load and populates textareas
+
+**LocalStorage Schema**:
+- **Key**: `tf-notes-{reportId}#{resourceAddress}#{attributeName}`
+- **Value**: JSON object `{question: string, answer: string, lastModified: number}`
+
+**Usage Example**:
+```python
+from src.lib.html_generation import get_notes_javascript
+
+# Embed notes JavaScript in HTML <head>
+notes_js = get_notes_javascript()
+
+html = f"""
+<html>
+<head>
+  <script>
+  {notes_js}
+  </script>
+</head>
+<body>...</body>
+</html>
+"""
+```
+
+**Error Handling**:
+- Catches `QuotaExceededError` when LocalStorage is full (logs to console, does not throw)
+- Handles JSON parse errors gracefully (logs error, continues loading other notes)
+- Validates LocalStorage key format (checks for prefix and correct part count)
+
+**Browser Compatibility**: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+ (requires LocalStorage API)
+
+**Related**: See [multi_env_comparator.py](../src/core/multi_env_comparator.py#L957) for HTML embedding, [specs/008-attribute-notes/contracts/](../specs/008-attribute-notes/contracts/) for API contracts
 
 ---
 

@@ -710,6 +710,9 @@ To modify colors or spacing:
 | `.json-content` | JSON/code display with monospace font |
 | `.sensitive-badge` | Sensitive data indicator |
 | `.toggle-icon` | Collapsible section arrow |
+| `.notes-container` | Wrapper for question/answer notes fields |
+| `.note-field` | Textarea for question or answer input |
+| `.note-label` | Label for notes textareas |
 
 ### Most Common Colors
 
@@ -730,6 +733,148 @@ To modify colors or spacing:
 | `20px` | Card gaps, general spacing |
 | `24px` | Card padding |
 | `30px` | Section padding |
+
+---
+
+## Notes Components
+
+Added in feature 008-attribute-notes for question/answer annotations on attribute changes.
+
+### Notes Container
+
+**Class**: `.notes-container`
+
+```css
+.notes-container {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    border-left: 3px solid #6c757d;
+}
+```
+
+**Usage**: Wrapper for question and answer text fields below each attribute change.
+
+### Note Label
+
+**Class**: `.note-label`
+
+```css
+.note-label {
+    display: block;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+}
+```
+
+**Usage**: Label element for question/answer textareas with `for` attribute linking to field ID.
+
+**HTML Example**:
+```html
+<label class="note-label" for="note-q-aws_instance-web-instance_type">
+  Question:
+</label>
+```
+
+### Note Field
+
+**Class**: `.note-field`
+
+```css
+.note-field {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, ...;
+    font-size: 0.95em;
+    line-height: 1.5;
+    resize: vertical;
+    background: white;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+```
+
+**Focus State**:
+```css
+.note-field:focus {
+    outline: none;
+    border-color: #667eea;  /* Primary brand color */
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+```
+
+**Placeholder**:
+```css
+.note-field::placeholder {
+    color: #adb5bd;
+    font-style: italic;
+}
+```
+
+**Usage**: Textarea element for question or answer input. Auto-saves to browser LocalStorage on input (debounced 500ms).
+
+**HTML Example**:
+```html
+<textarea 
+  class="note-field" 
+  id="note-q-aws_instance-web-instance_type"
+  placeholder="Add a question..."
+  oninput="debouncedSaveNote('aws_instance.web', 'instance_type', 'question', this.value)"
+  rows="4">
+</textarea>
+```
+
+### Note Answer
+
+**Class**: `.note-answer`
+
+```css
+.note-answer {
+    margin-top: 12px;
+}
+```
+
+**Usage**: Wrapper div for answer field to add spacing between question and answer textareas.
+
+### Complete Notes Structure
+
+```html
+<div class="notes-container">
+    <div>
+        <label class="note-label" for="note-q-{resource}-{attribute}">
+            Question:
+        </label>
+        <textarea 
+            class="note-field" 
+            id="note-q-{resource}-{attribute}"
+            placeholder="Add a question..."
+            rows="4">
+        </textarea>
+    </div>
+    <div class="note-answer">
+        <label class="note-label" for="note-a-{resource}-{attribute}">
+            Answer:
+        </label>
+        <textarea 
+            class="note-field" 
+            id="note-a-{resource}-{attribute}"
+            placeholder="Add an answer..."
+            rows="4">
+        </textarea>
+    </div>
+</div>
+```
+
+**Browser Persistence**: Notes automatically save to `localStorage` with key pattern:
+```
+tf-notes-{reportFilename}#{resourceAddress}#{attributeName}
+```
+
+**Related**: See [get_notes_css()](function-glossary.md#get_notes_css) and [get_notes_javascript()](function-glossary.md#get_notes_javascript) for implementation
 
 ---
 
