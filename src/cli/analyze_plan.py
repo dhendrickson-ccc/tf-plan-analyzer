@@ -7,6 +7,7 @@ Analyzes terraform plan JSON files to categorize resource changes.
 import argparse
 import html
 import json
+import json5
 import sys
 from datetime import datetime
 from difflib import SequenceMatcher
@@ -1423,11 +1424,11 @@ def load_config(config_file: str) -> Dict:
     """Load configuration from JSON file."""
     try:
         with open(config_file, "r") as f:
-            return json.load(f)
+            return json5.load(f)
     except FileNotFoundError:
         print(f"Error: Config file not found: {config_file}")
         sys.exit(1)
-    except json.JSONDecodeError as e:
+    except Exception as e:
         print(f"Error: Invalid JSON in config file: {e}")
         sys.exit(1)
 

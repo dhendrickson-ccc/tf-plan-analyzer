@@ -10,6 +10,7 @@ resource-specific ignore rules (applied to specific resource types).
 """
 
 import json
+import json5
 from pathlib import Path
 from typing import Dict, Set, Any, List, Optional
 
@@ -41,12 +42,10 @@ def load_ignore_config(file_path: Path) -> Dict:
 
     with open(file_path, "r") as f:
         try:
-            config = json.load(f)
-        except json.JSONDecodeError as e:
-            raise json.JSONDecodeError(
-                f"Malformed JSON in ignore configuration file: {file_path}",
-                e.doc,
-                e.pos,
+            config = json5.load(f)
+        except Exception as e:
+            raise ValueError(
+                f"Malformed JSON in ignore configuration file: {file_path}. Error: {str(e)}"
             ) from e
 
     # Validate basic structure (allow empty config)

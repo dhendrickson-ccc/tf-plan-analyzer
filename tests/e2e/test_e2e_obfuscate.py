@@ -12,11 +12,19 @@ import subprocess
 import sys
 from pathlib import Path
 import pytest
+from cryptography.fernet import Fernet
 
 
 # Test data directory
 TEST_DATA_DIR = Path(__file__).parent.parent.parent / "tests" / "fixtures" / "obfuscate"
 CLI_SCRIPT = Path(__file__).parent.parent.parent / "src" / "cli" / "analyze_plan.py"
+
+
+@pytest.fixture(autouse=True)
+def set_test_encryption_key(monkeypatch):
+    """Set a consistent encryption key for all tests in this module."""
+    test_key = Fernet.generate_key()
+    monkeypatch.setenv("TF_ANALYZER_SALT_KEY", test_key.decode("utf-8"))
 
 
 def run_obfuscate(args, env=None):

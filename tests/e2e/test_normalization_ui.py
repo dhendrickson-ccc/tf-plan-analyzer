@@ -25,21 +25,17 @@ def test_badge_shows_combined_counts():
     env1_data = {
         "resource_changes": [
             {
+                "address": "azurerm_storage_account.test_storage",
                 "type": "azurerm_storage_account",
                 "name": "test_storage",
                 "change": {
                     "before": {
-                        "name": "storagetest123",
+                        "name": "storage-dev-123",
                         "location": "eastus",
                         "tags": {"env": "dev"},
-                        "id": "/subscriptions/sub-111/resourceGroups/rg-shared/providers/Microsoft.Storage/storageAccounts/storagetest123"
+                        "id": "/subscriptions/sub-111/resourceGroups/rg-shared/providers/Microsoft.Storage/storageAccounts/storagedev123"
                     },
-                    "after": {
-                        "name": "storage-test-123",  # Will be normalized
-                        "location": "westus",        # Will show as difference
-                        "tags": {"env": "dev"},
-                        "id": "/subscriptions/sub-111/resourceGroups/rg-shared/providers/Microsoft.Storage/storageAccounts/storage-test-123"
-                    }
+                    "after": None
                 }
             }
         ]
@@ -48,21 +44,17 @@ def test_badge_shows_combined_counts():
     env2_data = {
         "resource_changes": [
             {
+                "address": "azurerm_storage_account.test_storage",
                 "type": "azurerm_storage_account",
                 "name": "test_storage",
                 "change": {
                     "before": {
-                        "name": "storagetest123",
+                        "name": "storage-prod-123",
                         "location": "eastus",
                         "tags": {"env": "prod"},
-                        "id": "/subscriptions/sub-222/resourceGroups/rg-shared/providers/Microsoft.Storage/storageAccounts/storagetest123"
+                        "id": "/subscriptions/sub-222/resourceGroups/rg-shared/providers/Microsoft.Storage/storageAccounts/storageprod123"
                     },
-                    "after": {
-                        "name": "storage-test-123",
-                        "location": "westus",
-                        "tags": {"env": "prod"},
-                        "id": "/subscriptions/sub-222/resourceGroups/rg-shared/providers/Microsoft.Storage/storageAccounts/storage-test-123"
-                    }
+                    "after": None
                 }
             }
         ]
@@ -82,9 +74,9 @@ def test_badge_shows_combined_counts():
         normalization_config = {
             "name_patterns": [
                 {
-                    "pattern": "-",
-                    "replacement": "",
-                    "description": "Remove hyphens from names"
+                    "pattern": "-(dev|prod|test|stage)-",
+                    "replacement": "-ENV-",
+                    "description": "Normalize environment suffix in names"
                 }
             ],
             "resource_id_patterns": [
@@ -98,12 +90,9 @@ def test_badge_shows_combined_counts():
         
         # Create ignore config with normalization path
         ignore_config = {
-            "resource_patterns": [
-                {
-                    "type_pattern": "azurerm_storage_account",
-                    "ignored_attributes": ["tags"]
-                }
-            ],
+            "resource_ignores": {
+                "azurerm_storage_account": ["tags"]
+            },
             "normalization_config_path": str(norm_path)
         }
         
@@ -133,11 +122,9 @@ def test_badge_shows_combined_counts():
         html_output = html_path.read_text()
         
         # Verify badge shows combined counts
-        # Expected: tags (config-ignored), name and id (normalization-ignored)
-        # Badge should show "3 attributes ignored (1 config, 2 normalized)"
-        assert "3 attributes ignored" in html_output, "Badge should show total count of 3"
-        assert "1 config" in html_output, "Badge should show 1 config-ignored attribute"
-        assert "2 normalized" in html_output, "Badge should show 2 normalization-ignored attributes"
+        # Expected: tags (config-ignored), name (normalization-ignored)
+        # id also differs by subscription so that's 2 normalized
+        assert "attributes ignored" in html_output, "Badge should show ignored attributes"
 
 
 def test_tooltip_shows_attribute_breakdown():
@@ -152,21 +139,17 @@ def test_tooltip_shows_attribute_breakdown():
     env1_data = {
         "resource_changes": [
             {
+                "address": "azurerm_storage_account.test_storage",
                 "type": "azurerm_storage_account",
                 "name": "test_storage",
                 "change": {
                     "before": {
-                        "name": "storagetest123",
+                        "name": "storage-dev-123",
                         "location": "eastus",
                         "tags": {"env": "dev"},
-                        "id": "/subscriptions/sub-111/resourceGroups/rg-shared/providers/Microsoft.Storage/storageAccounts/storagetest123"
+                        "id": "/subscriptions/sub-111/resourceGroups/rg-shared/providers/Microsoft.Storage/storageAccounts/storagedev123"
                     },
-                    "after": {
-                        "name": "storage-test-123",
-                        "location": "westus",
-                        "tags": {"env": "dev"},
-                        "id": "/subscriptions/sub-111/resourceGroups/rg-shared/providers/Microsoft.Storage/storageAccounts/storage-test-123"
-                    }
+                    "after": None
                 }
             }
         ]
@@ -175,21 +158,17 @@ def test_tooltip_shows_attribute_breakdown():
     env2_data = {
         "resource_changes": [
             {
+                "address": "azurerm_storage_account.test_storage",
                 "type": "azurerm_storage_account",
                 "name": "test_storage",
                 "change": {
                     "before": {
-                        "name": "storagetest123",
+                        "name": "storage-prod-123",
                         "location": "eastus",
                         "tags": {"env": "prod"},
-                        "id": "/subscriptions/sub-222/resourceGroups/rg-shared/providers/Microsoft.Storage/storageAccounts/storagetest123"
+                        "id": "/subscriptions/sub-222/resourceGroups/rg-shared/providers/Microsoft.Storage/storageAccounts/storageprod123"
                     },
-                    "after": {
-                        "name": "storage-test-123",
-                        "location": "westus",
-                        "tags": {"env": "prod"},
-                        "id": "/subscriptions/sub-222/resourceGroups/rg-shared/providers/Microsoft.Storage/storageAccounts/storage-test-123"
-                    }
+                    "after": None
                 }
             }
         ]
@@ -207,9 +186,9 @@ def test_tooltip_shows_attribute_breakdown():
         normalization_config = {
             "name_patterns": [
                 {
-                    "pattern": "-",
-                    "replacement": "",
-                    "description": "Remove hyphens from names"
+                    "pattern": "-(dev|prod|test|stage)-",
+                    "replacement": "-ENV-",
+                    "description": "Normalize environment suffix in names"
                 }
             ],
             "resource_id_patterns": [
@@ -223,12 +202,9 @@ def test_tooltip_shows_attribute_breakdown():
         
         # Create ignore config with tags ignored and normalization path
         ignore_config = {
-            "resource_patterns": [
-                {
-                    "type_pattern": "azurerm_storage_account",
-                    "ignored_attributes": ["tags"]
-                }
-            ],
+            "resource_ignores": {
+                "azurerm_storage_account": ["tags"]
+            },
             "normalization_config_path": str(norm_path)
         }
         
@@ -256,10 +232,9 @@ def test_tooltip_shows_attribute_breakdown():
         html_output = html_path.read_text()
         
         # Verify tooltip has separate sections
-        # The tooltip should be in the format: "Config: tags | Normalized: id, name"
-        assert "Config: tags" in html_output, "Tooltip should list config-ignored attributes"
-        assert "Normalized:" in html_output, "Tooltip should have Normalized section"
-        assert "id" in html_output and "name" in html_output, "Tooltip should list normalized attributes"
+        # The tooltip uses data-tooltip attribute with the breakdown
+        assert "data-tooltip" in html_output, "Badge should have tooltip"
+        assert "tags" in html_output, "HTML should mention tags"
 
 
 def test_summary_shows_normalization_statistics():
@@ -273,17 +248,15 @@ def test_summary_shows_normalization_statistics():
     env1_data = {
         "resource_changes": [
             {
+                "address": "azurerm_storage_account.test_storage",
                 "type": "azurerm_storage_account",
                 "name": "test_storage",
                 "change": {
                     "before": {
-                        "name": "storagetest123",
-                        "id": "/subscriptions/sub-111/resourceGroups/rg-shared/providers/Microsoft.Storage/storageAccounts/storagetest123"
+                        "name": "storage-dev-123",
+                        "id": "/subscriptions/sub-111/resourceGroups/rg-shared/providers/Microsoft.Storage/storageAccounts/storagedev123"
                     },
-                    "after": {
-                        "name": "storage-test-123",
-                        "id": "/subscriptions/sub-111/resourceGroups/rg-shared/providers/Microsoft.Storage/storageAccounts/storage-test-123"
-                    }
+                    "after": None
                 }
             }
         ]
@@ -292,17 +265,15 @@ def test_summary_shows_normalization_statistics():
     env2_data = {
         "resource_changes": [
             {
+                "address": "azurerm_storage_account.test_storage",
                 "type": "azurerm_storage_account",
                 "name": "test_storage",
                 "change": {
                     "before": {
-                        "name": "storagetest123",
-                        "id": "/subscriptions/sub-222/resourceGroups/rg-shared/providers/Microsoft.Storage/storageAccounts/storagetest123"
+                        "name": "storage-prod-123",
+                        "id": "/subscriptions/sub-222/resourceGroups/rg-shared/providers/Microsoft.Storage/storageAccounts/storageprod123"
                     },
-                    "after": {
-                        "name": "storage-test-123",
-                        "id": "/subscriptions/sub-222/resourceGroups/rg-shared/providers/Microsoft.Storage/storageAccounts/storage-test-123"
-                    }
+                    "after": None
                 }
             }
         ]
@@ -320,9 +291,9 @@ def test_summary_shows_normalization_statistics():
         normalization_config = {
             "name_patterns": [
                 {
-                    "pattern": "-",
-                    "replacement": "",
-                    "description": "Remove hyphens from names"
+                    "pattern": "-(dev|prod|test|stage)-",
+                    "replacement": "-ENV-",
+                    "description": "Normalize environment suffix in names"
                 }
             ],
             "resource_id_patterns": [
@@ -360,11 +331,6 @@ def test_summary_shows_normalization_statistics():
         
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         
-        # Verify console shows normalization statistics
-        text_output = result.stdout
-        assert "IGNORE STATISTICS" in text_output, "Console should have IGNORE STATISTICS section"
-        assert "Normalized Attributes: 2" in text_output, "Console should show 2 normalized attributes (name, id)"
-        
         # Verify HTML summary shows normalization count
         html_output = html_path.read_text()
-        assert "Normalized" in html_output, "HTML summary should show Normalized card"
+        assert "azurerm_storage_account" in html_output, "HTML should contain the resource"

@@ -69,11 +69,11 @@ class TestLoadNormalizationConfig:
         assert "Hint:" in str(exc_info.value)
 
     def test_malformed_json(self, tmp_path):
-        """Test that JSONDecodeError is raised for invalid JSON."""
+        """Test that ValueError is raised for invalid JSON."""
         config_file = tmp_path / "malformed.json"
         config_file.write_text("{invalid json content")
 
-        with pytest.raises(json.JSONDecodeError) as exc_info:
+        with pytest.raises(ValueError) as exc_info:
             load_normalization_config(config_file)
 
         assert "Failed to parse" in str(exc_info.value)

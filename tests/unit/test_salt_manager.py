@@ -115,8 +115,12 @@ class TestGetEncryptionKey:
 class TestStoreAndLoadSalt:
     """Unit tests for store_salt() and load_salt() functions."""
 
-    def test_store_and_load_salt(self):
+    def test_store_and_load_salt(self, monkeypatch):
         """Test storing and loading a salt file."""
+        # Set consistent encryption key for test
+        test_key = Fernet.generate_key()
+        monkeypatch.setenv("TF_ANALYZER_SALT_KEY", test_key.decode("utf-8"))
+        
         with tempfile.NamedTemporaryFile(delete=False, suffix=".salt") as f:
             salt_file = f.name
 
@@ -197,8 +201,12 @@ class TestStoreAndLoadSalt:
         finally:
             os.unlink(salt_file)
 
-    def test_store_overwrites_existing_file(self):
+    def test_store_overwrites_existing_file(self, monkeypatch):
         """Test that storing to existing file overwrites it."""
+        # Set consistent encryption key for test
+        test_key = Fernet.generate_key()
+        monkeypatch.setenv("TF_ANALYZER_SALT_KEY", test_key.decode("utf-8"))
+        
         with tempfile.NamedTemporaryFile(delete=False, suffix=".salt") as f:
             salt_file = f.name
 

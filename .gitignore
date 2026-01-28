@@ -38,3 +38,4 @@ baseline-coverage-summary.txt
 *.egg-info
 dist/
 build/
+Livetest-temp/

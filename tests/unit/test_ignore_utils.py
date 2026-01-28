@@ -75,11 +75,11 @@ class TestLoadIgnoreConfig:
         assert "not found" in str(exc_info.value)
 
     def test_malformed_json(self, tmp_path):
-        """Test that JSONDecodeError is raised for invalid JSON."""
+        """Test that ValueError is raised for invalid JSON."""
         config_file = tmp_path / "malformed.json"
         config_file.write_text("{invalid json content")
 
-        with pytest.raises(json.JSONDecodeError) as exc_info:
+        with pytest.raises(ValueError) as exc_info:
             load_ignore_config(config_file)
 
         assert "Malformed JSON" in str(exc_info.value)
@@ -234,7 +234,7 @@ class TestLoadIgnoreConfig:
         }
         ignore_config_file.write_text(json.dumps(ignore_config_data))
 
-        with pytest.raises(json.JSONDecodeError) as exc_info:
+        with pytest.raises(ValueError) as exc_info:
             load_ignore_config(ignore_config_file)
 
         # Should include context about the error

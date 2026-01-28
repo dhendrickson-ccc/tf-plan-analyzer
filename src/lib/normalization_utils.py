@@ -7,6 +7,7 @@ to filter environment-specific differences in Terraform plan comparisons.
 """
 
 import json
+import json5
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -75,14 +76,12 @@ def load_normalization_config(file_path: Path) -> NormalizationConfig:
     # Load and parse JSON
     try:
         with open(file_path, 'r') as f:
-            config_dict = json.load(f)
-    except json.JSONDecodeError as e:
-        raise json.JSONDecodeError(
+            config_dict = json5.load(f)
+    except Exception as e:
+        raise ValueError(
             f"Failed to parse normalization config file: {file_path}\n"
-            f"JSON Error: {e.msg}",
-            e.doc,
-            e.pos
-        )
+            f"Error: {str(e)}"
+        ) from e
     
     # Validate structure
     if not isinstance(config_dict, dict):
