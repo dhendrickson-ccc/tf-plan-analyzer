@@ -851,6 +851,40 @@ class MultiEnvReport:
 
             self.resource_comparisons.append(comparison)
 
+    def _detect_sortable_fields(self, attr_diff) -> List[str]:
+        """
+        Detect common fields across array-of-object values for field-based sorting.
+        
+        Returns intersection of field names present in ALL environments to ensure
+        consistent sorting across environments.
+        
+        Args:
+            attr_diff: AttributeDiff object containing env values
+            
+        Returns:
+            Sorted list of common field names, empty if not applicable
+        """
+        values = attr_diff.normalized_values.values() if attr_diff.normalized_values else attr_diff.env_values_raw.values()
+        
+        # Filter to only array-of-object values
+        array_values = [
+            val for val in values
+            if isinstance(val, list) and len(val) > 0 and isinstance(val[0], dict)
+        ]
+        
+        if not array_values:
+            return []
+        
+        # Get field sets from each environment's first object
+        field_sets = [set(arr[0].keys()) for arr in array_values]
+        
+        # Intersection: only fields present in ALL environments
+        if field_sets:
+            common_fields = set.intersection(*field_sets)
+            return sorted(common_fields)
+        
+        return []
+
     def calculate_summary(self) -> None:
         """Calculate summary statistics for the report."""
         self.summary_stats = {
@@ -979,6 +1013,313 @@ class MultiEnvReport:
         html_parts.append("                });")
         html_parts.append("            });")
         html_parts.append("        });")
+        html_parts.append("")
+        html_parts.append("        // JSON sorting and diff re-rendering")
+        html_parts.append("        function handleSortChange(selectElement) {")
+        html_parts.append("            const attributeSection = selectElement.closest('.attribute-section');")
+        html_parts.append("            const envColumns = attributeSection.querySelectorAll('.env-value-column[data-json-value]');")
+        html_parts.append("            const sortOption = selectElement.value;  // Full option: 'sorted', 'unsorted', or 'field:xxx'")
+        html_parts.append("")
+        html_parts.append("            // Parse JSON data from all environments")
+        html_parts.append("            const envData = [];")
+        html_parts.append("            envColumns.forEach(column => {")
+        html_parts.append("                try {")
+        html_parts.append("                    const jsonValue = JSON.parse(column.getAttribute('data-json-value'));")
+        html_parts.append("                    const envLabel = column.getAttribute('data-env');")
+        html_parts.append("                    const isBaseline = column.getAttribute('data-is-baseline') === 'true';")
+        html_parts.append("                    envData.push({ column, jsonValue, envLabel, isBaseline });")
+        html_parts.append("                } catch (e) {")
+        html_parts.append("                    console.error('Failed to parse JSON for re-sorting:', e);")
+        html_parts.append("                }")
+        html_parts.append("            });")
+        html_parts.append("")
+        html_parts.append("            if (envData.length === 0) return;")
+        html_parts.append("")
+        html_parts.append("            // Find baseline environment")
+        html_parts.append("            const baseline = envData.find(e => e.isBaseline);")
+        html_parts.append("            if (!baseline) return;")
+        html_parts.append("")
+        html_parts.append("            // Re-render each environment's value with new sort order")
+        html_parts.append("            envData.forEach(env => {")
+        html_parts.append("                const valueContainer = env.column.querySelector('.value-container');")
+        html_parts.append("                if (!valueContainer) return;")
+        html_parts.append("")
+        html_parts.append("                if (env.isBaseline) {")
+        html_parts.append("                    // For baseline, compare against first different env")
+        html_parts.append("                    const otherEnv = envData.find(e => !e.isBaseline && jsonStringify(sortJson(e.jsonValue, sortOption)) !== jsonStringify(sortJson(baseline.jsonValue, sortOption)));")
+        html_parts.append("                    if (otherEnv) {")
+        html_parts.append("                        const [beforeHtml, _] = highlightJsonDiff(env.jsonValue, otherEnv.jsonValue, sortOption, true);")
+        html_parts.append("                        valueContainer.innerHTML = beforeHtml;")
+        html_parts.append("                    } else {")
+        html_parts.append("                        // No differences, show plain JSON")
+        html_parts.append('                        valueContainer.innerHTML = \'<pre class="json-content">\' + escapeHtml(jsonStringify(sortJson(env.jsonValue, sortOption))) + \'</pre>\';')
+        html_parts.append("                    }")
+        html_parts.append("                } else {")
+        html_parts.append("                    // For non-baseline, compare against baseline")
+        html_parts.append("                    const [_, afterHtml] = highlightJsonDiff(baseline.jsonValue, env.jsonValue, sortOption, true);")
+        html_parts.append("                    valueContainer.innerHTML = afterHtml;")
+        html_parts.append("                }")
+        html_parts.append("            });")
+        html_parts.append("        }")
+        html_parts.append("")
+        html_parts.append("        function sortJson(obj, sortOption) {")
+        html_parts.append("            if (!sortOption || sortOption === 'unsorted') return obj;")
+        html_parts.append("            if (obj === null || obj === undefined) return obj;")
+        html_parts.append("            if (typeof obj !== 'object') return obj;")
+        html_parts.append("            ")
+        html_parts.append("            // Handle arrays")
+        html_parts.append("            if (Array.isArray(obj)) {")
+        html_parts.append("                let sorted = [...obj];  // Clone array")
+        html_parts.append("                ")
+        html_parts.append("                // Check if sorting by field")
+        html_parts.append("                if (typeof sortOption === 'string' && sortOption.startsWith('field:')) {")
+        html_parts.append("                    const fieldName = sortOption.substring(6);  // Remove 'field:' prefix")
+        html_parts.append("                    // Only sort if array contains objects with the field")
+        html_parts.append("                    if (sorted.length > 0 && typeof sorted[0] === 'object' && sorted[0] !== null && fieldName in sorted[0]) {")
+        html_parts.append("                        sorted.sort((a, b) => {")
+        html_parts.append("                            const aVal = a[fieldName];")
+        html_parts.append("                            const bVal = b[fieldName];")
+        html_parts.append("                            ")
+        html_parts.append("                            // Handle null/undefined (sort to end)")
+        html_parts.append("                            if (aVal == null && bVal == null) return 0;")
+        html_parts.append("                            if (aVal == null) return 1;")
+        html_parts.append("                            if (bVal == null) return -1;")
+        html_parts.append("                            ")
+        html_parts.append("                            // Type-safe comparison")
+        html_parts.append("                            if (typeof aVal === 'number' && typeof bVal === 'number') {")
+        html_parts.append("                                return aVal - bVal;")
+        html_parts.append("                            }")
+        html_parts.append("                            ")
+        html_parts.append("                            // String comparison (convert to string if needed)")
+        html_parts.append("                            const aStr = String(aVal);")
+        html_parts.append("                            const bStr = String(bVal);")
+        html_parts.append("                            return aStr.localeCompare(bStr);")
+        html_parts.append("                        });")
+        html_parts.append("                    }")
+        html_parts.append("                }")
+        html_parts.append("                ")
+        html_parts.append("                // Recursively process nested structures")
+        html_parts.append("                return sorted.map(item => sortJson(item, sortOption));")
+        html_parts.append("            }")
+        html_parts.append("            ")
+        html_parts.append("            // Handle objects - always sort keys to match Python's sort_keys=True")
+        html_parts.append("            const sorted = {};")
+        html_parts.append("            Object.keys(obj).sort().forEach(key => {")
+        html_parts.append("                sorted[key] = sortJson(obj[key], sortOption);")
+        html_parts.append("            });")
+        html_parts.append("            return sorted;")
+        html_parts.append("        }")
+        html_parts.append("")
+        html_parts.append("        function escapeHtml(text) {")
+        html_parts.append("            const div = document.createElement('div');")
+        html_parts.append("            div.textContent = text;")
+        html_parts.append("            return div.innerHTML;")
+        html_parts.append("        }")
+        html_parts.append("")
+        html_parts.append("        // Custom JSON stringifier to match Python's json.dumps(indent=2, sort_keys=True)")
+        html_parts.append("        function jsonStringify(obj) {")
+        html_parts.append("            if (obj === null || obj === undefined) return 'null';")
+        html_parts.append("            return JSON.stringify(obj, null, 2);")
+        html_parts.append("        }")
+        html_parts.append("")
+        html_parts.append("        function highlightJsonDiff(before, after, sortOption, isBaselineComparison) {")
+        html_parts.append("            const beforeStr = jsonStringify(sortJson(before, sortOption));")
+        html_parts.append("            const afterStr = jsonStringify(sortJson(after, sortOption));")
+        html_parts.append("")
+        html_parts.append("            const removedClass = isBaselineComparison ? 'baseline-removed' : 'removed';")
+        html_parts.append("            const addedClass = isBaselineComparison ? 'baseline-added' : 'added';")
+        html_parts.append("")
+        html_parts.append("            if (beforeStr === afterStr) {")
+        html_parts.append('                const plain = \'<pre class="json-content">\' + escapeHtml(beforeStr) + \'</pre>\';')
+        html_parts.append("                return [plain, plain];")
+        html_parts.append("            }")
+        html_parts.append("")
+        html_parts.append("            const beforeLines = beforeStr.split('\\n');")
+        html_parts.append("            const afterLines = afterStr.split('\\n');")
+        html_parts.append("            const placeholderLine = '<span class=\"placeholder\">&nbsp;</span>';")
+        html_parts.append("")
+        html_parts.append("            // Simple line-based diff using LCS algorithm")
+        html_parts.append("            const diff = computeDiff(beforeLines, afterLines);")
+        html_parts.append("")
+        html_parts.append("            const beforeHtmlLines = [];")
+        html_parts.append("            const afterHtmlLines = [];")
+        html_parts.append("")
+        html_parts.append("            diff.forEach(op => {")
+        html_parts.append("                if (op.type === 'equal') {")
+        html_parts.append("                    op.lines.forEach(line => {")
+        html_parts.append('                        beforeHtmlLines.push(\'<span class="unchanged">\' + escapeHtml(line) + \'</span>\');')
+        html_parts.append('                        afterHtmlLines.push(\'<span class="unchanged">\' + escapeHtml(line) + \'</span>\');')
+        html_parts.append("                    });")
+        html_parts.append("                } else if (op.type === 'delete') {")
+        html_parts.append("                    op.lines.forEach(line => {")
+        html_parts.append('                        beforeHtmlLines.push(\'<span class="\' + removedClass + \'">\' + escapeHtml(line) + \'</span>\');')
+        html_parts.append("                        afterHtmlLines.push(placeholderLine);")
+        html_parts.append("                    });")
+        html_parts.append("                } else if (op.type === 'insert') {")
+        html_parts.append("                    op.lines.forEach(line => {")
+        html_parts.append("                        beforeHtmlLines.push(placeholderLine);")
+        html_parts.append('                        afterHtmlLines.push(\'<span class="\' + addedClass + \'">\' + escapeHtml(line) + \'</span>\');')
+        html_parts.append("                    });")
+        html_parts.append("                } else if (op.type === 'replace') {")
+        html_parts.append("                    // Character-level diff for similar lines")
+        html_parts.append("                    for (let i = 0; i < Math.max(op.beforeLines.length, op.afterLines.length); i++) {")
+        html_parts.append("                        const beforeLine = op.beforeLines[i];")
+        html_parts.append("                        const afterLine = op.afterLines[i];")
+        html_parts.append("                        ")
+        html_parts.append("                        if (beforeLine !== undefined && afterLine !== undefined) {")
+        html_parts.append("                            const [beforeHighlight, afterHighlight] = highlightCharDiff(beforeLine, afterLine, isBaselineComparison);")
+        html_parts.append('                            beforeHtmlLines.push(\'<span class="\' + removedClass + \'" style="background-color: rgba(187, 222, 251, 0.3);">\' + beforeHighlight + \'</span>\');')
+        html_parts.append('                            afterHtmlLines.push(\'<span class="\' + addedClass + \'" style="background-color: rgba(200, 230, 201, 0.3);">\' + afterHighlight + \'</span>\');')
+        html_parts.append("                        } else if (beforeLine !== undefined) {")
+        html_parts.append('                            beforeHtmlLines.push(\'<span class="\' + removedClass + \'">\' + escapeHtml(beforeLine) + \'</span>\');')
+        html_parts.append("                            afterHtmlLines.push(placeholderLine);")
+        html_parts.append("                        } else if (afterLine !== undefined) {")
+        html_parts.append("                            beforeHtmlLines.push(placeholderLine);")
+        html_parts.append('                            afterHtmlLines.push(\'<span class="\' + addedClass + \'">\' + escapeHtml(afterLine) + \'</span>\');')
+        html_parts.append("                        }")
+        html_parts.append("                    }")
+        html_parts.append("                }")
+        html_parts.append("            });")
+        html_parts.append("")
+        html_parts.append('            const beforeHtml = \'<pre class="json-content">\' + beforeHtmlLines.join(\'<br>\') + \'</pre>\';')
+        html_parts.append('            const afterHtml = \'<pre class="json-content">\' + afterHtmlLines.join(\'<br>\') + \'</pre>\';')
+        html_parts.append("")
+        html_parts.append("            return [beforeHtml, afterHtml];")
+        html_parts.append("        }")
+        html_parts.append("")
+        html_parts.append("        // Simple LCS-based diff algorithm")
+        html_parts.append("        function computeDiff(before, after) {")
+        html_parts.append("            const n = before.length;")
+        html_parts.append("            const m = after.length;")
+        html_parts.append("            const lcs = Array(n + 1).fill(null).map(() => Array(m + 1).fill(0));")
+        html_parts.append("")
+        html_parts.append("            // Build LCS table")
+        html_parts.append("            for (let i = 1; i <= n; i++) {")
+        html_parts.append("                for (let j = 1; j <= m; j++) {")
+        html_parts.append("                    if (before[i - 1] === after[j - 1]) {")
+        html_parts.append("                        lcs[i][j] = lcs[i - 1][j - 1] + 1;")
+        html_parts.append("                    } else {")
+        html_parts.append("                        lcs[i][j] = Math.max(lcs[i - 1][j], lcs[i][j - 1]);")
+        html_parts.append("                    }")
+        html_parts.append("                }")
+        html_parts.append("            }")
+        html_parts.append("")
+        html_parts.append("            // Backtrack to build diff operations")
+        html_parts.append("            const result = [];")
+        html_parts.append("            let i = n, j = m;")
+        html_parts.append("            while (i > 0 || j > 0) {")
+        html_parts.append("                if (i > 0 && j > 0 && before[i - 1] === after[j - 1]) {")
+        html_parts.append("                    if (result.length === 0 || result[0].type !== 'equal') {")
+        html_parts.append("                        result.unshift({ type: 'equal', lines: [] });")
+        html_parts.append("                    }")
+        html_parts.append("                    result[0].lines.unshift(before[i - 1]);")
+        html_parts.append("                    i--; j--;")
+        html_parts.append("                } else if (j > 0 && (i === 0 || lcs[i][j - 1] >= lcs[i - 1][j])) {")
+        html_parts.append("                    if (result.length === 0 || result[0].type !== 'insert') {")
+        html_parts.append("                        result.unshift({ type: 'insert', lines: [] });")
+        html_parts.append("                    }")
+        html_parts.append("                    result[0].lines.unshift(after[j - 1]);")
+        html_parts.append("                    j--;")
+        html_parts.append("                } else if (i > 0 && (j === 0 || lcs[i][j - 1] < lcs[i - 1][j])) {")
+        html_parts.append("                    if (result.length === 0 || result[0].type !== 'delete') {")
+        html_parts.append("                        result.unshift({ type: 'delete', lines: [] });")
+        html_parts.append("                    }")
+        html_parts.append("                    result[0].lines.unshift(before[i - 1]);")
+        html_parts.append("                    i--;")
+        html_parts.append("                }")
+        html_parts.append("            }")
+        html_parts.append("            ")
+        html_parts.append("            // Post-process: merge adjacent delete+insert into replace if lines are similar")
+        html_parts.append("            const merged = [];")
+        html_parts.append("            for (let k = 0; k < result.length; k++) {")
+        html_parts.append("                const curr = result[k];")
+        html_parts.append("                const next = result[k + 1];")
+        html_parts.append("                ")
+        html_parts.append("                if (curr.type === 'delete' && next && next.type === 'insert') {")
+        html_parts.append("                    // Check if lines are similar enough for char-level diff")
+        html_parts.append("                    const maxLen = Math.max(curr.lines.length, next.lines.length);")
+        html_parts.append("                    const beforeLines = curr.lines;")
+        html_parts.append("                    const afterLines = next.lines;")
+        html_parts.append("                    ")
+        html_parts.append("                    let shouldMerge = false;")
+        html_parts.append("                    if (maxLen === 1 || (beforeLines.length === afterLines.length && beforeLines.length <= 3)) {")
+        html_parts.append("                        // Check similarity of first pair")
+        html_parts.append("                        if (beforeLines.length > 0 && afterLines.length > 0) {")
+        html_parts.append("                            const similarity = computeSimilarity(beforeLines[0], afterLines[0]);")
+        html_parts.append("                            shouldMerge = similarity > 0.5;")
+        html_parts.append("                        }")
+        html_parts.append("                    }")
+        html_parts.append("                    ")
+        html_parts.append("                    if (shouldMerge) {")
+        html_parts.append("                        merged.push({ type: 'replace', beforeLines, afterLines });")
+        html_parts.append("                        k++; // Skip next")
+        html_parts.append("                    } else {")
+        html_parts.append("                        merged.push(curr);")
+        html_parts.append("                    }")
+        html_parts.append("                } else {")
+        html_parts.append("                    merged.push(curr);")
+        html_parts.append("                }")
+        html_parts.append("            }")
+        html_parts.append("            ")
+        html_parts.append("            return merged;")
+        html_parts.append("        }")
+        html_parts.append("")
+        html_parts.append("        function computeSimilarity(str1, str2) {")
+        html_parts.append("            const len1 = str1.length;")
+        html_parts.append("            const len2 = str2.length;")
+        html_parts.append("            if (len1 === 0 || len2 === 0) return 0;")
+        html_parts.append("            ")
+        html_parts.append("            const lcs = Array(len1 + 1).fill(null).map(() => Array(len2 + 1).fill(0));")
+        html_parts.append("            for (let i = 1; i <= len1; i++) {")
+        html_parts.append("                for (let j = 1; j <= len2; j++) {")
+        html_parts.append("                    if (str1[i - 1] === str2[j - 1]) {")
+        html_parts.append("                        lcs[i][j] = lcs[i - 1][j - 1] + 1;")
+        html_parts.append("                    } else {")
+        html_parts.append("                        lcs[i][j] = Math.max(lcs[i - 1][j], lcs[i][j - 1]);")
+        html_parts.append("                    }")
+        html_parts.append("                }")
+        html_parts.append("            }")
+        html_parts.append("            return (2.0 * lcs[len1][len2]) / (len1 + len2);")
+        html_parts.append("        }")
+        html_parts.append("")
+        html_parts.append("        function highlightCharDiff(beforeStr, afterStr, isBaselineComparison) {")
+        html_parts.append("            const charRemovedClass = isBaselineComparison ? 'baseline-char-removed' : 'char-removed';")
+        html_parts.append("            const charAddedClass = isBaselineComparison ? 'baseline-char-added' : 'char-added';")
+        html_parts.append("            ")
+        html_parts.append("            const len1 = beforeStr.length;")
+        html_parts.append("            const len2 = afterStr.length;")
+        html_parts.append("            const lcs = Array(len1 + 1).fill(null).map(() => Array(len2 + 1).fill(0));")
+        html_parts.append("            ")
+        html_parts.append("            for (let i = 1; i <= len1; i++) {")
+        html_parts.append("                for (let j = 1; j <= len2; j++) {")
+        html_parts.append("                    if (beforeStr[i - 1] === afterStr[j - 1]) {")
+        html_parts.append("                        lcs[i][j] = lcs[i - 1][j - 1] + 1;")
+        html_parts.append("                    } else {")
+        html_parts.append("                        lcs[i][j] = Math.max(lcs[i - 1][j], lcs[i][j - 1]);")
+        html_parts.append("                    }")
+        html_parts.append("                }")
+        html_parts.append("            }")
+        html_parts.append("            ")
+        html_parts.append("            const beforeParts = [];")
+        html_parts.append("            const afterParts = [];")
+        html_parts.append("            let i = len1, j = len2;")
+        html_parts.append("            ")
+        html_parts.append("            while (i > 0 || j > 0) {")
+        html_parts.append("                if (i > 0 && j > 0 && beforeStr[i - 1] === afterStr[j - 1]) {")
+        html_parts.append("                    beforeParts.unshift(escapeHtml(beforeStr[i - 1]));")
+        html_parts.append("                    afterParts.unshift(escapeHtml(afterStr[j - 1]));")
+        html_parts.append("                    i--; j--;")
+        html_parts.append("                } else if (j > 0 && (i === 0 || lcs[i][j - 1] >= lcs[i - 1][j])) {")
+        html_parts.append('                    afterParts.unshift(\'<span class="\' + charAddedClass + \'">\' + escapeHtml(afterStr[j - 1]) + \'</span>\');')
+        html_parts.append("                    j--;")
+        html_parts.append("                } else if (i > 0) {")
+        html_parts.append('                    beforeParts.unshift(\'<span class="\' + charRemovedClass + \'">\' + escapeHtml(beforeStr[i - 1]) + \'</span>\');')
+        html_parts.append("                    i--;")
+        html_parts.append("                }")
+        html_parts.append("            }")
+        html_parts.append("            ")
+        html_parts.append("            return [beforeParts.join(''), afterParts.join('')];")
+        html_parts.append("        }")
         html_parts.append("    </script>")
         html_parts.append("    <script>")
         html_parts.append(f"    {src.lib.html_generation.get_notes_javascript()}")
@@ -1084,14 +1425,22 @@ class MultiEnvReport:
         # Separate regular resources from environment-specific resources (v2.0 feature)
         regular_resources = []
         env_specific_resources = []
+        first_env_only_resources = []
+        
+        # Get the first environment label (baseline)
+        first_env = env_labels[0] if env_labels else None
         
         for rc in comparisons_to_show:
             # Resources present in all environments are "regular"
             if len(rc.is_present_in) == len(env_labels):
                 regular_resources.append(rc)
             else:
-                # Resources missing from one or more environments are "env-specific"
-                env_specific_resources.append(rc)
+                # Check if resource only exists in first environment (will be created in others)
+                if first_env and rc.is_present_in == {first_env}:
+                    first_env_only_resources.append(rc)
+                else:
+                    # Resources missing from one or more environments are "env-specific"
+                    env_specific_resources.append(rc)
 
         # Render regular resources first
         for rc in regular_resources:
@@ -1252,6 +1601,76 @@ class MultiEnvReport:
             html_parts.append("                </div>")
             html_parts.append("            </details>")
 
+        # Render first-env-only resources in green collapsible section (new resources to be created) - at the bottom
+        if first_env_only_resources:
+            resource_count = len(first_env_only_resources)
+            missing_envs = [env for env in env_labels if env != first_env]
+            missing_envs_str = ", ".join(missing_envs)
+            
+            html_parts.append(
+                '            <details class="first-env-only-section">'
+            )
+            html_parts.append(
+                '                <summary class="first-env-only-header">'
+            )
+            html_parts.append(
+                f'                    <span>🆕 Resources in {first_env} ({resource_count} will be created in {missing_envs_str})</span>'
+            )
+            html_parts.append("                </summary>")
+            html_parts.append('                <div class="first-env-only-content">')
+            
+            for rc in first_env_only_resources:
+                is_identical = not rc.has_differences
+                status_class = "identical" if is_identical else "different"
+                status_text = "✓ Identical" if is_identical else "⚠ Different"
+                has_sensitive_diff = rc.has_sensitive_differences()
+                
+                html_parts.append('                    <div class="resource-change">')
+                html_parts.append(
+                    '                        <div class="resource-change-header" onclick="toggleResource(this)">'
+                )
+                html_parts.append(
+                    '                            <span class="toggle-icon collapsed">▼</span>'
+                )
+                html_parts.append(
+                    f'                            <span class="resource-name">{rc.resource_address}</span>'
+                )
+                html_parts.append(
+                    f'                            <span class="first-env-badge">Will be created in: {missing_envs_str}</span>'
+                )
+                
+                # Render combined ignore badge
+                if rc.ignored_attributes or any(diff.ignored_due_to_normalization for diff in rc.attribute_diffs):
+                    normalized_attrs = [
+                        diff.attribute_name 
+                        for diff in rc.attribute_diffs 
+                        if diff.ignored_due_to_normalization
+                    ]
+                    config_count, norm_count = _calculate_ignore_counts(rc.ignored_attributes, rc.attribute_diffs)
+                    badge_html = _render_ignore_badge(config_count, norm_count, rc.ignored_attributes, normalized_attrs)
+                    if badge_html:
+                        html_parts.append(f'                            {badge_html}')
+                
+                if has_sensitive_diff:
+                    html_parts.append(
+                        '                            <span class="sensitive-indicator">⚠️ SENSITIVE DIFF</span>'
+                    )
+                
+                html_parts.append("                        </div>")
+                html_parts.append(
+                    '                        <div class="resource-change-content">'
+                )
+                
+                # Render attribute table
+                attribute_table_html = self._render_attribute_table(rc, env_labels)
+                html_parts.append(attribute_table_html)
+                
+                html_parts.append("                        </div>")
+                html_parts.append("                    </div>")
+            
+            html_parts.append("                </div>")
+            html_parts.append("            </details>")
+
         html_parts.append("        </div>")
         html_parts.append("    </div>")
         html_parts.append("</body>")
@@ -1345,6 +1764,39 @@ class MultiEnvReport:
                         '                                <span class="sensitive-badge">🔒 SENSITIVE</span>'
                     )
 
+                # Add sort control for JSON objects (dict/list)
+                has_json_values = any(
+                    isinstance(val, (dict, list)) and val is not None
+                    for val in (attr_diff.normalized_values.values() if attr_diff.normalized_values else attr_diff.env_values_raw.values())
+                )
+                if has_json_values:
+                    # Detect sortable fields for array-of-object structures
+                    sortable_fields = self._detect_sortable_fields(attr_diff)
+                    
+                    parts.append(
+                        '                                <select class="json-sort-control" onchange="handleSortChange(this)">'
+                    )
+                    parts.append(
+                        '                                    <option value="sorted">Alphabetical (A-Z)</option>'
+                    )
+                    parts.append(
+                        '                                    <option value="unsorted">Insertion Order</option>'
+                    )
+                    
+                    # Add field-based options if sortable fields detected
+                    if sortable_fields:
+                        parts.append(
+                            '                                    <option disabled>──────────</option>'
+                        )
+                        for field in sortable_fields:
+                            parts.append(
+                                f'                                    <option value="field:{html.escape(field)}">Sort by: {html.escape(field)}</option>'
+                            )
+                    
+                    parts.append(
+                        '                                </select>'
+                    )
+
                 parts.append("                            </h3>")
 
                 # Attribute values container (flexbox)
@@ -1372,8 +1824,23 @@ class MultiEnvReport:
                         value, attr_diff, env_labels, env_label
                     )
                     
+                    # Build data attributes for JSON objects to enable client-side re-sorting
+                    data_attrs = ''
+                    if isinstance(value, (dict, list)) and value is not None:
+                        # Determine if this is the baseline environment
+                        is_baseline = False
+                        for env in env_labels:
+                            baseline_value = attr_diff.normalized_values.get(env) if attr_diff.normalized_values else attr_diff.env_values_raw.get(env)
+                            if baseline_value is not None:
+                                is_baseline = (env == env_label)
+                                break
+                        
+                        # Store raw JSON data as data attributes (escape quotes for HTML)
+                        json_str = json.dumps(value, ensure_ascii=False)
+                        data_attrs = f' data-json-value="{html.escape(json_str, quote=True)}" data-env="{env_label}" data-is-baseline="{str(is_baseline).lower()}"'
+                    
                     parts.append(
-                        '                                <div class="env-value-column">'
+                        f'                                <div class="env-value-column"{data_attrs}>'
                     )
                     parts.append(
                         f'                                    <div class="env-label">{env_label}</div>'

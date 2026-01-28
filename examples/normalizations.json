@@ -1,6 +1,16 @@
 {
   "name_patterns": [
     {
+      "pattern": "@Microsoft\\.KeyVault\\(SecretUri=https://gspiot-keyvau-[dstpb]-use2(-[a-z]?\\d{2})?\\.vault\\.azure\\.net/secrets/([^/]+)/?\\)",
+      "replacement": "@Microsoft.KeyVault(<NORMALIZED>gspiot-keyvau-ENV-use2-NUM/\\2)",
+      "description": "Normalize Key Vault SecretUri format (same as VaultName/SecretName format, just different syntax)"
+    },
+    {
+      "pattern": "@Microsoft\\.KeyVault\\(VaultName=gspiot-keyvau-[dstpb]-use2(-[a-z]?\\d{2})?;SecretName=([^)]+)\\)",
+      "replacement": "@Microsoft.KeyVault(<NORMALIZED>gspiot-keyvau-ENV-use2-NUM/\\2)",
+      "description": "Normalize Key Vault VaultName/SecretName format (same as SecretUri format, just different syntax)"
+    },
+    {
       "pattern": "/subscriptions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
       "replacement": "/subscriptions/SUBSCRIPTION_ID",
       "description": "Normalize Azure subscription GUIDs in any attribute"
@@ -14,6 +24,16 @@
       "pattern": "(gsp\\w+?)(dev|stage|test|prod)(\\.promega\\.com)$",
       "replacement": "\\1ENV\\3",
       "description": "Hostname bindings with environment prefix (e.g., gspadminstage, gspadmintest, gspadmindev)"
+    },
+    {
+      "pattern": "^(gsp|pronect)(admin|support|inst)(svc)?(ENV|dev|stage|test|prod)?\\.promega\\.com$",
+      "replacement": "APPNAME\\2\\3.promega.com",
+      "description": "Normalize hostnames: preserve function (admin/support/inst) and optional svc, normalize gsp/pronect prefix and optional env token"
+    },
+    {
+      "pattern": "(^|https?://)pronect\\.promega\\.com(?::\\d+)?($|/)",
+      "replacement": "\\1gspENV.promega.com\\2",
+      "description": "Normalize base app hostname pronect.promega.com to canonical gspENV.promega.com (also works for URL/port/path forms)"
     },
     {
       "pattern": "\\(gspiot-[^)]*-[dstpb]-use2-[a-z]?\\d{2}\\)",
@@ -36,6 +56,16 @@
       "description": "Private DNS zone virtual network link random suffix"
     },
     {
+      "pattern": "HTTP-Settings-(gsp|pronect)(admin|support|inst)?(svc)?(ENV|dev|stage|test|prod)?\\.promega\\.com",
+      "replacement": "HTTP-Settings-APPNAME\\2\\3.promega.com",
+      "description": "Normalize HTTP settings: preserve function (admin/support/inst) and svc suffix, normalize gsp/pronect prefix"
+    },
+    {
+      "pattern": "^Rule-(http|https)-(?:gspENV|gsp|pronect)(admin|support|inst)?(svc)?(ENV|dev|stage|test|prod)?\\.promega\\.com$",
+      "replacement": "Rule-\\1-gspENV\\2\\3.promega.com",
+      "description": "Normalize redirect rule names: collapse gsp/pronect and env suffix, preserve admin/support/inst and optional svc"
+    },
+    {
       "pattern": "^[a-z0-9-]+-promega-com$",
       "replacement": "ENV-promega-com",
       "description": "Certificate domains with any environment prefix (e.g., gspdev-promega-com, prnect-promega-com)"
@@ -56,14 +86,19 @@
       "description": "Environment code in resource names (e.g., -d-, -s-, -t-, -p-)"
     },
     {
+      "pattern": "gspiot-keyvau-ENV-use2(-[a-z]?\\d{2})?",
+      "replacement": "gspiot-keyvau-ENV-use2-NUM",
+      "description": "Key Vault names with optional numeric suffix (normalize missing suffix)"
+    },
+    {
       "pattern": "sa[dstpb]use2\\d{2}",
       "replacement": "saENVuse2NUM",
       "description": "Storage account env patterns"
     },
     {
-      "pattern": "(gspiot\\w+?)(bn[a-z]{2}|va[a-z]{2}|lr[a-z]{2}|sh[a-z]{2})($|-)",
-      "replacement": "\\1SUFFIX\\3",
-      "description": "Storage suffixes (bnst, vapr, lrXX, shXX) - includes prod vapr pattern"
+      "pattern": "bnst|shqd|vapr",
+      "replacement": "SUFFIX",
+      "description": "Storage account suffixes - matches anywhere"
     },
     {
       "pattern": "(gspiot\\w+)lr([dstpb])e$",
@@ -134,6 +169,11 @@
       "pattern": "-insactys-",
       "replacement": "-insact-",
       "description": "Insights activity system variations"
+    },
+    {
+      "pattern": "\\.vault\\.azure\\.net/secrets/[^/]+/[0-9a-f]+$",
+      "replacement": ".vault.azure.net/secrets/SECRET_NAME/VERSION_ID",
+      "description": "Normalize Key Vault secret URLs with version IDs (any length)"
     }
   ],
   "resource_id_patterns": [
@@ -148,9 +188,9 @@
       "description": "Normalize environment code in resource group names"
     },
     {
-      "pattern": "-([dstpb])-use2-[a-z]?\\d{2}($|/)",
-      "replacement": "-ENV-use2-NUM\\2",
-      "description": "Normalize environment code and numeric suffix in resource IDs"
+      "pattern": "-([dstpb])-use2(-[a-z]?\\d{2})?($|/)",
+      "replacement": "-ENV-use2-NUM\\3",
+      "description": "Normalize environment code and optional numeric suffix in resource IDs"
     },
     {
       "pattern": "(gspiot\\w+)(bn[a-z]{2}|va[a-z]{2}|lr[a-z]{2}|sh[a-z]{2})",
@@ -163,14 +203,49 @@
       "description": "Normalize storage URLs with environment-specific suffixes"
     },
     {
-      "pattern": "https://(gspiot-[\\w-]+)-([dstpb])(-[\\w-]+)\\.vault\\.azure\\.net",
-      "replacement": "https://\\1-ENV\\3.vault.azure.net",
-      "description": "Normalize Key Vault URLs with environment codes"
+      "pattern": "https://(gspiot-[\\w-]+)-([dstpb])-use2(-[a-z]?\\d{2})?\\.vault\\.azure\\.net",
+      "replacement": "https://\\1-ENV-use2-NUM.vault.azure.net",
+      "description": "Normalize Key Vault URLs with environment codes and optional numeric suffix"
     },
     {
       "pattern": "([a-z0-9-]+)(dev|stage|test|prod)\\.promega\\.com",
       "replacement": "\\1ENV.promega.com",
       "description": "Normalize hostname domains with environment names"
+    },
+    {
+      "pattern": "/roleAssignments/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "replacement": "/roleAssignments/ROLE_ASSIGNMENT_ID",
+      "description": "Normalize role assignment GUIDs in resource IDs"
+    },
+    {
+      "pattern": "/backendHttpSettingsCollection/HTTP-Settings-(gsp|pronect)(admin|support|inst)?(svc)?(ENV|dev|stage|test|prod)?\\.promega\\.com",
+      "replacement": "/backendHttpSettingsCollection/HTTP-Settings-APPNAME\\2\\3.promega.com",
+      "description": "Normalize HTTP settings in resource IDs: preserve function and svc suffix"
+    },
+    {
+      "pattern": "(/httpListeners/Listener-(?:http|https)-)(?:gspENV|gsp|pronect)(admin|support|inst)?(svc)?(ENV|dev|stage|test|prod)?\\.promega\\.com",
+      "replacement": "\\1gspENV\\2\\3.promega.com",
+      "description": "Normalize App Gateway listener hostnames in IDs: collapse gsp/gspENV/pronect and optional env token, preserve admin/support/inst + optional svc"
+    },
+    {
+      "pattern": "(/redirectConfigurations/Rule-(?:http|https)-)(?:gspENV|gsp|pronect)(admin|support|inst)?(svc)?(ENV|dev|stage|test|prod)?\\.promega\\.com",
+      "replacement": "\\1gspENV\\2\\3.promega.com",
+      "description": "Normalize App Gateway redirect rule hostnames in IDs: collapse gsp/pronect and env suffix, preserve admin/support/inst + optional svc"
+    },
+    {
+      "pattern": "(/requestRoutingRules/Rule-(?:http|https)-)(?:gspENV|gsp|pronect)(admin|support|inst)?(svc)?(ENV|dev|stage|test|prod)?\\.promega\\.com",
+      "replacement": "\\1gspENV\\2\\3.promega.com",
+      "description": "Normalize App Gateway request routing rule hostnames in IDs: collapse gsp/pronect and env suffix, preserve admin/support/inst + optional svc"
+    },
+    {
+      "pattern": "/versions/[0-9a-f]{32}($|/)",
+      "replacement": "/versions/VERSION_ID\\1",
+      "description": "Normalize Key Vault secret version IDs"
+    },
+    {
+      "pattern": "https://[^/]+\\.vault\\.azure\\.net/secrets/[^/]+/[0-9a-f]+$",
+      "replacement": "https://VAULT.vault.azure.net/secrets/SECRET_NAME/VERSION_ID",
+      "description": "Normalize full Key Vault secret URLs with version IDs"
     }
   ]
 }

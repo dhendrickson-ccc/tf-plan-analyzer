@@ -662,6 +662,30 @@ def get_attribute_section_css() -> str:
             margin-left: 10px;
             display: inline-block;
         }
+        
+        .json-sort-control {
+            float: right;
+            font-size: 0.85em;
+            padding: 4px 8px;
+            border: 1px solid #667eea;
+            border-radius: 4px;
+            background: white;
+            color: #667eea;
+            cursor: pointer;
+            transition: all 0.2s;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .json-sort-control:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .json-sort-control:focus {
+            outline: 2px solid #667eea;
+            outline-offset: 2px;
+        }
 """
 
 
@@ -879,6 +903,74 @@ def get_env_specific_section_css() -> str:
         }
         
         .env-specific-content {
+            padding: 0 20px 20px 20px;
+        }
+"""
+
+
+def get_first_env_only_section_css() -> str:
+    """
+    Get CSS for first-environment-only resource grouping section.
+
+    Provides styling for collapsible <details> section that groups resources
+    existing only in the first (baseline) environment that will be created in others.
+
+    Returns:
+        str: CSS stylesheet for first-env-only sections including:
+            - .first-env-only-section: Details element container with green theme
+            - .first-env-only-header: Summary element with success styling
+            - .first-env-badge: Green badge showing where resources will be created
+            - .first-env-only-content: Content container
+
+    Example:
+        >>> css = get_first_env_only_section_css()
+        >>> ".first-env-only-section" in css
+        True
+    """
+    return """
+        .first-env-only-section {
+            margin-top: 30px;
+            margin-bottom: 30px;
+            border: 2px solid #10b981;
+            border-radius: 8px;
+            background: #d1fae5;
+        }
+        
+        .first-env-only-header {
+            padding: 15px 20px;
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #065f46;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .first-env-only-header:hover {
+            background: #a7f3d0;
+        }
+        
+        .first-env-only-header::marker {
+            content: "▼ ";
+            font-size: 0.8em;
+        }
+        
+        details.first-env-only-section:not([open]) .first-env-only-header::marker {
+            content: "▶ ";
+        }
+        
+        .first-env-badge {
+            background: #10b981;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .first-env-only-content {
             padding: 0 20px 20px 20px;
         }
 """
@@ -1114,5 +1206,6 @@ def generate_full_styles() -> str:
 {get_scrollable_container_css()}
 {get_sticky_header_css()}
 {get_env_specific_section_css()}
+{get_first_env_only_section_css()}
 {get_notes_css()}
 </style>"""
