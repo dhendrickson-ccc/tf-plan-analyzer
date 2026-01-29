@@ -22,8 +22,17 @@ def get_notes_markdown_css() -> str:
         user-select: none;
     }
     .notes-title { flex: 1; color: #495057; }
-    .toggle-mode { margin-left: 10px; padding: 3px 10px; font-size: 0.95em; border: none; border-radius: 3px; background: #e2e6ea; color: #495057; cursor: pointer; }
-    .toggle-mode[aria-pressed="true"] { background: #667eea; color: #fff; }
+    /* Slider toggle switch */
+    .toggle-switch { display: inline-flex; align-items: center; margin-left: 10px; }
+    .toggle-switch input.toggle-mode { position: absolute; opacity: 0; width: 0; height: 0; }
+    .toggle-label { font-size: 0.85em; color: #606672; margin: 0 8px; user-select: none; }
+    .toggle-slider { width: 44px; height: 24px; background: #e2e6ea; border-radius: 999px; display: inline-block; position: relative; transition: background 0.15s ease-in-out; vertical-align: middle; }
+    .toggle-slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,0.15); transition: transform 0.15s ease-in-out; }
+    .toggle-switch input.toggle-mode:checked + .toggle-slider { background: #667eea; }
+    .toggle-switch input.toggle-mode:checked + .toggle-slider::before { transform: translateX(20px); }
+    /* Highlight active label */
+    .toggle-switch input.toggle-mode:checked ~ .toggle-label.toggle-label-preview { color: #0f172a; font-weight: 700; }
+    .toggle-switch input.toggle-mode:not(:checked) ~ .toggle-label.toggle-label-edit { color: #0f172a; font-weight: 700; }
     /* Place edit and preview views in the same visual area so preview replaces the textarea */
         .notes-content { position: relative; margin-top: 8px; padding: 10px 0; }
     .note-edit, .note-preview { width: 100%; box-sizing: border-box; min-height: 96px; padding: 10px; margin: 0; }
@@ -192,12 +201,17 @@ def get_notes_markdown_javascript() -> str:
                 }
             });
         }
-        // Update the toggle button label and aria state
+        // Update the toggle control (checkbox slider) aria state
         const toggleBtn = container.querySelector('.toggle-mode');
         if (toggleBtn) {
-            toggleBtn.setAttribute('aria-pressed', newMode === 'edit' ? 'true' : 'false');
-            // Show the action that will occur when clicked: when currently in preview, button should read 'Edit'
-            toggleBtn.textContent = newMode === 'edit' ? 'Preview' : 'Edit';
+            try {
+                if (toggleBtn.tagName === 'INPUT') {
+                    toggleBtn.checked = (newMode === 'preview');
+                    toggleBtn.setAttribute('aria-checked', newMode === 'preview' ? 'true' : 'false');
+                } else {
+                    toggleBtn.setAttribute('aria-pressed', newMode === 'edit' ? 'true' : 'false');
+                }
+            } catch (e) {}
         }
     }
 
@@ -218,7 +232,9 @@ def get_notes_markdown_javascript() -> str:
             }
             // Update toggle button label when initializing in preview mode
             const toggleBtnInit = container.querySelector('.toggle-mode');
-            if (toggleBtnInit) { toggleBtnInit.setAttribute('aria-pressed', 'false'); toggleBtnInit.textContent = 'Edit'; }
+            if (toggleBtnInit) {
+                try { if (toggleBtnInit.tagName === 'INPUT') { toggleBtnInit.checked = true; toggleBtnInit.setAttribute('aria-checked', 'true'); } else { toggleBtnInit.setAttribute('aria-pressed','false'); toggleBtnInit.textContent='Edit'; } } catch(e) {}
+            }
             // visibility is driven by data-mode and CSS; avoid inline styles
         } else {
             container.setAttribute('data-mode', 'edit');
@@ -226,7 +242,9 @@ def get_notes_markdown_javascript() -> str:
             try { container.querySelectorAll('textarea.note-question, textarea[id^="note-q-"]').forEach(function(t){ try { t.removeAttribute('readonly'); t.style.pointerEvents='auto'; } catch(e){} }); } catch(e) {}
             if (preview) preview.innerHTML = '';
             const toggleBtnInit = container.querySelector('.toggle-mode');
-            if (toggleBtnInit) { toggleBtnInit.setAttribute('aria-pressed', 'true'); toggleBtnInit.textContent = 'Preview'; }
+            if (toggleBtnInit) {
+                try { if (toggleBtnInit.tagName === 'INPUT') { toggleBtnInit.checked = false; toggleBtnInit.setAttribute('aria-checked', 'false'); } else { toggleBtnInit.setAttribute('aria-pressed','true'); toggleBtnInit.textContent='Preview'; } } catch(e) {}
+            }
             // visibility is driven by data-mode and CSS; avoid inline styles
         }
     }

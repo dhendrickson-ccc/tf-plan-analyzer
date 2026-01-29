@@ -1888,7 +1888,12 @@ class MultiEnvReport:
                 parts.append(f'                            <details class="notes-container" data-resource="{rc.resource_address}" data-attribute="{attr_diff.attribute_name}" data-mode="edit" open>')
                 parts.append('                                <summary class="notes-header" data-collapsed="false">')
                 parts.append('                                    <span class="notes-title">Notes — Q&amp;A</span>')
-                parts.append(f'                                    <button type="button" class="toggle-mode" aria-pressed="true" onclick="toggleNoteMode(event, \'{rc.resource_address}\', \'{attr_diff.attribute_name}\')">Preview</button>')
+                parts.append(f'                                    <label class="toggle-switch" title="Toggle preview">')
+                parts.append(f'                                        <span class="toggle-label toggle-label-edit">Edit</span>')
+                parts.append(f'                                        <input type="checkbox" class="toggle-mode" onchange="toggleNoteMode(event, \'{rc.resource_address}\', \'{attr_diff.attribute_name}\')" aria-checked="false" />')
+                parts.append(f'                                        <span class="toggle-slider" aria-hidden="true"></span>')
+                parts.append(f'                                        <span class="toggle-label toggle-label-preview">Preview</span>')
+                parts.append(f'                                    </label>')
                 parts.append('                                </summary>')
                 # Question field (edit + preview share the same visual area) - wrapped so we can hide only question in preview
                 parts.append('                                <div class="note-question">')
