@@ -334,11 +334,11 @@ class ResourceComparison:
             config_raw: Unmasked configuration for comparison purposes
             sensitive_metadata: Sensitive field metadata from this environment's plan
         """
-        self.env_configs[env_label] = config
+        # Ensure we always store a dict for the env config entry so we can attach UI state
+        entry = config if config is not None else {}
+        self.env_configs[env_label] = entry
         self.env_configs[env_label]['open'] = 'open'  # Default expanded
-        self.env_configs_raw[env_label] = (
-            config_raw if config_raw is not None else config
-        )
+        self.env_configs_raw[env_label] = config_raw if config_raw is not None else config
         if config is not None:
             self.is_present_in.add(env_label)
         
@@ -1322,6 +1322,10 @@ class MultiEnvReport:
         html_parts.append("            return [beforeParts.join(''), afterParts.join('')];")
         html_parts.append("        }")
         html_parts.append("    </script>")
+        # Inject notes CSS so preview/edit visibility rules are present
+        html_parts.append("    <style>")
+        html_parts.append(f"    {src.lib.html_generation.get_notes_markdown_css()}")
+        html_parts.append("    </style>")
         html_parts.append("    <script>")
         html_parts.append(f"    {src.lib.html_generation.get_notes_javascript()}")
         html_parts.append("    </script>")

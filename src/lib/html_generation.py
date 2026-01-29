@@ -4,7 +4,7 @@ def get_notes_markdown_css() -> str:
     .notes-container[data-mode] {
         position: relative;
         margin-top: 15px;
-        padding: 0;
+        padding: 12px;
         background: #f8f9fa;
         border-radius: 4px;
         border-left: 3px solid #6c757d;
@@ -25,7 +25,7 @@ def get_notes_markdown_css() -> str:
     .toggle-mode { margin-left: 10px; padding: 3px 10px; font-size: 0.95em; border: none; border-radius: 3px; background: #e2e6ea; color: #495057; cursor: pointer; }
     .toggle-mode[aria-pressed="true"] { background: #667eea; color: #fff; }
     /* Place edit and preview views in the same visual area so preview replaces the textarea */
-    .notes-content { position: relative; margin-top: 8px; }
+        .notes-content { position: relative; margin-top: 8px; padding: 10px 0; }
     .note-edit, .note-preview { width: 100%; box-sizing: border-box; min-height: 96px; padding: 10px; margin: 0; }
     .note-field { display: block; }
     .notes-container[data-mode="edit"] .note-edit { display: block; }
@@ -51,8 +51,10 @@ def get_notes_markdown_css() -> str:
         .notes-container .note-preview ol { margin: 0; padding-left: 1.25rem; }
         /* Nuclear hide rule: make textarea hiding unavoidably specific */
         /* Hide only the Question textarea (IDs prefixed with note-q-) when previewing; leave Answer editable */
+        /* Strong rules to hide and disable question textarea in preview mode */
         details.notes-container[data-mode="preview"] textarea[id^="note-q-"],
-        details.notes-container[data-mode="preview"] textarea[id^="note-q-"] .note-edit,
+        details.notes-container[data-mode="preview"] textarea.note-question,
+        details.notes-container[data-mode="preview"] .note-question textarea.note-field,
         details.notes-container[data-mode="preview"] .notes-content > textarea[id^="note-q-"] {
             display: none !important;
             visibility: hidden !important;
@@ -62,6 +64,7 @@ def get_notes_markdown_css() -> str:
             margin: 0 !important;
             border: 0 !important;
             overflow: hidden !important;
+            pointer-events: none !important;
         }
 
         /* Default: preview hidden until preview mode */
@@ -95,12 +98,12 @@ def get_notes_markdown_css() -> str:
     .note-preview ul, .note-preview ol { margin: 0; padding-left: 1.25rem; }
     .note-preview li { margin: 0.35rem 0; }
     .note-warning { display: flex; align-items: center; color: #b85c00; background: #fffbe6; border: 1px solid #ffe58f; border-radius: 3px; padding: 6px 10px; margin: 8px 0; }
-    .notes-container { border: 1px solid #d0d7de; border-radius: 6px; margin: 1em 0; background: #f9f9fb; box-shadow: 0 1px 2px rgba(0,0,0,0.03); transition: box-shadow 0.2s; overflow: hidden; }
+    .notes-container { border: 1px solid #d0d7de; border-radius: 6px; margin: 1em 0; background: #f9f9fb; box-shadow: 0 1px 2px rgba(0,0,0,0.03); transition: box-shadow 0.2s; overflow: hidden; padding: 12px; }
     .notes-container[open] { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
     .notes-container summary.notes-header { list-style: none; }
     .notes-container summary.notes-header::-webkit-details-marker { display: none; }
-    .notes-container summary.notes-header::before { content: '\25BC'; display: inline-block; margin-right: 0.5em; }
-    .notes-container:not([open]) summary.notes-header::before { content: '\25B6'; }
+    .notes-container summary.notes-header::before { content: '\\25BC'; display: inline-block; margin-right: 0.5em; }
+    .notes-container:not([open]) summary.notes-header::before { content: '\\25B6'; }
     @media (max-width: 768px) { .notes-header, .note-preview { font-size: 0.97em; } }
     '''
 
@@ -126,7 +129,8 @@ def get_notes_markdown_javascript() -> str:
         try {
             if (typeof marked === 'undefined' || typeof DOMPurify === 'undefined') {
                 // Markdown engine not present — fall back to escaped text preserving line breaks
-                dirtyHtml = escapeHtml(rawMarkdown || '').replace(/\n/g, '<br>');
+                // Use RegExp constructor to avoid emitting regex literal slashes that can be split
+                dirtyHtml = escapeHtml(rawMarkdown || '').replace(new RegExp('\\\\n','g'), '<br>');
                 cleanHtml = dirtyHtml;
             } else {
                 dirtyHtml = marked.parse(rawMarkdown || '');
@@ -154,6 +158,18 @@ def get_notes_markdown_javascript() -> str:
         // Flip mode
         const newMode = mode === 'edit' ? 'preview' : 'edit';
         container.setAttribute('data-mode', newMode);
+        // Ensure question textareas are readonly/disabled in preview mode as a JS-level fallback
+        try {
+            if (newMode === 'preview') {
+                container.querySelectorAll('textarea.note-question, textarea[id^="note-q-"]').forEach(function(t) {
+                    try { t.setAttribute('readonly', 'true'); t.setAttribute('aria-hidden', 'true'); t.style.pointerEvents = 'none'; } catch (e) {}
+                });
+            } else {
+                container.querySelectorAll('textarea.note-question, textarea[id^="note-q-"]').forEach(function(t) {
+                    try { t.removeAttribute('readonly'); t.removeAttribute('aria-hidden'); t.style.pointerEvents = 'auto'; } catch (e) {}
+                });
+            }
+        } catch (e) {}
         // When moving to preview, render ALL note content blocks (question + answer)
         if (newMode === 'preview') {
             container.querySelectorAll('.notes-content').forEach(function(block) {
@@ -194,6 +210,8 @@ def get_notes_markdown_javascript() -> str:
         if (textarea && textarea.value.trim().length > 0) hasContent = true;
         if (hasContent) {
             container.setAttribute('data-mode', 'preview');
+            // make question textarea readonly when initializing in preview mode
+            try { container.querySelectorAll('textarea.note-question, textarea[id^="note-q-"]').forEach(function(t){ try { t.setAttribute('readonly','true'); t.style.pointerEvents='none'; } catch(e){} }); } catch(e) {}
             if (preview && textarea) {
                 const result = renderMarkdown(textarea.value);
                 preview.innerHTML = result.cleanHtml;
@@ -204,6 +222,8 @@ def get_notes_markdown_javascript() -> str:
             // visibility is driven by data-mode and CSS; avoid inline styles
         } else {
             container.setAttribute('data-mode', 'edit');
+            // ensure question textarea editable in edit mode
+            try { container.querySelectorAll('textarea.note-question, textarea[id^="note-q-"]').forEach(function(t){ try { t.removeAttribute('readonly'); t.style.pointerEvents='auto'; } catch(e){} }); } catch(e) {}
             if (preview) preview.innerHTML = '';
             const toggleBtnInit = container.querySelector('.toggle-mode');
             if (toggleBtnInit) { toggleBtnInit.setAttribute('aria-pressed', 'true'); toggleBtnInit.textContent = 'Preview'; }
@@ -240,12 +260,35 @@ def get_notes_markdown_javascript() -> str:
     });
 
     function saveNoteWithBlur(resource, attribute, field, el) {
-        if (window.saveNote) {
-            try {
-                const value = (el && typeof el.value !== 'undefined') ? el.value : (document.querySelector(`.notes-container[data-resource="${resource}"][data-attribute="${attribute}"] .note-edit`) || {}).value;
-                window.saveNote(resource, attribute, field, value);
-            } catch (e) {}
-        }
+        if (!window.saveNote) return;
+        try {
+            // If caller provided the element, use it
+            if (el && typeof el.value !== 'undefined') {
+                window.saveNote(resource, attribute, field, el.value);
+                return;
+            }
+
+            // Fallback: construct the canonical textarea id used by the generator
+            // sanitized names replace . [ ] : with '-'
+            function sanitizeName(name) { return String(name).replace(/[.\[\]:]/g, '-'); }
+            const sRes = sanitizeName(resource);
+            const sAttr = sanitizeName(attribute);
+            const prefix = (field === 'question') ? 'q' : (field === 'answer' ? 'a' : '');
+            if (prefix) {
+                const id = `note-${prefix}-${sRes}-${sAttr}`;
+                const node = document.getElementById(id);
+                if (node && typeof node.value !== 'undefined') {
+                    window.saveNote(resource, attribute, field, node.value);
+                    return;
+                }
+            }
+
+            // Last resort: find the textarea inside the notes-container for this resource/attribute
+            const fallback = document.querySelector(`.notes-container[data-resource="${resource}"][data-attribute="${attribute}"] textarea.note-field`);
+            if (fallback && typeof fallback.value !== 'undefined') {
+                window.saveNote(resource, attribute, field, fallback.value);
+            }
+        } catch (e) {}
     }
     
     // Expose handlers to global scope so inline `onclick`/`onblur` attributes work
