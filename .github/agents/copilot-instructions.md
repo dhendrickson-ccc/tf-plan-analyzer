@@ -13,6 +13,8 @@ Auto-generated from all feature plans. Last updated: 2026-01-13
 - JSON files (ignore_config.json, normalizations.json) - file-based configuration (007-normalization-diff-filtering)
 - Python 3.11 (existing project constraint) + None (client-side JavaScript for LocalStorage interaction, no new Python dependencies) (008-attribute-notes)
 - Browser LocalStorage (client-side only, no server-side persistence) (008-attribute-notes)
+- Python 3.9+ (currently supports 3.9, 3.10, 3.11) + json5>=0.9.0 for parsing; client-side JavaScript for markdown rendering (009-qa-markdown-preview)
+- LocalStorage (client-side) for Q&A notes persistence (009-qa-markdown-preview)
 
 - Python 3.8+ (matching existing codebase) (001-multi-env-comparison)
 
@@ -32,9 +34,9 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.8+ (matching existing codebase): Follow standard conventions
 
 ## Recent Changes
+- 009-qa-markdown-preview: Added Python 3.9+ (currently supports 3.9, 3.10, 3.11) + json5>=0.9.0 for parsing; client-side JavaScript for markdown rendering
 - 008-attribute-notes: Added Python 3.11 (existing project constraint) + None (client-side JavaScript for LocalStorage interaction, no new Python dependencies)
 - 007-normalization-diff-filtering: Added Python 3.9+ (requires-python = ">=3.9" in pyproject.toml) + Python standard library only (json, re, pathlib) - no external packages needed for normalization
-- 006-comparison-ui-improvements: Added Python 3.9.6 + No new dependencies - pure HTML+CSS modifications
 
 
 <!-- MANUAL ADDITIONS START -->

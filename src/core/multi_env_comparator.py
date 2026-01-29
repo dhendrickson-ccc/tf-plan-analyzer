@@ -335,6 +335,7 @@ class ResourceComparison:
             sensitive_metadata: Sensitive field metadata from this environment's plan
         """
         self.env_configs[env_label] = config
+        self.env_configs[env_label]['open'] = 'open'  # Default expanded
         self.env_configs_raw[env_label] = (
             config_raw if config_raw is not None else config
         )
@@ -1324,6 +1325,21 @@ class MultiEnvReport:
         html_parts.append("    <script>")
         html_parts.append(f"    {src.lib.html_generation.get_notes_javascript()}")
         html_parts.append("    </script>")
+        # Ensure client-side markdown libraries are available via CDN when viewing the report
+        html_parts.append('    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>')
+        html_parts.append('    <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>')
+        html_parts.append("    <script>")
+        html_parts.append(f"    {src.lib.html_generation.get_notes_markdown_javascript()}")
+        html_parts.append("        document.addEventListener('DOMContentLoaded', function() {")
+        html_parts.append("            document.querySelectorAll('.notes-container').forEach(function(container) {")
+        html_parts.append("                var resource = container.getAttribute('data-resource');")
+        html_parts.append("                var attribute = container.getAttribute('data-attribute');")
+        html_parts.append("                if (resource && attribute && typeof initializeNoteMode === 'function') {")
+        html_parts.append("                    initializeNoteMode(window.getReportId ? window.getReportId() : 'unknown-report', resource, attribute);")
+        html_parts.append("                }")
+        html_parts.append("            });")
+        html_parts.append("        });")
+        html_parts.append("    </script>")
         html_parts.append("</head>")
         html_parts.append("<body>")
         html_parts.append('    <div class="container">')
@@ -1861,20 +1877,32 @@ class MultiEnvReport:
 
                 parts.append("                            </div>")  # Close attribute-values
                 
-                # Add notes container (T015-T020: User Story 1 - Question field)
+
+                # Add markdown-enabled Q&A notes container (User Story 1)
                 sanitized_resource = self._sanitize_for_html_id(rc.resource_address)
                 sanitized_attribute = self._sanitize_for_html_id(attr_diff.attribute_name)
-                
-                parts.append('                            <div class="notes-container">')
-                parts.append('                                <div>')
-                parts.append(f'                                    <label class="note-label" for="note-q-{sanitized_resource}-{sanitized_attribute}">Question:</label>')
-                parts.append(f'                                    <textarea class="note-field" id="note-q-{sanitized_resource}-{sanitized_attribute}" placeholder="Add a question..." oninput="debouncedSaveNote(\'{rc.resource_address}\', \'{attr_diff.attribute_name}\', \'question\', this.value)" rows="4"></textarea>')
+                parts.append(f'                            <details class="notes-container" data-resource="{rc.resource_address}" data-attribute="{attr_diff.attribute_name}" data-mode="edit" open>')
+                parts.append('                                <summary class="notes-header" data-collapsed="false">')
+                parts.append('                                    <span class="notes-title">Notes — Q&amp;A</span>')
+                parts.append(f'                                    <button type="button" class="toggle-mode" aria-pressed="true" onclick="toggleNoteMode(event, \'{rc.resource_address}\', \'{attr_diff.attribute_name}\')">Preview</button>')
+                parts.append('                                </summary>')
+                # Question field (edit + preview share the same visual area) - wrapped so we can hide only question in preview
+                parts.append('                                <div class="note-question">')
+                parts.append(f'                                    <label class="note-label" for="note-q-{sanitized_resource}-{sanitized_attribute}">Question (optional):</label>')
+                parts.append('                                    <div class="notes-content">')
+                parts.append(f'                                        <textarea class="note-field note-edit note-question" id="note-q-{sanitized_resource}-{sanitized_attribute}" placeholder="Enter a question (Markdown supported)..." oninput="debouncedSaveNote(\'{rc.resource_address}\', \'{attr_diff.attribute_name}\', \'question\', this.value)" onblur="saveNoteWithBlur(\'{rc.resource_address}\', \'{attr_diff.attribute_name}\', \'question\', this)" rows="4"></textarea>')
+                parts.append(f'                                        <div class="note-preview" id="note-q-prev-{sanitized_resource}-{sanitized_attribute}"></div>')
+                parts.append('                                    </div>')
                 parts.append('                                </div>')
+                # Answer field
                 parts.append('                                <div class="note-answer">')
-                parts.append(f'                                    <label class="note-label" for="note-a-{sanitized_resource}-{sanitized_attribute}">Answer:</label>')
-                parts.append(f'                                    <textarea class="note-field" id="note-a-{sanitized_resource}-{sanitized_attribute}" placeholder="Add an answer..." oninput="debouncedSaveNote(\'{rc.resource_address}\', \'{attr_diff.attribute_name}\', \'answer\', this.value)" rows="4"></textarea>')
+                parts.append(f'                                    <label class="note-label" for="note-a-{sanitized_resource}-{sanitized_attribute}">Answer (optional):</label>')
+                parts.append('                                    <div class="notes-content">')
+                parts.append(f'                                        <textarea class="note-field note-edit note-answer" id="note-a-{sanitized_resource}-{sanitized_attribute}" placeholder="Enter an answer (Markdown supported)..." oninput="debouncedSaveNote(\'{rc.resource_address}\', \'{attr_diff.attribute_name}\', \'answer\', this.value)" onblur="saveNoteWithBlur(\'{rc.resource_address}\', \'{attr_diff.attribute_name}\', \'answer\', this)" rows="4"></textarea>')
+                parts.append(f'                                        <div class="note-preview" id="note-a-prev-{sanitized_resource}-{sanitized_attribute}"></div>')
+                parts.append('                                    </div>')
                 parts.append('                                </div>')
-                parts.append('                            </div>')
+                parts.append('                            </details>')
                 
                 parts.append("                        </div>")  # Close attribute-section
 

@@ -1,3 +1,102 @@
+from src.lib.html_generation import get_notes_markdown_css, get_notes_markdown_javascript
+
+class TestGetNotesMarkdownCSS:
+    """Tests for get_notes_markdown_css function."""
+
+    def test_returns_string(self):
+        css = get_notes_markdown_css()
+        assert isinstance(css, str)
+
+    def test_contains_notes_container_data_mode(self):
+        css = get_notes_markdown_css()
+        assert ".notes-container[data-mode]" in css
+
+    def test_contains_note_preview_markdown(self):
+        css = get_notes_markdown_css()
+        assert ".note-preview" in css
+        assert ".note-preview h1" in css
+        assert ".note-preview code" in css
+
+    def test_contains_toggle_mode_class(self):
+        css = get_notes_markdown_css()
+        assert ".toggle-mode" in css
+
+    def test_contains_note_warning_class(self):
+        css = get_notes_markdown_css()
+        assert ".note-warning" in css
+
+    def test_contains_accessibility_and_responsive(self):
+        css = get_notes_markdown_css()
+        assert "@media (max-width: 768px)" in css
+
+
+class TestGetNotesMarkdownJavaScript:
+    """Tests for get_notes_markdown_javascript function."""
+
+    def test_returns_string(self):
+        js = get_notes_markdown_javascript()
+        assert isinstance(js, str)
+
+    def test_contains_renderMarkdown_function(self):
+        js = get_notes_markdown_javascript()
+        assert 'function renderMarkdown' in js
+        assert 'function toggleNoteMode' in js
+        assert 'function initializeNoteMode' in js
+        assert 'marked.parse' in js
+        assert 'DOMPurify.sanitize' in js
+        assert 'data-mode' in js
+        assert 'note-edit' in js
+        assert 'note-preview' in js
+        assert 'toggleBtn.setAttribute' in js
+        assert 'container.setAttribute' in js
+        assert 'preview.innerHTML = result.cleanHtml' in js
+def test_initialize_note_mode_logic():
+    js = get_notes_markdown_javascript()
+    # Check that initializeNoteMode sets preview if content, edit if empty
+    assert 'if (hasContent)' in js
+    assert 'container.setAttribute(' in js
+    assert "data-mode', 'preview'" in js or "data-mode', 'edit'" in js
+    # Should clear preview if switching to edit and empty
+    assert 'if (preview) preview.innerHTML = ' in js
+
+
+def test_collapse_restore_js_snippets():
+    js = get_notes_markdown_javascript()
+    # saveCollapseState and restoreCollapseState should exist
+    assert 'function saveCollapseState' in js
+    assert 'function restoreCollapseState' in js
+    # Should wire up DOMContentLoaded to set open/remove open
+    assert "document.addEventListener('DOMContentLoaded'" in js or 'document.addEventListener("DOMContentLoaded"' in js
+    # Should call restoreCollapseState and set data-collapsed attributes
+    assert 'restoreCollapseState(reportId, resource, attribute)' in js or 'restoreCollapseState' in js
+
+
+def test_notes_domcontentloaded_and_toggle_present():
+    js = get_notes_markdown_javascript()
+    # Ensure DOMContentLoaded wiring exists and toggle listener registration present
+    assert "document.addEventListener('DOMContentLoaded'" in js or 'document.addEventListener("DOMContentLoaded"' in js
+    assert 'container.addEventListener(\'toggle\'' in js or 'container.addEventListener("toggle"' in js
+
+    def test_contains_saveCollapseState_function(self):
+        js = get_notes_markdown_javascript()
+        assert "function saveCollapseState(" in js
+
+    def test_contains_restoreCollapseState_function(self):
+        js = get_notes_markdown_javascript()
+        assert "function restoreCollapseState(" in js
+
+    def test_contains_saveNoteWithBlur_function(self):
+        js = get_notes_markdown_javascript()
+        assert "function saveNoteWithBlur(" in js
+
+    def test_mentions_marked_and_DOMPurify(self):
+        js = get_notes_markdown_javascript()
+        assert "marked" in js
+        assert "DOMPurify" in js
+
+    def test_contains_note_warning(self):
+        js = get_notes_markdown_javascript()
+        assert "note-warning" in js
 #!/usr/bin/env python3
 """
 Unit tests for HTML generation module.

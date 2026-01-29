@@ -47,14 +47,14 @@ class TestUS1AddQuestionField:
         # Read generated HTML
         html_content = output_file.read_text()
 
-        # Verify notes container exists
-        assert '<div class="notes-container">' in html_content, \
-            "Notes container div not found in HTML"
+        # Verify notes container exists (details element)
+        assert '<details class="notes-container"' in html_content or '<details class=\"notes-container\"' in html_content, \
+            "Notes container element not found in HTML"
 
         # Verify question label exists
         assert '<label class="note-label"' in html_content, \
             "Question label not found in HTML"
-        assert 'Question:' in html_content, \
+        assert 'Question (optional):' in html_content, \
             "Question label text not found"
 
         # Verify question textarea exists with required attributes
@@ -64,7 +64,7 @@ class TestUS1AddQuestionField:
             "Textarea does not have note-field class"
         assert 'id="note-q-' in html_content, \
             "Question textarea does not have correct ID pattern"
-        assert 'placeholder="Add a question..."' in html_content, \
+        assert 'placeholder="Enter a question (Markdown supported)..."' in html_content, \
             "Question textarea missing placeholder text"
         assert 'rows="4"' in html_content, \
             "Question textarea missing rows attribute"
@@ -200,13 +200,13 @@ class TestUS2AnswerField:
         html_content = output_file.read_text()
 
         # Verify answer label exists
-        assert 'Answer:' in html_content, \
+        assert 'Answer (optional):' in html_content, \
             "Answer label text not found"
 
         # Verify answer textarea exists with required attributes
         assert 'id="note-a-' in html_content, \
             "Answer textarea does not have correct ID pattern"
-        assert 'placeholder="Add an answer..."' in html_content, \
+        assert 'placeholder="Enter an answer (Markdown supported)..."' in html_content, \
             "Answer textarea missing placeholder text"
 
         # Verify answer wrapper div exists

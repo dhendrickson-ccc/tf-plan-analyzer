@@ -1,3 +1,263 @@
+def get_notes_markdown_css() -> str:
+    """Return CSS for markdown-enabled notes (collapse + edit/preview)."""
+    return '''
+    .notes-container[data-mode] {
+        position: relative;
+        margin-top: 15px;
+        padding: 0;
+        background: #f8f9fa;
+        border-radius: 4px;
+        border-left: 3px solid #6c757d;
+        transition: box-shadow 0.2s;
+    }
+    .notes-header {
+        display: flex;
+        align-items: center;
+        font-weight: 600;
+        font-size: 1em;
+        padding: 10px 16px;
+        background: #eef1f4;
+        border-bottom: 1px solid #e2e6ea;
+        cursor: pointer;
+        user-select: none;
+    }
+    .notes-title { flex: 1; color: #495057; }
+    .toggle-mode { margin-left: 10px; padding: 3px 10px; font-size: 0.95em; border: none; border-radius: 3px; background: #e2e6ea; color: #495057; cursor: pointer; }
+    .toggle-mode[aria-pressed="true"] { background: #667eea; color: #fff; }
+    /* Place edit and preview views in the same visual area so preview replaces the textarea */
+    .notes-content { position: relative; margin-top: 8px; }
+    .note-edit, .note-preview { width: 100%; box-sizing: border-box; min-height: 96px; padding: 10px; margin: 0; }
+    .note-field { display: block; }
+    .notes-container[data-mode="edit"] .note-edit { display: block; }
+    .notes-container[data-mode="edit"] .note-preview { display: none; }
+    .notes-container[data-mode="preview"] .note-preview { display: block; }
+        .note-preview { background: #fff; border: 1px solid #ced4da; border-radius: 4px; color: #222; font-size: 1em; line-height: 1.6; }
+        /* Removed broad .note-edit hide rules so question/answer can be targeted separately */
+
+        /* Make preview sit on the container background (transparent) so header/lists align with .notes-container */
+        .notes-container .note-preview {
+            width: 100%;
+            box-sizing: border-box;
+            /* transparent so the gray container shows through */
+            background: transparent;
+            border: none;
+            padding: 0;
+            min-height: 0;
+        }
+        /* Remove default markdown spacing so header + lists align with surrounding UI */
+        .notes-container .note-preview > :first-child { margin-top: 0; }
+        .notes-container .note-preview > :last-child { margin-bottom: 0; }
+        .notes-container .note-preview ul,
+        .notes-container .note-preview ol { margin: 0; padding-left: 1.25rem; }
+        /* Nuclear hide rule: make textarea hiding unavoidably specific */
+        /* Hide only the Question textarea (IDs prefixed with note-q-) when previewing; leave Answer editable */
+        details.notes-container[data-mode="preview"] textarea[id^="note-q-"],
+        details.notes-container[data-mode="preview"] textarea[id^="note-q-"] .note-edit,
+        details.notes-container[data-mode="preview"] .notes-content > textarea[id^="note-q-"] {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            min-height: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: 0 !important;
+            overflow: hidden !important;
+        }
+
+        /* Default: preview hidden until preview mode */
+        details.notes-container .note-preview { display: none; }
+        details.notes-container[data-mode="preview"] .note-preview { display: block; }
+
+        /* Tighten markdown spacing */
+        details.notes-container .note-preview > :first-child { margin-top: 0; }
+        details.notes-container .note-preview > :last-child { margin-bottom: 0; }
+        details.notes-container .note-preview ul,
+        details.notes-container .note-preview ol { margin: 0; padding-left: 1.25rem; }
+    /* Removed legacy broad nesting rule for textarea hiding; question-only rules are applied instead */
+    /* Labels remain visible in preview; only textareas are hidden via stronger rules above */
+    .note-preview h1, .note-preview h2, .note-preview h3, .note-preview h4, .note-preview h5, .note-preview h6 {
+        margin: 0 0 0.5em 0;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+    .note-preview h1 { font-size: 1.5em; border-bottom: 1px solid #e2e6ea; }
+    .note-preview h2 { font-size: 1.3em; border-bottom: 1px solid #e2e6ea; }
+    .note-preview h3 { font-size: 1.1em; }
+    .note-preview code, .note-preview pre {
+        font-family: 'Fira Mono', 'Consolas', 'Menlo', monospace;
+        background: #f3f3f3;
+        border-radius: 3px;
+        padding: 2px 6px;
+        font-size: 0.97em;
+    }
+    .note-preview pre { padding: 10px; overflow-x: auto; margin: 0.75em 0; }
+    /* Normalize list alignment inside preview so bullets line up with headings */
+    .note-preview ul, .note-preview ol { margin: 0; padding-left: 1.25rem; }
+    .note-preview li { margin: 0.35rem 0; }
+    .note-warning { display: flex; align-items: center; color: #b85c00; background: #fffbe6; border: 1px solid #ffe58f; border-radius: 3px; padding: 6px 10px; margin: 8px 0; }
+    .notes-container { border: 1px solid #d0d7de; border-radius: 6px; margin: 1em 0; background: #f9f9fb; box-shadow: 0 1px 2px rgba(0,0,0,0.03); transition: box-shadow 0.2s; overflow: hidden; }
+    .notes-container[open] { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .notes-container summary.notes-header { list-style: none; }
+    .notes-container summary.notes-header::-webkit-details-marker { display: none; }
+    .notes-container summary.notes-header::before { content: '\25BC'; display: inline-block; margin-right: 0.5em; }
+    .notes-container:not([open]) summary.notes-header::before { content: '\25B6'; }
+    @media (max-width: 768px) { .notes-header, .note-preview { font-size: 0.97em; } }
+    '''
+
+
+def get_notes_markdown_javascript() -> str:
+    """Return JavaScript for markdown notes: render, toggle, init, collapse state."""
+    return '''
+    // Requires marked.js and DOMPurify via CDN (but graceful if missing)
+    function renderMarkdown(rawMarkdown) {
+        let dirtyHtml = '';
+        let cleanHtml = '';
+        let hasInvalidSyntax = false;
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        try {
+            if (typeof marked === 'undefined' || typeof DOMPurify === 'undefined') {
+                // Markdown engine not present — fall back to escaped text preserving line breaks
+                dirtyHtml = escapeHtml(rawMarkdown || '').replace(/\n/g, '<br>');
+                cleanHtml = dirtyHtml;
+            } else {
+                dirtyHtml = marked.parse(rawMarkdown || '');
+                cleanHtml = DOMPurify.sanitize(dirtyHtml, {ALLOWED_TAGS: ['h1','h2','h3','h4','h5','h6','p','ul','ol','li','pre','code','blockquote','strong','em','a','hr','br','span','img'], ALLOWED_ATTR: ['href','src','alt','title','target'], FORCE_BODY: true});
+            }
+        } catch (e) {
+            // If parsing fails, treat as invalid markdown but show escaped content
+            hasInvalidSyntax = true;
+            cleanHtml = escapeHtml(rawMarkdown || '');
+        }
+
+        return {rawMarkdown, dirtyHtml, cleanHtml, hasInvalidSyntax};
+    }
+
+    function toggleNoteMode(event, resource, attribute) {
+        try { if (event && event.stopPropagation) event.stopPropagation(); } catch (e) {}
+        // Try to find container via event, fall back to data attributes
+        let container = null;
+        try {
+            if (event && event.target) container = event.target.closest('.notes-container');
+        } catch (e) {}
+        if (!container) container = document.querySelector(`.notes-container[data-resource="${resource}"][data-attribute="${attribute}"]`);
+        if (!container) return;
+        const mode = container.getAttribute('data-mode');
+        // Flip mode
+        const newMode = mode === 'edit' ? 'preview' : 'edit';
+        container.setAttribute('data-mode', newMode);
+        // When moving to preview, render ALL note content blocks (question + answer)
+        if (newMode === 'preview') {
+            container.querySelectorAll('.notes-content').forEach(function(block) {
+                const textarea = block.querySelector('.note-edit');
+                const preview = block.querySelector('.note-preview');
+                if (textarea && preview) {
+                    const result = renderMarkdown(textarea.value);
+                    preview.innerHTML = result.cleanHtml;
+                    let warning = block.querySelector('.note-warning');
+                    if (result.hasInvalidSyntax) {
+                        if (!warning) {
+                            warning = document.createElement('div');
+                            warning.className = 'note-warning';
+                            warning.innerHTML = '<span class="note-warning-icon" aria-hidden="true">⚠️</span> <strong>Malformed Markdown:</strong> Preview may be incomplete.';
+                            preview.parentNode.insertBefore(warning, preview);
+                        }
+                    } else if (warning) {
+                        warning.remove();
+                    }
+                }
+            });
+        }
+        // Update the toggle button label and aria state
+        const toggleBtn = container.querySelector('.toggle-mode');
+        if (toggleBtn) {
+            toggleBtn.setAttribute('aria-pressed', newMode === 'edit' ? 'true' : 'false');
+            // Show the action that will occur when clicked: when currently in preview, button should read 'Edit'
+            toggleBtn.textContent = newMode === 'edit' ? 'Preview' : 'Edit';
+        }
+    }
+
+    function initializeNoteMode(reportId, resource, attribute) {
+        const container = document.querySelector(`.notes-container[data-resource="${resource}"][data-attribute="${attribute}"]`);
+        if (!container) return;
+        const textarea = container.querySelector('.note-edit');
+        const preview = container.querySelector('.note-preview');
+        let hasContent = false;
+        if (textarea && textarea.value.trim().length > 0) hasContent = true;
+        if (hasContent) {
+            container.setAttribute('data-mode', 'preview');
+            if (preview && textarea) {
+                const result = renderMarkdown(textarea.value);
+                preview.innerHTML = result.cleanHtml;
+            }
+            // Update toggle button label when initializing in preview mode
+            const toggleBtnInit = container.querySelector('.toggle-mode');
+            if (toggleBtnInit) { toggleBtnInit.setAttribute('aria-pressed', 'false'); toggleBtnInit.textContent = 'Edit'; }
+            // visibility is driven by data-mode and CSS; avoid inline styles
+        } else {
+            container.setAttribute('data-mode', 'edit');
+            if (preview) preview.innerHTML = '';
+            const toggleBtnInit = container.querySelector('.toggle-mode');
+            if (toggleBtnInit) { toggleBtnInit.setAttribute('aria-pressed', 'true'); toggleBtnInit.textContent = 'Preview'; }
+            // visibility is driven by data-mode and CSS; avoid inline styles
+        }
+    }
+
+    function saveCollapseState(resource, attribute, isCollapsed) {
+        const reportId = window.getReportId ? window.getReportId() : 'unknown-report';
+        const key = `tf-notes-${reportId}#${resource}#${attribute}`;
+        let note = {};
+        try { const existing = localStorage.getItem(key); if (existing) note = JSON.parse(existing); } catch (e) {}
+        note.isCollapsed = isCollapsed;
+        try { localStorage.setItem(key, JSON.stringify(note)); } catch (e) {}
+    }
+
+    function restoreCollapseState(reportId, resource, attribute) {
+        const key = `tf-notes-${reportId}#${resource}#${attribute}`;
+        let note = {};
+        try { const existing = localStorage.getItem(key); if (existing) note = JSON.parse(existing); } catch (e) {}
+        return note.isCollapsed === true;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.notes-container').forEach(function(container) {
+            const resource = container.getAttribute('data-resource');
+            const attribute = container.getAttribute('data-attribute');
+            const reportId = window.getReportId ? window.getReportId() : 'unknown-report';
+            const isCollapsed = restoreCollapseState(reportId, resource, attribute);
+            if (isCollapsed) { container.removeAttribute('open'); const summary = container.querySelector('summary.notes-header'); if (summary) summary.setAttribute('data-collapsed', 'true'); }
+            else { container.setAttribute('open', 'open'); const summary = container.querySelector('summary.notes-header'); if (summary) summary.setAttribute('data-collapsed', 'false'); }
+            container.addEventListener('toggle', function(e) { const isNowCollapsed = !container.hasAttribute('open'); saveCollapseState(resource, attribute, isNowCollapsed); const summary = container.querySelector('summary.notes-header'); if (summary) summary.setAttribute('data-collapsed', isNowCollapsed ? 'true' : 'false'); });
+        });
+    });
+
+    function saveNoteWithBlur(resource, attribute, field, el) {
+        if (window.saveNote) {
+            try {
+                const value = (el && typeof el.value !== 'undefined') ? el.value : (document.querySelector(`.notes-container[data-resource="${resource}"][data-attribute="${attribute}"] .note-edit`) || {}).value;
+                window.saveNote(resource, attribute, field, value);
+            } catch (e) {}
+        }
+    }
+    
+    // Expose handlers to global scope so inline `onclick`/`onblur` attributes work
+    try {
+        window.renderMarkdown = renderMarkdown;
+        window.toggleNoteMode = toggleNoteMode;
+        window.initializeNoteMode = initializeNoteMode;
+        window.saveNoteWithBlur = saveNoteWithBlur;
+        window.saveCollapseState = saveCollapseState;
+        window.restoreCollapseState = restoreCollapseState;
+    } catch (e) {}
+    '''
 """
 HTML Generation Utilities
 
